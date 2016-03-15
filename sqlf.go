@@ -18,9 +18,30 @@ import (
 // A future implementation might be able to handle updates involving
 // multiple tables, but keeping it simple for now.
 type execCommand struct {
-	command string
-	table   *TableInfo
-	inputs  []columnInfo
+	command     string
+	table       *TableInfo
+	inputs      []*columnInfo
+	tableClones map[*TableInfo]*TableInfo
+}
+
+func (cmd *execCommand) tableClone(ti *TableInfo) *TableInfo {
+	ti2, ok := cmd.tableClones[ti]
+	if !ok {
+		if cmd.tableClones == nil {
+			cmd.tableClones = make(map[*TableInfo]*TableInfo)
+		}
+		ti2 = ti.clone()
+		cmd.tableClones[ti] = ti2
+	}
+	return ti2
+}
+
+func (cmd *execCommand) tableNameClone(tn TableName) TableName {
+	return tn.clone(cmd.tableClone(tn.table))
+}
+
+func (cmd *execCommand) columnListClone(cl ColumnList) ColumnList {
+	return cl.clone(cmd.tableClone(cl.table))
 }
 
 func (cmd execCommand) Command() string {
@@ -53,23 +74,40 @@ func (cmd execCommand) Exec(db Execer, row interface{}) (sql.Result, error) {
 }
 
 func Insertf(format string, args ...interface{}) ExecCommand {
-	cmd := execCommand{
-		command: fmt.Sprintf(format, args...),
-	}
+	cmd := execCommand{}
+
+	// clone of args that we can modify
+	var args2 []interface{}
 
 	for _, arg := range args {
 		if tn, ok := arg.(TableName); ok {
-			if tn.clause == ClauseInsertInto {
-				cmd.table = tn.table
+			if tn.clause == clauseInsertInto {
+				cmd.table = cmd.tableClone(tn.table)
 			}
+			args2 = append(args2, cmd.tableNameClone(tn))
 		}
 		if cil, ok := arg.(ColumnList); ok {
-			if cil.clause.isInput() {
+			cil2 := cmd.columnListClone(cil)
+			args2 = append(args2, cil2)
+			if cil2.clause.isInput() {
 				// input parameters for the INSERT statement
-				cmd.inputs = append(cmd.inputs, cil.filtered()...)
+				cmd.inputs = append(cmd.inputs, cil2.filtered()...)
 			}
 		}
 	}
+
+	// now that we have a copy of the arguments that we can copy,
+	// replace the original to avoid accidentally modifying
+	args = args2
+
+	// apply placeholders to each of the input parameters
+	for i, ci := range cmd.inputs {
+		ci.placeholder = i + 1
+	}
+
+	// generate the SQL statement
+	cmd.command = fmt.Sprintf(format, args...)
+
 	return cmd
 }
 
@@ -80,7 +118,7 @@ func Updatef(format string, args ...interface{}) ExecCommand {
 
 	for _, arg := range args {
 		if tn, ok := arg.(TableName); ok {
-			if tn.clause == ClauseUpdateTable {
+			if tn.clause == clauseUpdateTable {
 				cmd.table = tn.table
 			}
 		}
@@ -102,14 +140,37 @@ func Selectf(format string, args ...interface{}) QueryCommand {
 // TableInfo contains enough information about a database table
 // to assist with generating SQL strings.
 type TableInfo struct {
-	TableName string
-	Select    SelectInfo
-	Insert    InsertInfo
-	Update    UpdateInfo
+	Name   string
+	Select SelectInfo
+	Insert InsertInfo
+	Update UpdateInfo
 
 	rowType reflect.Type
-	columns ColumnList
+	columns []*columnInfo
 	dialect Dialect
+	alias   string
+}
+
+// clone makes a complete, deep copy of the table.
+// This is important for taking a copy that can be modified.
+func (ti *TableInfo) clone() *TableInfo {
+	ti2 := &TableInfo{
+		Name:    ti.Name,
+		rowType: ti.rowType,
+		columns: make([]*columnInfo, len(ti.columns)),
+		dialect: ti.dialect,
+		alias:   ti.alias,
+	}
+	// create a clone of all of the columns before cloning
+	// anything else.
+	for i, ci := range ti.columns {
+		ti2.columns[i] = ci.clone(ti2)
+	}
+	ti2.Select = ti.Select.clone(ti2)
+	ti2.Insert = ti.Insert.clone(ti2)
+	ti2.Update = ti.Update.clone(ti2)
+
+	return ti2
 }
 
 // Table creates a TableInfo with the specified table name
@@ -121,7 +182,7 @@ type TableInfo struct {
 // are ignored, only the structure fields and field tags
 // are used.
 func Table(name string, row interface{}) *TableInfo {
-	ti := &TableInfo{TableName: name}
+	ti := &TableInfo{Name: name}
 
 	ti.rowType = reflect.TypeOf(row)
 	for ti.rowType.Kind() == reflect.Ptr {
@@ -144,7 +205,7 @@ func Table(name string, row interface{}) *TableInfo {
 		}
 		tagSettings := parseTagSetting(field.Tag)
 
-		ci := columnInfo{
+		ci := &columnInfo{
 			table:      ti,
 			fieldName:  field.Name,
 			fieldIndex: i,
@@ -163,25 +224,38 @@ func Table(name string, row interface{}) *TableInfo {
 		if _, ok := tagSettings["AUTO_INCREMENT"]; ok {
 			ci.autoIncrement = true
 		}
-		ti.columns.add(ci)
+		ti.columns = append(ti.columns, ci)
 	}
 
-	ti.Select.TableName = TableName{clause: ClauseSelectColumns, table: ti}
-	ti.Select.Columns = ColumnList{clause: ClauseSelectColumns, list: ti.columns.list}.All()
-	ti.Insert.TableName = TableName{clause: ClauseInsertInto, table: ti}
-	ti.Insert.Columns = ColumnList{clause: ClauseInsertColumns, list: ti.columns.list}.Insertable()
-	ti.Insert.Values = ColumnList{clause: ClauseInsertValues, list: ti.columns.list}.Insertable()
-	ti.Update.TableName = TableName{clause: ClauseUpdateTable, table: ti}
-	ti.Update.SetColumns = ColumnList{clause: ClauseUpdateSet, list: ti.columns.list}.Updateable()
-	ti.Update.WhereColumns = ColumnList{clause: ClauseUpdateWhere, list: ti.columns.list}.PrimaryKey()
+	ti.Select.TableName = TableName{clause: clauseSelectColumns, table: ti}
+	ti.Select.Columns = ColumnList{clause: clauseSelectColumns, table: ti}.All()
+	ti.Insert.TableName = TableName{clause: clauseInsertInto, table: ti}
+	ti.Insert.Columns = ColumnList{clause: clauseInsertColumns, table: ti}.Insertable()
+	ti.Insert.Values = ColumnList{clause: clauseInsertValues, table: ti}.Insertable()
+	ti.Update.TableName = TableName{clause: clauseUpdateTable, table: ti}
+	ti.Update.SetColumns = ColumnList{clause: clauseUpdateSet, table: ti}.Updateable()
+	ti.Update.WhereColumns = ColumnList{clause: clauseUpdateWhere, table: ti}.PrimaryKey()
 
 	return ti
 }
 
-// WithDialect sets the SQL dialect for this table.
+// WithDialect creates a clone of the table with a different dialect.
 func (ti *TableInfo) WithDialect(dialect Dialect) *TableInfo {
-	ti.dialect = dialect
-	return ti
+	ti2 := ti.clone()
+	ti2.alias = "" // clear out any alias
+	ti2.dialect = dialect
+	return ti2
+}
+
+// WithAlias creates a clone of the table with the specified alias.
+// Any SQL statements produced with this table will include the alias
+// name for all references of the table.
+// Note that alias should be a valid SQL identier, as it is not quoted
+// in any SQL statements produced.
+func (ti *TableInfo) WithAlias(alias string) *TableInfo {
+	ti2 := ti.clone()
+	ti2.alias = alias
+	return ti2
 }
 
 // Dialect returns the SQL dialect to use with this table.
@@ -192,23 +266,59 @@ func (ti *TableInfo) Dialect() Dialect {
 	return defaultDialect()
 }
 
-// SelectInfo contains information about a table that will
-// be formatted for a SELECT clause.
+// SelectInfo contains information about a table that can
+// be formatted for a SELECT statement or a select clause
+// in an INSERT statement.
 type SelectInfo struct {
-	TableName TableName
-	Columns   ColumnList
+	TableName   TableName
+	Columns     ColumnList
+	Placeholder Placeholder
 }
 
+// clone creates a copy associated with a new table.
+// That new table must have been cloned from the original.
+func (si SelectInfo) clone(ti *TableInfo) SelectInfo {
+	return SelectInfo{
+		TableName:   si.TableName.clone(ti),
+		Columns:     si.Columns.clone(ti),
+		Placeholder: si.Placeholder,
+	}
+}
+
+// UpdateInfo contains information about a table that
+// can be formatted for an UPDATE statement.
 type UpdateInfo struct {
 	TableName    TableName
 	SetColumns   ColumnList
 	WhereColumns ColumnList
 }
 
+// clone creates a copy associated with a new table.
+// That new table must have been cloned from the original.
+func (ui UpdateInfo) clone(ti *TableInfo) UpdateInfo {
+	return UpdateInfo{
+		TableName:    ui.TableName.clone(ti),
+		SetColumns:   ui.SetColumns.clone(ti),
+		WhereColumns: ui.WhereColumns.clone(ti),
+	}
+}
+
+// InsertInfo contains information about a table that
+// can be formatted in an INSERT statement.
 type InsertInfo struct {
 	TableName TableName
 	Columns   ColumnList
 	Values    ColumnList
+}
+
+// clone creates a copy associated with a new table.
+// That new table must have been cloned from the original.
+func (ii InsertInfo) clone(ti *TableInfo) InsertInfo {
+	return InsertInfo{
+		TableName: ii.TableName.clone(ti),
+		Columns:   ii.Columns.clone(ti),
+		Values:    ii.Values.clone(ti),
+	}
 }
 
 // ColumnInfo contains enough information about a database column
@@ -222,70 +332,97 @@ type columnInfo struct {
 	version       bool
 	fieldIndex    int
 
-	// varies with each command
-	columnAlias string
-	tableAlias  string
+	// modified on copies during SQL statement preparation
 	placeholder int
 }
 
-// Clause represents a specific SQL clause. Column lists
+// clone returns a copy of the columnInfo associated with a different
+// table. This method is used as part of cloning an entire TableInfo.
+func (ci *columnInfo) clone(ti *TableInfo) *columnInfo {
+	ci2 := &columnInfo{}
+	*ci2 = *ci
+	ci2.table = ti
+	return ci2
+}
+
+func (ci *columnInfo) hasTableAlias() bool {
+	return ci.table.alias != ""
+}
+
+func (ci *columnInfo) tableAlias() string {
+	return ci.table.alias
+}
+
+func (ci *columnInfo) hasColumnAlias() bool {
+	return ci.table.alias != ""
+}
+
+func (ci *columnInfo) columnAlias() string {
+	return ci.table.alias + "_" + ci.columnName
+}
+
+// sqlClause represents a specific SQL clause. Column lists
 // and table names are represented differently depending on
 // which SQL clause they appear in.
-type Clause int
+type sqlClause int
 
 // All of the different clauses of an SQL statement where columns
 // and table names can be found.
 const (
-	ClauseSelectColumns Clause = iota
-	ClauseSelectFrom
-	ClauseInsertInto
-	ClauseInsertColumns
-	ClauseInsertValues
-	ClauseUpdateTable
-	ClauseUpdateSet
-	ClauseUpdateWhere
+	clauseSelectColumns sqlClause = iota
+	clauseSelectFrom
+	clauseInsertInto
+	clauseInsertColumns
+	clauseInsertValues
+	clauseUpdateTable
+	clauseUpdateSet
+	// TODO: clauseUpdateFrom -- might just be clauseSelectFrom
+	clauseUpdateWhere
 )
 
-func (c Clause) isInput() bool {
-	return c == ClauseInsertValues ||
-		c == ClauseUpdateSet ||
-		c == ClauseUpdateWhere
+// isInput identifies whether the SQL clause contains placeholders
+// for variable input.
+func (c sqlClause) isInput() bool {
+	return c == clauseInsertValues ||
+		c == clauseUpdateSet ||
+		c == clauseUpdateWhere
 }
 
+// TableName represents the name of a table for formatting
+// in an SQL statement. The format will depend on where the
+// table appears in the SQL statement. For example, in a SELECT FROM
+// clause, the table may include an alias, but in an INSERT INTO statement
+// the table will not have an alias. (TODO: INSERT x INTO x ... FROM x, y, etc)
 type TableName struct {
 	table  *TableInfo
-	clause Clause
-
-	// varies with each command
-	alias string
+	clause sqlClause
 }
 
-func (tn TableName) clone() TableName {
-	return TableName{
-		table:  tn.table,
-		clause: tn.clause,
-		alias:  tn.alias,
-	}
+// clone makes a copy of the table name that is associated with
+// a new table. That new table must have been cloned from the original.
+func (tn TableName) clone(ti *TableInfo) TableName {
+	tn2 := tn
+	tn2.table = ti
+	return tn2
 }
 
-// Clause identifies the SQL clause that this table name applies to.
-func (tn TableName) Clause() Clause {
-	return tn.clause
-}
-
+// String prints the table name in the appropriate
+// form for the part of the SQL statement that this TableName
+// applies to. Because TableName implements the Stringer
+// interface, it can be formatted using "%s" in fmt.Sprintf.
 func (tn TableName) String() string {
 	dialect := tn.table.Dialect()
 	switch tn.clause {
-	case ClauseSelectFrom:
-		if tn.alias != "" {
+	case clauseSelectFrom:
+		if tn.table.alias != "" {
 			return fmt.Sprintf("%s as %s",
-				dialect.Quote(tn.table.TableName),
-				tn.alias,
+				dialect.Quote(tn.table.Name),
+				tn.table.alias,
 			)
 		}
-		return dialect.Quote(tn.table.TableName)
-	case ClauseInsertInto, ClauseUpdateTable:
-		return dialect.Quote(tn.table.TableName)
+		return dialect.Quote(tn.table.Name)
+	case clauseInsertInto, clauseUpdateTable:
+		return dialect.Quote(tn.table.Name)
 	}
 	panic(fmt.Sprintf("invalid clause for table name: %d", tn.clause))
 }
@@ -293,41 +430,33 @@ func (tn TableName) String() string {
 // ColumnList represents a list of columns associated
 // with a table for use in a specific SQL clause.
 type ColumnList struct {
-	list   []columnInfo
-	filter func(ci columnInfo) bool
-	clause Clause
+	table  *TableInfo
+	filter func(ci *columnInfo) bool
+	clause sqlClause
 }
 
-func (cil ColumnList) clone() ColumnList {
-	cil2 := ColumnList{
-		list:   make([]columnInfo, len(cil.list)),
+// clone makes a copy of the ColumnList that is associated
+// with a different TableInfo. That different TableInfo must
+// have been cloned from the original.
+func (cil ColumnList) clone(ti *TableInfo) ColumnList {
+	return ColumnList{
+		table:  ti,
 		filter: cil.filter,
 		clause: cil.clause,
 	}
-	copy(cil2.list, cil.list)
-	return cil2
 }
 
-func (cil *ColumnList) add(ci columnInfo) {
-	cil.list = append(cil.list, ci)
-}
-
-func (cil ColumnList) filtered() []columnInfo {
+func (cil ColumnList) filtered() []*columnInfo {
 	if cil.filter == nil {
-		return cil.list
+		return cil.table.columns
 	}
-	var list []columnInfo
-	for _, ci := range cil.list {
+	var list []*columnInfo
+	for _, ci := range cil.table.columns {
 		if cil.filter(ci) {
 			list = append(list, ci)
 		}
 	}
 	return list
-}
-
-// Clause returns the SQL clause that this column list applies to.
-func (cil ColumnList) Clause() Clause {
-	return cil.clause
 }
 
 // String prints the columns in the list in the appropriate
@@ -338,28 +467,28 @@ func (cil ColumnList) String() string {
 	var buf bytes.Buffer
 	for i, ci := range cil.filtered() {
 		if i > 0 {
-			if cil.clause == ClauseUpdateWhere {
+			if cil.clause == clauseUpdateWhere {
 				buf.WriteString(" and ")
 			} else {
 				buf.WriteRune(',')
 			}
 		}
 		switch cil.clause {
-		case ClauseSelectColumns:
-			if ci.tableAlias != "" {
-				buf.WriteString(ci.tableAlias)
+		case clauseSelectColumns:
+			if ci.hasTableAlias() {
+				buf.WriteString(ci.tableAlias())
 				buf.WriteRune('.')
 			}
 			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
-			if ci.columnAlias != "" {
+			if ci.hasColumnAlias() {
 				buf.WriteString(" as ")
-				buf.WriteString(ci.columnAlias)
+				buf.WriteString(ci.columnAlias())
 			}
-		case ClauseInsertColumns:
+		case clauseInsertColumns:
 			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
-		case ClauseInsertValues:
+		case clauseInsertValues:
 			buf.WriteString(ci.table.Dialect().Placeholder(ci.placeholder))
-		case ClauseUpdateSet, ClauseUpdateWhere:
+		case clauseUpdateSet, clauseUpdateWhere:
 			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
 			buf.WriteRune('=')
 			buf.WriteString(ci.table.Dialect().Placeholder(ci.placeholder))
@@ -370,15 +499,15 @@ func (cil ColumnList) String() string {
 
 // All returns a list of all of the columns in the associated table.
 func (cil ColumnList) All() ColumnList {
-	return ColumnList{clause: cil.clause, list: cil.list}
+	return ColumnList{clause: cil.clause, table: cil.table}
 }
 
-// Filter returns a column list of all columns in the
+// apply returns a column list of all columns in the
 // table for which the filter function f returns true.
-func (cil ColumnList) Filter(f func(ci columnInfo) bool) ColumnList {
+func (cil ColumnList) applyFilter(f func(ci *columnInfo) bool) ColumnList {
 	return ColumnList{
 		clause: cil.clause,
-		list:   cil.list,
+		table:  cil.table,
 		filter: f,
 	}
 }
@@ -386,7 +515,7 @@ func (cil ColumnList) Filter(f func(ci columnInfo) bool) ColumnList {
 // PrimaryKey returns a column list of all primary key columns in the
 // associated table.
 func (cil ColumnList) PrimaryKey() ColumnList {
-	return cil.Filter(func(ci columnInfo) bool {
+	return cil.applyFilter(func(ci *columnInfo) bool {
 		return ci.primaryKey
 	})
 }
@@ -395,7 +524,7 @@ func (cil ColumnList) PrimaryKey() ColumnList {
 // table that can be inserted. This list includes all columns except
 // an auto-increment column, if the table has one.
 func (cil ColumnList) Insertable() ColumnList {
-	return cil.Filter(func(ci columnInfo) bool {
+	return cil.applyFilter(func(ci *columnInfo) bool {
 		return !ci.autoIncrement
 	})
 }
@@ -404,7 +533,7 @@ func (cil ColumnList) Insertable() ColumnList {
 // updated in the associated table. This list excludes any
 // primary key columns and any auto-increment column.
 func (cil ColumnList) Updateable() ColumnList {
-	return cil.Filter(func(ci columnInfo) bool {
+	return cil.applyFilter(func(ci *columnInfo) bool {
 		return !ci.primaryKey && !ci.autoIncrement
 	})
 }
@@ -414,7 +543,7 @@ func (cil ColumnList) Updateable() ColumnList {
 // of the Go struct field. This function will, however, match
 // the name of the DB table column as well.
 func (cil ColumnList) Include(names ...string) ColumnList {
-	return cil.Filter(func(ci columnInfo) bool {
+	return cil.applyFilter(func(ci *columnInfo) bool {
 		for _, name := range names {
 			if name == ci.fieldName || name == ci.columnName {
 				return true
@@ -424,6 +553,12 @@ func (cil ColumnList) Include(names ...string) ColumnList {
 	})
 }
 
+// Placeholder represents a placeholder in an SQL query that
+// represents a variable that will be bound to the query at
+// execution time. Different SQL dialects have varied formats
+// for placeholders, but most will accept a single question mark
+// ("?"). PostgreSQL is a notable exception as it requires a numberd
+// placeholde (eg "$1").
 type Placeholder struct {
 	table    *TableInfo
 	position int
