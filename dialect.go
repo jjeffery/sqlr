@@ -2,6 +2,7 @@ package sqlf
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 )
 
@@ -12,12 +13,12 @@ type Dialect interface {
 	// not clash with any reserved words. The SQL-99 standard
 	// specifies double quotes (eg "table_name"), but many
 	// dialects, including MySQL use the backtick (eg `table_name`).
-	// SQL serer uses square brackets (eg [table_name]).
+	// SQL server uses square brackets (eg [table_name]).
 	Quote(name string) string
 
 	// Return the placeholder for binding a variable value.
-	// Most SQL dialects support a single question mark ("?"), but
-	// PostgreSQL uses numbered placeholders (eg "$1").
+	// Most SQL dialects support a single question mark (?), but
+	// PostgreSQL uses numbered placeholders (eg $1).
 	Placeholder(n int) string
 }
 
@@ -55,11 +56,18 @@ var (
 	DefaultDialect Dialect // Default dialect (MySQL, can be changed)
 	DialectMySQL   Dialect // MySQL dialect
 	DialectMSSQL   Dialect // Microsoft SQL Server dialect
+	DialectPG      Dialect // PostgreSQL
 )
 
 func init() {
 	DialectMySQL = dialect{quoteFunc: quoteFunc("`", "`")}
 	DialectMSSQL = dialect{quoteFunc: quoteFunc("[", "]")}
+	DialectPG = dialect{
+		quoteFunc: quoteFunc("\"", "\""),
+		placeholderFunc: func(n int) string {
+			return fmt.Sprintf("$%d", n)
+		},
+	}
 }
 
 func defaultDialect() Dialect {

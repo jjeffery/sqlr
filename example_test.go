@@ -32,15 +32,10 @@ func init() {
 	insert := Row1Table.Insert
 	cmd := sqlf.Insertf("insert into %s(%s) values(%s)", insert.TableName, insert.Columns, insert.Values)
 	insertRow1 = func(db sqlf.Execer, row1 *Row1) error {
-		result, err := cmd.Exec(db, row1)
+		err := cmd.Exec(db, row1)
 		if err != nil {
 			return err
 		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		row1.Id = id
 		return nil
 	}
 }
@@ -64,6 +59,8 @@ func TestExample(t *testing.T) {
 	//row2 := Row2Table
 	assert.Equal("`id`,`given_name`,`family_name`,`Date_of_Birth`", row1.Select.Columns.String())
 	assert.Equal("`given_name`=?,`family_name`=?,`Date_of_Birth`=?", row1.Update.SetColumns.String())
+	assert.Equal("\"given_name\"=$0,\"family_name\"=$0,\"Date_of_Birth\"=$0", row1.WithDialect(sqlf.DialectPG).Update.SetColumns.String())
+	assert.Equal("[given_name]=?,[family_name]=?,[Date_of_Birth]=?", row1.WithDialect(sqlf.DialectMSSQL).Update.SetColumns.String())
 	assert.Equal("`id`=?", row1.Update.WhereColumns.String())
 	assert.Equal("`given_name`,`family_name`,`Date_of_Birth`", row1.Insert.Columns.String())
 	assert.Equal("?,?,?", row1.Insert.Values.Insertable().String())
@@ -81,6 +78,11 @@ func TestExample(t *testing.T) {
 	assert.Equal("John", insertArgs[0])
 	assert.Equal("Smith", insertArgs[1])
 	assert.Equal(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), insertArgs[2])
+
+	tblpg := row1.WithDialect(sqlf.DialectPG)
+	insertCmd = sqlf.Insertf("insert into %s(%s) values (%s)", tblpg.Insert.TableName, tblpg.Insert.Columns, tblpg.Insert.Values)
+	assert.NotNil(insertCmd)
+	assert.Equal(`insert into "table1"("given_name","family_name","Date_of_Birth") values ($1,$2,$3)`, insertCmd.Command())
 
 	updateCmd := sqlf.Updatef("update %s set %s where %s", row1.Update.TableName, row1.Update.SetColumns, row1.Update.WhereColumns)
 	assert.NotNil(updateCmd)

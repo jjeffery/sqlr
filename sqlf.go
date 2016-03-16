@@ -7,130 +7,10 @@ package sqlf
 
 import (
 	"bytes"
-	"database/sql"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 )
-
-// execCommand handles inserting or updating a single table at a time.
-// A future implementation might be able to handle updates involving
-// multiple tables, but keeping it simple for now.
-type execCommand struct {
-	command     string
-	table       *TableInfo
-	inputs      []*columnInfo
-	tableClones map[*TableInfo]*TableInfo
-}
-
-func (cmd *execCommand) tableClone(ti *TableInfo) *TableInfo {
-	ti2, ok := cmd.tableClones[ti]
-	if !ok {
-		if cmd.tableClones == nil {
-			cmd.tableClones = make(map[*TableInfo]*TableInfo)
-		}
-		ti2 = ti.clone()
-		cmd.tableClones[ti] = ti2
-	}
-	return ti2
-}
-
-func (cmd *execCommand) tableNameClone(tn TableName) TableName {
-	return tn.clone(cmd.tableClone(tn.table))
-}
-
-func (cmd *execCommand) columnListClone(cl ColumnList) ColumnList {
-	return cl.clone(cmd.tableClone(cl.table))
-}
-
-func (cmd execCommand) Command() string {
-	return cmd.command
-}
-
-func (cmd execCommand) Args(row interface{}) ([]interface{}, error) {
-	if cmd.table == nil {
-		return nil, errors.New("table not specified")
-	}
-	var args []interface{}
-
-	rowVal := reflect.ValueOf(row)
-	for rowVal.Type().Kind() == reflect.Ptr {
-		rowVal = rowVal.Elem()
-	}
-	if rowVal.Type() != cmd.table.rowType {
-		return nil, fmt.Errorf("Args: expected type %s.%s or pointer", cmd.table.rowType.PkgPath(), cmd.table.rowType.Name())
-	}
-
-	for _, ci := range cmd.inputs {
-		args = append(args, rowVal.Field(ci.fieldIndex).Interface())
-	}
-
-	return args, nil
-}
-
-func (cmd execCommand) Exec(db Execer, row interface{}) (sql.Result, error) {
-	return nil, nil
-}
-
-func Insertf(format string, args ...interface{}) ExecCommand {
-	cmd := execCommand{}
-
-	// clone of args that we can modify
-	var args2 []interface{}
-
-	for _, arg := range args {
-		if tn, ok := arg.(TableName); ok {
-			if tn.clause == clauseInsertInto {
-				cmd.table = cmd.tableClone(tn.table)
-			}
-			args2 = append(args2, cmd.tableNameClone(tn))
-		}
-		if cil, ok := arg.(ColumnList); ok {
-			cil2 := cmd.columnListClone(cil)
-			args2 = append(args2, cil2)
-			if cil2.clause.isInput() {
-				// input parameters for the INSERT statement
-				cmd.inputs = append(cmd.inputs, cil2.filtered()...)
-			}
-		}
-	}
-
-	// now that we have a copy of the arguments that we can copy,
-	// replace the original to avoid accidentally modifying
-	args = args2
-
-	// apply placeholders to each of the input parameters
-	for i, ci := range cmd.inputs {
-		ci.placeholder = i + 1
-	}
-
-	// generate the SQL statement
-	cmd.command = fmt.Sprintf(format, args...)
-
-	return cmd
-}
-
-func Updatef(format string, args ...interface{}) ExecCommand {
-	cmd := execCommand{
-		command: fmt.Sprintf(format, args...),
-	}
-
-	for _, arg := range args {
-		if tn, ok := arg.(TableName); ok {
-			if tn.clause == clauseUpdateTable {
-				cmd.table = tn.table
-			}
-		}
-		if cil, ok := arg.(ColumnList); ok {
-			if cil.clause.isInput() {
-				// input parameters for the INSERT statement
-				cmd.inputs = append(cmd.inputs, cil.filtered()...)
-			}
-		}
-	}
-	return cmd
-}
 
 func Selectf(format string, args ...interface{}) QueryCommand {
 	// TODO: not implemented
@@ -429,6 +309,14 @@ func (tn TableName) String() string {
 
 // ColumnList represents a list of columns associated
 // with a table for use in a specific SQL clause.
+//
+// Each ColumnList represents a subset of the columns in the
+// table. For example a column list for the WHERE clause in
+// a row update statement will only contain the columns for
+// the primary key. However any ColumnList can return a different
+// subset of the columns in the table. For example calling the All
+// method on any ColumnList will return a ColumnList with all of the
+// columns in the table.
 type ColumnList struct {
 	table  *TableInfo
 	filter func(ci *columnInfo) bool
@@ -459,9 +347,46 @@ func (cil ColumnList) filtered() []*columnInfo {
 	return list
 }
 
+// All returns a column list of all of the columns in the associated table.
+func (cil ColumnList) All() ColumnList {
+	return ColumnList{clause: cil.clause, table: cil.table}
+}
+
+// Include returns a column list of all columns corresponding
+// to the list of names. When specifying columns, use the
+// name of field in the Go struct, not the column name in the
+// database table.
+func (cil ColumnList) Include(names ...string) ColumnList {
+	return cil.applyFilter(func(ci *columnInfo) bool {
+		for _, name := range names {
+			if name == ci.fieldName {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// Insertable returns a column list of all columns in the associated
+// table that can be inserted. This list includes all columns except
+// an auto-increment column, if the table has one.
+func (cil ColumnList) Insertable() ColumnList {
+	return cil.applyFilter(func(ci *columnInfo) bool {
+		return !ci.autoIncrement
+	})
+}
+
+// PrimaryKey returns a column list containing all primary key columns in the
+// associated table.
+func (cil ColumnList) PrimaryKey() ColumnList {
+	return cil.applyFilter(func(ci *columnInfo) bool {
+		return ci.primaryKey
+	})
+}
+
 // String prints the columns in the list in the appropriate
 // form for the part of the SQL statement that this column
-// list applies to. Because ColumnList implements the Stringer
+// list applies to. Because ColumnList implements the fmt.Stringer
 // interface, it can be formatted using "%s" in fmt.Sprintf.
 func (cil ColumnList) String() string {
 	var buf bytes.Buffer
@@ -497,9 +422,13 @@ func (cil ColumnList) String() string {
 	return buf.String()
 }
 
-// All returns a list of all of the columns in the associated table.
-func (cil ColumnList) All() ColumnList {
-	return ColumnList{clause: cil.clause, table: cil.table}
+// Updateable returns a column list of all columns that can be
+// updated in the associated table. This list excludes any
+// primary key columns and any auto-increment column.
+func (cil ColumnList) Updateable() ColumnList {
+	return cil.applyFilter(func(ci *columnInfo) bool {
+		return !ci.primaryKey && !ci.autoIncrement
+	})
 }
 
 // apply returns a column list of all columns in the
@@ -510,47 +439,6 @@ func (cil ColumnList) applyFilter(f func(ci *columnInfo) bool) ColumnList {
 		table:  cil.table,
 		filter: f,
 	}
-}
-
-// PrimaryKey returns a column list of all primary key columns in the
-// associated table.
-func (cil ColumnList) PrimaryKey() ColumnList {
-	return cil.applyFilter(func(ci *columnInfo) bool {
-		return ci.primaryKey
-	})
-}
-
-// Insertable returns a column list of all columns in the associated
-// table that can be inserted. This list includes all columns except
-// an auto-increment column, if the table has one.
-func (cil ColumnList) Insertable() ColumnList {
-	return cil.applyFilter(func(ci *columnInfo) bool {
-		return !ci.autoIncrement
-	})
-}
-
-// Updateable returns a column list of all columns that can be
-// updated in the associated table. This list excludes any
-// primary key columns and any auto-increment column.
-func (cil ColumnList) Updateable() ColumnList {
-	return cil.applyFilter(func(ci *columnInfo) bool {
-		return !ci.primaryKey && !ci.autoIncrement
-	})
-}
-
-// Include returns a column list of all columns whose name
-// is in the list of names. For consistency, use the name
-// of the Go struct field. This function will, however, match
-// the name of the DB table column as well.
-func (cil ColumnList) Include(names ...string) ColumnList {
-	return cil.applyFilter(func(ci *columnInfo) bool {
-		for _, name := range names {
-			if name == ci.fieldName || name == ci.columnName {
-				return true
-			}
-		}
-		return false
-	})
 }
 
 // Placeholder represents a placeholder in an SQL query that
@@ -566,37 +454,4 @@ type Placeholder struct {
 
 func (p Placeholder) String() string {
 	return p.table.Dialect().Placeholder(p.position)
-}
-
-// Execer is an interface for the Exec method. This interface
-// is implemented by the *sql.DB and *sql.Tx types in the
-// standard library database/sql package.
-type Execer interface {
-	Exec(command string, args ...interface{}) (sql.Result, error)
-}
-
-// ExecCommand is the return value when creating an SQL command
-// that does not return rows (ie INSERT, UPDATE, DELETE). It contains
-// all the information required to execute the command against the database.
-type ExecCommand interface {
-	Command() string
-	Args(row interface{}) ([]interface{}, error)
-	Exec(db Execer, row interface{}) (sql.Result, error)
-}
-
-// Queryer is an interface for the Query method. This interface
-// is implemented by the *sql.DB and *sql.Tx types in the standard
-// library database/sql package.
-type Queryer interface {
-	Query(command string, args ...interface{}) (*sql.Rows, error)
-}
-
-// QueryCommand is the return value when creating an SQL command
-// that return rows (ie SELECT). It contains all the information
-// required to execute the command against the database.
-type QueryCommand interface {
-	Command() string
-	Args(args ...interface{}) ([]interface{}, error)
-	Query(db Queryer, args ...interface{}) (*sql.Rows, error)
-	Scan(rows *sql.Rows, dest ...interface{}) error
 }
