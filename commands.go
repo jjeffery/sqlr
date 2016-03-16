@@ -208,7 +208,11 @@ func (cmd insertRowCommand) Exec(db Execer, row interface{}) error {
 	return nil
 }
 
-func Insertf(format string, args ...interface{}) InsertRowCommand {
+// InsertRowf builds up a command for inserting a single row in the database
+// using a familiar "printf" style syntax.
+//
+// TODO: need an example
+func InsertRowf(format string, args ...interface{}) InsertRowCommand {
 	// take a clone of the args so that we can modify them
 	args = cloneArgs(args)
 	cmd := insertRowCommand{}
@@ -255,7 +259,11 @@ func (cmd updateRowCommand) Exec(db Execer, row interface{}) (rowsUpdated int, e
 	return int(n), nil
 }
 
-func Updatef(format string, args ...interface{}) UpdateRowCommand {
+// UpdateRowf builds a command to update a single row in the database
+// using a familiar "printf"-style syntax.
+//
+// TODO: example needed.
+func UpdateRowf(format string, args ...interface{}) UpdateRowCommand {
 	// take a clone of the args so that we can modify them
 	args = cloneArgs(args)
 	cmd := updateRowCommand{}

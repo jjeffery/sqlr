@@ -30,7 +30,7 @@ var updateRow1 func(db sqlf.Execer, row1 *Row1) error
 func init() {
 	sqlf.DefaultDialect = sqlf.DialectMySQL
 	insert := Row1Table.Insert
-	cmd := sqlf.Insertf("insert into %s(%s) values(%s)", insert.TableName, insert.Columns, insert.Values)
+	cmd := sqlf.InsertRowf("insert into %s(%s) values(%s)", insert.TableName, insert.Columns, insert.Values)
 	insertRow1 = func(db sqlf.Execer, row1 *Row1) error {
 		err := cmd.Exec(db, row1)
 		if err != nil {
@@ -41,7 +41,7 @@ func init() {
 }
 func init() {
 	update := Row1Table.Update
-	cmd := sqlf.Updatef("update %s set %s where %s", update.TableName, update.SetColumns.Updateable(), update.WhereColumns.PrimaryKey())
+	cmd := sqlf.UpdateRowf("update %s set %s where %s", update.TableName, update.SetColumns.Updateable(), update.WhereColumns.PrimaryKey())
 	updateRow1 = func(db sqlf.Execer, row1 *Row1) error {
 		_, err := cmd.Exec(db, row1)
 		if err != nil {
@@ -65,7 +65,7 @@ func TestExample(t *testing.T) {
 	assert.Equal("`given_name`,`family_name`,`Date_of_Birth`", row1.Insert.Columns.String())
 	assert.Equal("?,?,?", row1.Insert.Values.Insertable().String())
 
-	insertCmd := sqlf.Insertf("insert into %s(%s) values (%s)", row1.Insert.TableName, row1.Insert.Columns, row1.Insert.Values)
+	insertCmd := sqlf.InsertRowf("insert into %s(%s) values (%s)", row1.Insert.TableName, row1.Insert.Columns, row1.Insert.Values)
 	assert.NotNil(insertCmd)
 	assert.Equal("insert into `table1`(`given_name`,`family_name`,`Date_of_Birth`) values (?,?,?)", insertCmd.Command())
 	insertArgs, err := insertCmd.Args(Row1{
@@ -80,11 +80,11 @@ func TestExample(t *testing.T) {
 	assert.Equal(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), insertArgs[2])
 
 	tblpg := row1.WithDialect(sqlf.DialectPG)
-	insertCmd = sqlf.Insertf("insert into %s(%s) values (%s)", tblpg.Insert.TableName, tblpg.Insert.Columns, tblpg.Insert.Values)
+	insertCmd = sqlf.InsertRowf("insert into %s(%s) values (%s)", tblpg.Insert.TableName, tblpg.Insert.Columns, tblpg.Insert.Values)
 	assert.NotNil(insertCmd)
 	assert.Equal(`insert into "table1"("given_name","family_name","Date_of_Birth") values ($1,$2,$3)`, insertCmd.Command())
 
-	updateCmd := sqlf.Updatef("update %s set %s where %s", row1.Update.TableName, row1.Update.SetColumns, row1.Update.WhereColumns)
+	updateCmd := sqlf.UpdateRowf("update %s set %s where %s", row1.Update.TableName, row1.Update.SetColumns, row1.Update.WhereColumns)
 	assert.NotNil(updateCmd)
 	assert.Equal("update `table1` set `given_name`=?,`family_name`=?,`Date_of_Birth`=? where `id`=?", updateCmd.Command())
 	updateArgs, err := updateCmd.Args(Row1{

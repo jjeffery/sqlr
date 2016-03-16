@@ -186,9 +186,16 @@ func (ui UpdateInfo) clone(ti *TableInfo) UpdateInfo {
 // InsertInfo contains information about a table that
 // can be formatted in an INSERT statement.
 type InsertInfo struct {
+	// Table name for use in INSERT INTO clause.
 	TableName TableName
-	Columns   ColumnList
-	Values    ColumnList
+
+	// Columns that should appear in the parentheses
+	// after  INSERT INTO table(...). By default these
+	// are all columns except for any auto-increment columns.
+	Columns ColumnList
+
+	// Placeholders that match the Columns list.
+	Values ColumnList
 }
 
 // clone creates a copy associated with a new table.

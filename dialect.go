@@ -51,9 +51,14 @@ func (d dialect) Placeholder(n int) string {
 	return d.placeholderFunc(n)
 }
 
-// SQL Dialects
+// SQL Dialects. The DefaultDialect value can be set and will be assumed
+// for all subsequent tables. If not set explicitly, then the default
+// dialect is obtained by looking at the first driver in the list of
+// SQL drivers. For programs where only one database driver is loaded,
+// this is a pretty good guess. If multiple drivers are loaded, then
+// the program should set DefaultDialect explicitly.
 var (
-	DefaultDialect Dialect // Default dialect (MySQL, can be changed)
+	DefaultDialect Dialect // Default dialect
 	DialectMySQL   Dialect // MySQL dialect
 	DialectMSSQL   Dialect // Microsoft SQL Server dialect
 	DialectPG      Dialect // PostgreSQL
