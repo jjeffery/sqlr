@@ -7,9 +7,11 @@ package sqlf
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 func Selectf(format string, args ...interface{}) QueryCommand {
@@ -73,28 +75,100 @@ func Table(name string, row interface{}) *TableInfo {
 		panic("sqlf.Table: expected struct or pointer to struct")
 	}
 
-	for i := 0; i < ti.rowType.NumField(); i++ {
-		field := ti.rowType.Field(i)
+	ti.addColumns(ti.rowType, nil, nil)
+	ti.Select.TableName = TableName{clause: clauseSelectColumns, table: ti}
+	ti.Select.Columns = ColumnList{clause: clauseSelectColumns, table: ti}.All()
+	ti.Insert.TableName = TableName{clause: clauseInsertInto, table: ti}
+	ti.Insert.Columns = ColumnList{clause: clauseInsertColumns, table: ti}.Insertable()
+	ti.Insert.Values = ColumnList{clause: clauseInsertValues, table: ti}.Insertable()
+	ti.Update.TableName = TableName{clause: clauseUpdateTable, table: ti}
+	ti.Update.SetColumns = ColumnList{clause: clauseUpdateSet, table: ti}.Updateable()
+	ti.Update.WhereColumns = ColumnList{clause: clauseUpdateWhere, table: ti}.PrimaryKey()
+
+	return ti
+}
+
+var sqlScanType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+var timeType = reflect.TypeOf(time.Time{})
+
+// addColumns iterates through a structure type and adds columns to the
+// table for the fields in that type. The function works recursively to
+// add columns for fields of embedded structures, including any anonymous
+// fields.
+func (ti *TableInfo) addColumns(rowType reflect.Type, fields []int, prefixes []string) {
+	for i := 0; i < rowType.NumField(); i++ {
+		field := rowType.Field(i)
+		newTraversal := func(a []int, b int) []int {
+			// take a full copy so that we do not use the original slice
+			c := make([]int, len(a)+1)
+			n := copy(c, a)
+			c[n] = b
+			return c
+		}
+
+		tagSettings := parseTagSetting(field.Tag)
 
 		// For compatibility, use Gorm's tag formats, as they have
 		// all the information we need. This means you can interop
 		// using Gorm with this package if you like.
-		if field.Tag.Get("sql") == "-" {
+		if _, ok := tagSettings["-"]; ok {
 			// ignore field
 			continue
 		}
-		tagSettings := parseTagSetting(field.Tag)
-
-		ci := &columnInfo{
-			table:      ti,
-			fieldName:  field.Name,
-			fieldIndex: i,
+		if len(field.PkgPath) != 0 && !field.Anonymous {
+			// ignore unexported field
+			continue
 		}
 
-		if value, ok := tagSettings["COLUMN"]; ok {
-			ci.columnName = value
+		fieldType := field.Type
+		if fieldType.Kind() == reflect.Struct {
+			if field.Anonymous {
+				// Any anonymouse structure is automatically added.
+				ti.addColumns(fieldType, newTraversal(fields, i), prefixes)
+				continue
+			}
+
+			// An embedded structure will not be mapped if it meets
+			// any of the following criteria:
+			// * it is time.Time (special case)
+			// * it implements sql.Scan (unlikely)
+			// * its pointer type implements sql.Scan (more likely)
+			if fieldType != timeType &&
+				!fieldType.Implements(sqlScanType) &&
+				!reflect.PtrTo(fieldType).Implements(sqlScanType) {
+				var prefix string
+				if value, ok := tagSettings["PREFIX"]; ok {
+					prefix = value
+				} else if value, ok := tagSettings["COLUMN"]; ok {
+					prefix = value
+				} else {
+					prefix = ToDBName(field.Name)
+				}
+				prefix = strings.TrimSpace(prefix)
+				newPrefixes := prefixes
+				if prefix != "" {
+					newPrefixes = append(prefixes, prefix)
+				}
+
+				ti.addColumns(fieldType, newTraversal(fields, i), newPrefixes)
+				continue
+			}
+		}
+
+		ci := &columnInfo{
+			table:     ti,
+			fieldName: field.Name,
+			fields:    newTraversal(fields, i),
+		}
+
+		if value, ok := tagSettings["COLUMN"]; ok && value != "" {
+			if value[0] == '*' {
+				ci.columnName = addPrefix(prefixes, value[1:])
+			} else {
+				ci.columnName = value
+			}
 		} else {
-			ci.columnName = ToDBName(ci.fieldName)
+			ci.columnName = addPrefix(prefixes, ToDBName(ci.fieldName))
 		}
 		if _, ok := tagSettings["PRIMARY_KEY"]; ok {
 			ci.primaryKey = true
@@ -106,17 +180,6 @@ func Table(name string, row interface{}) *TableInfo {
 		}
 		ti.columns = append(ti.columns, ci)
 	}
-
-	ti.Select.TableName = TableName{clause: clauseSelectColumns, table: ti}
-	ti.Select.Columns = ColumnList{clause: clauseSelectColumns, table: ti}.All()
-	ti.Insert.TableName = TableName{clause: clauseInsertInto, table: ti}
-	ti.Insert.Columns = ColumnList{clause: clauseInsertColumns, table: ti}.Insertable()
-	ti.Insert.Values = ColumnList{clause: clauseInsertValues, table: ti}.Insertable()
-	ti.Update.TableName = TableName{clause: clauseUpdateTable, table: ti}
-	ti.Update.SetColumns = ColumnList{clause: clauseUpdateSet, table: ti}.Updateable()
-	ti.Update.WhereColumns = ColumnList{clause: clauseUpdateWhere, table: ti}.PrimaryKey()
-
-	return ti
 }
 
 // WithDialect creates a clone of the table with a different dialect.
@@ -217,7 +280,7 @@ type columnInfo struct {
 	primaryKey    bool
 	autoIncrement bool
 	version       bool
-	fieldIndex    int
+	fields        []int
 
 	// modified on copies during SQL statement preparation
 	placeholder int

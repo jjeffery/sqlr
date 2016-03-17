@@ -97,3 +97,10 @@ func ToDBName(name string) string {
 	smap.Set(name, s)
 	return s
 }
+
+func addPrefix(prefixes []string, name string) string {
+	if len(prefixes) == 0 {
+		return name
+	}
+	return strings.Join(prefixes, "_") + "_" + name
+}

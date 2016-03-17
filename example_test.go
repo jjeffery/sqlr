@@ -1,6 +1,7 @@
 package sqlf_test
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -49,6 +50,35 @@ func init() {
 		}
 		return nil
 	}
+}
+
+type T2 struct {
+	T1
+	Name          string
+	Address       T3
+	PreferredName sql.NullString
+}
+
+type T1 struct {
+	ID        int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
+type T3 struct {
+	Line1    string
+	Line2    string
+	Locality string `sql:"column:*suburb"`
+	City     string
+	Country  string
+	Postcode string
+}
+
+func TestReflect(t *testing.T) {
+	assert := assert.New(t)
+	tbl := sqlf.Table("t", T2{})
+	assert.Equal("`id`,`created_at`,`updated_at`,`deleted_at`,`name`,`address_line1`,`address_line2`,`address_suburb`,`address_city`,`address_country`,`address_postcode`,`preferred_name`", tbl.Select.Columns.String())
 }
 
 // This test is just for experimenting with the API. Will produce some

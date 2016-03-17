@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/jmoiron/sqlx/reflectx"
 )
 
 // InsertRowCommand contains all the information required to insert
@@ -147,7 +149,7 @@ func (cmd execRowCommand) Args(row interface{}) ([]interface{}, error) {
 	}
 
 	for _, ci := range cmd.inputs {
-		args = append(args, rowVal.Field(ci.fieldIndex).Interface())
+		args = append(args, reflectx.FieldByIndexesReadOnly(rowVal, ci.fields).Interface())
 	}
 
 	return args, nil
@@ -198,7 +200,7 @@ func (cmd insertRowCommand) Exec(db Execer, row interface{}) error {
 		if err != nil {
 			return err
 		}
-		field := rowVal.Field(autoInc.fieldIndex)
+		field := reflectx.FieldByIndexes(rowVal, autoInc.fields)
 		if !field.CanSet() {
 			return fmt.Errorf("Cannot set auto-increment value for type %s", rowVal.Type().Name())
 		}
