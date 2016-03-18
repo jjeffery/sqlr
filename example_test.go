@@ -30,7 +30,6 @@ var insertRow1 func(db sqlx.Execer, row1 *Row1) error
 var updateRow1 func(db sqlx.Execer, row1 *Row1) error
 
 func init() {
-	sqlf.DefaultDialect = sqlf.DialectMySQL
 	insert := Row1Table.Insert
 	cmd := sqlf.InsertRowf("insert into %s(%s) values(%s)", insert.TableName, insert.Columns, insert.Values)
 	insertRow1 = func(db sqlx.Execer, row1 *Row1) error {

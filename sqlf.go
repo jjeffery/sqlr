@@ -21,6 +21,7 @@ type TableInfo struct {
 	Select SelectInfo
 	Insert InsertInfo
 	Update UpdateInfo
+	Delete DeleteInfo
 
 	rowType reflect.Type
 	columns []*columnInfo
@@ -46,6 +47,7 @@ func (ti *TableInfo) clone() *TableInfo {
 	ti2.Select = ti.Select.clone(ti2)
 	ti2.Insert = ti.Insert.clone(ti2)
 	ti2.Update = ti.Update.clone(ti2)
+	ti2.Delete = ti.Delete.clone(ti2)
 
 	return ti2
 }
@@ -80,6 +82,8 @@ func Table(name string, row interface{}) *TableInfo {
 	ti.Update.TableName = TableName{clause: clauseUpdateTable, table: ti}
 	ti.Update.SetColumns = ColumnList{clause: clauseUpdateSet, table: ti}.Updateable()
 	ti.Update.WhereColumns = ColumnList{clause: clauseUpdateWhere, table: ti}.PrimaryKey()
+	ti.Delete.TableName = TableName{clause: clauseDeleteTable, table: ti}
+	ti.Delete.WhereColumns = ColumnList{clause: clauseDeleteWhere, table: ti}.PrimaryKey()
 
 	return ti
 }
@@ -209,20 +213,24 @@ func (ti *TableInfo) Dialect() Dialect {
 // be formatted for a SELECT statement or a select clause
 // in an INSERT statement.
 type SelectInfo struct {
-	TableName   TableName
-	Columns     ColumnList
-	OrderBy     ColumnList
-	Placeholder Placeholder
+	TableName TableName
+	Columns   ColumnList
+	OrderBy   ColumnList
 }
 
 // clone creates a copy associated with a new table.
 // That new table must have been cloned from the original.
 func (si SelectInfo) clone(ti *TableInfo) SelectInfo {
 	return SelectInfo{
-		TableName:   si.TableName.clone(ti),
-		Columns:     si.Columns.clone(ti),
-		Placeholder: si.Placeholder,
+		TableName: si.TableName.clone(ti),
+		Columns:   si.Columns.clone(ti),
+		OrderBy:   si.OrderBy.clone(ti),
 	}
+}
+
+// Placeholder returns a placeholder for the SELECT statement.
+func (si SelectInfo) Placeholder() *Placeholder {
+	return &Placeholder{table: si.TableName.table}
 }
 
 // UpdateInfo contains information about a table that
@@ -241,6 +249,11 @@ func (ui UpdateInfo) clone(ti *TableInfo) UpdateInfo {
 		SetColumns:   ui.SetColumns.clone(ti),
 		WhereColumns: ui.WhereColumns.clone(ti),
 	}
+}
+
+// Placeholder returns a placeholder for the UPDATE statement.
+func (ui UpdateInfo) Placeholder() *Placeholder {
+	return &Placeholder{table: ui.TableName.table}
 }
 
 // InsertInfo contains information about a table that
@@ -268,6 +281,32 @@ func (ii InsertInfo) clone(ti *TableInfo) InsertInfo {
 	}
 }
 
+// Placeholder returns a placeholder for the INSERT statement.
+func (ii InsertInfo) Placeholder() *Placeholder {
+	return &Placeholder{table: ii.TableName.table}
+}
+
+// DeleteInfo contains information about a table that
+// can be formatted for a DELETE statement.
+type DeleteInfo struct {
+	TableName    TableName
+	WhereColumns ColumnList
+}
+
+// clone creates a copy associated with a new table.
+// That new table must have been cloned from the original.
+func (di DeleteInfo) clone(ti *TableInfo) DeleteInfo {
+	return DeleteInfo{
+		TableName:    di.TableName.clone(ti),
+		WhereColumns: di.WhereColumns.clone(ti),
+	}
+}
+
+// Placeholder returns a placeholder for the DELETE statement.
+func (di DeleteInfo) Placeholder() *Placeholder {
+	return &Placeholder{table: di.TableName.table}
+}
+
 // ColumnInfo contains enough information about a database column
 // to assist with generating SQL strings.
 type columnInfo struct {
@@ -280,7 +319,7 @@ type columnInfo struct {
 	fields        []int
 
 	// modified on copies during SQL statement preparation
-	placeholder int
+	inputPosition int
 }
 
 // clone returns a copy of the columnInfo associated with a different
@@ -308,6 +347,10 @@ func (ci *columnInfo) columnAlias() string {
 	return ci.table.alias + "_" + ci.columnName
 }
 
+func (ci *columnInfo) setPosition(n int) {
+	ci.inputPosition = n
+}
+
 // sqlClause represents a specific SQL clause. Column lists
 // and table names are represented differently depending on
 // which SQL clause they appear in.
@@ -326,6 +369,8 @@ const (
 	clauseUpdateSet
 	// TODO: clauseUpdateFrom -- might just be clauseSelectFrom
 	clauseUpdateWhere
+	clauseDeleteTable
+	clauseDeleteWhere
 )
 
 // isInput identifies whether the SQL clause contains placeholders
@@ -369,7 +414,7 @@ func (tn TableName) String() string {
 			)
 		}
 		return dialect.Quote(tn.table.Name)
-	case clauseInsertInto, clauseUpdateTable:
+	case clauseInsertInto, clauseUpdateTable, clauseDeleteTable:
 		return dialect.Quote(tn.table.Name)
 	}
 	panic(fmt.Sprintf("invalid clause for table name: %d", tn.clause))
@@ -503,14 +548,20 @@ func (cil ColumnList) String() string {
 				buf.WriteString(" as ")
 				buf.WriteString(ci.columnAlias())
 			}
+		case clauseDeleteWhere:
+			if ci.hasTableAlias() {
+				buf.WriteString(ci.tableAlias())
+				buf.WriteRune('.')
+			}
+			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
 		case clauseInsertColumns:
 			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
 		case clauseInsertValues:
-			buf.WriteString(ci.table.Dialect().Placeholder(ci.placeholder))
+			buf.WriteString(ci.table.Dialect().Placeholder(ci.inputPosition))
 		case clauseUpdateSet, clauseUpdateWhere:
 			buf.WriteString(ci.table.Dialect().Quote(ci.columnName))
 			buf.WriteRune('=')
-			buf.WriteString(ci.table.Dialect().Placeholder(ci.placeholder))
+			buf.WriteString(ci.table.Dialect().Placeholder(ci.inputPosition))
 		}
 	}
 	return buf.String()
@@ -546,6 +597,17 @@ type Placeholder struct {
 	position int
 }
 
-func (p Placeholder) String() string {
+func (p *Placeholder) clone(ti *TableInfo) *Placeholder {
+	return &Placeholder{
+		table:    ti,
+		position: p.position,
+	}
+}
+
+func (p *Placeholder) String() string {
 	return p.table.Dialect().Placeholder(p.position)
+}
+
+func (p *Placeholder) setPosition(n int) {
+	p.position = n
 }

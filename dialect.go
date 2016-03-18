@@ -35,6 +35,12 @@ func quoteFunc(begin string, end string) func(name string) string {
 	}
 }
 
+func placeholderFunc(format string) func(n int) string {
+	return func(n int) string {
+		return fmt.Sprintf(format, n)
+	}
+}
+
 type dialect struct {
 	quoteFunc       func(name string) string
 	placeholderFunc func(n int) string
@@ -62,16 +68,19 @@ var (
 	DialectMySQL   Dialect // MySQL dialect
 	DialectMSSQL   Dialect // Microsoft SQL Server dialect
 	DialectPG      Dialect // PostgreSQL
+	DialectSQLite  Dialect
 )
 
 func init() {
 	DialectMySQL = dialect{quoteFunc: quoteFunc("`", "`")}
 	DialectMSSQL = dialect{quoteFunc: quoteFunc("[", "]")}
 	DialectPG = dialect{
-		quoteFunc: quoteFunc("\"", "\""),
-		placeholderFunc: func(n int) string {
-			return fmt.Sprintf("$%d", n)
-		},
+		quoteFunc:       quoteFunc("\"", "\""),
+		placeholderFunc: placeholderFunc("$%d"),
+	}
+	DialectSQLite = dialect{
+		quoteFunc:       quoteFunc("\"", "\""),
+		placeholderFunc: placeholderFunc("?%d"),
 	}
 }
 
@@ -80,10 +89,15 @@ func defaultDialect() Dialect {
 		return DefaultDialect
 	}
 	for _, d := range sql.Drivers() {
+		println("driver:", d)
 		if strings.Contains(strings.ToLower(d), "mysql") {
 			return DialectMySQL
 		} else if d == "mssql" {
 			return DialectMSSQL
+		} else if d == "sqlite3" {
+			return DialectSQLite
+		} else if d == "postgres" {
+			return DialectPG
 		}
 	}
 	panic("Cannot determine default dialect. Set DefaultDialect")

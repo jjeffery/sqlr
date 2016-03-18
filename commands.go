@@ -54,7 +54,7 @@ type ExecCommand interface {
 	Command() string
 
 	// Exec executes the SQL statement with the arguments given.
-	Exec(db sqlx.Execer, row interface{}) (sql.Result, error)
+	Exec(db sqlx.Execer, args ...interface{}) (sql.Result, error)
 }
 
 // QueryCommand contains all the information required to perform an
@@ -99,6 +99,8 @@ func cloneArgs(args []interface{}) []interface{} {
 			args2[i] = tn.clone(tableClone(tn.table))
 		} else if cil, ok := arg.(ColumnList); ok {
 			args2[i] = cil.clone(tableClone(cil.table))
+		} else if ph, ok := arg.(*Placeholder); ok {
+			args2[i] = ph.clone(tableClone(ph.table))
 		} else {
 			args2[i] = arg
 		}
@@ -235,7 +237,7 @@ func InsertRowf(format string, args ...interface{}) InsertRowCommand {
 
 	// apply placeholders to each of the input parameters
 	for i, ci := range cmd.inputs {
-		ci.placeholder = i + 1
+		ci.setPosition(i + 1)
 	}
 
 	// generate the SQL statement
@@ -286,7 +288,50 @@ func UpdateRowf(format string, args ...interface{}) UpdateRowCommand {
 
 	// apply placeholders to each of the input parameters
 	for i, ci := range cmd.inputs {
-		ci.placeholder = i + 1
+		ci.setPosition(i + 1)
+	}
+
+	// generate the SQL statement
+	cmd.command = fmt.Sprintf(format, args...)
+
+	return cmd
+}
+
+type execCommand struct {
+	command string
+}
+
+func (cmd execCommand) Command() string {
+	return cmd.command
+}
+
+func (cmd execCommand) Exec(db sqlx.Execer, args ...interface{}) (sql.Result, error) {
+	return db.Exec(cmd.Command(), args...)
+}
+
+// Execf formats an SQL command that does not return any rows.
+func Execf(format string, args ...interface{}) ExecCommand {
+	args = cloneArgs(args)
+	cmd := execCommand{}
+	var inputs []interface {
+		setPosition(n int)
+	}
+
+	for _, arg := range args {
+		if cil, ok := arg.(ColumnList); ok {
+			if cil.clause.isInput() {
+				for _, ci := range cil.filtered() {
+					inputs = append(inputs, ci)
+				}
+			}
+		} else if ph, ok := arg.(*Placeholder); ok {
+			inputs = append(inputs, ph)
+		}
+	}
+
+	// apply placeholders to each of the input parameters
+	for i, input := range inputs {
+		input.setPosition(i + 1)
 	}
 
 	// generate the SQL statement
@@ -411,7 +456,7 @@ func Queryf(format string, args ...interface{}) QueryCommand {
 
 	// apply placeholders to each of the input parameters
 	for i, ci := range cmd.inputs {
-		ci.placeholder = i + 1
+		ci.setPosition(i + 1)
 	}
 
 	// generate the SQL statement

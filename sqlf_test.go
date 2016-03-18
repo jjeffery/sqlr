@@ -95,4 +95,12 @@ func Test1(t *testing.T) {
 	assert.Equal(3, users[1].ID)
 	assert.Equal("Doe", users[1].FamilyName)
 	assert.Equal("Jane", users[1].GivenName)
+
+	del1 := Execf("delete from %s where %s < %s", tbl.Delete.TableName, tbl.Delete.WhereColumns, tbl.Delete.Placeholder())
+	t.Log(del1.Command())
+	result, err := del1.Exec(db, 100)
+	assert.NoError(err)
+	rowsAffected, err := result.RowsAffected()
+	assert.NoError(err)
+	assert.Equal(int64(2), rowsAffected)
 }
