@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/spexp/sqlf"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,14 +26,14 @@ type Row2 struct {
 var Row1Table = sqlf.Table("table1", Row1{})
 var Row2Table = sqlf.Table("table2", Row2{})
 
-var insertRow1 func(db sqlf.Execer, row1 *Row1) error
-var updateRow1 func(db sqlf.Execer, row1 *Row1) error
+var insertRow1 func(db sqlx.Execer, row1 *Row1) error
+var updateRow1 func(db sqlx.Execer, row1 *Row1) error
 
 func init() {
 	sqlf.DefaultDialect = sqlf.DialectMySQL
 	insert := Row1Table.Insert
 	cmd := sqlf.InsertRowf("insert into %s(%s) values(%s)", insert.TableName, insert.Columns, insert.Values)
-	insertRow1 = func(db sqlf.Execer, row1 *Row1) error {
+	insertRow1 = func(db sqlx.Execer, row1 *Row1) error {
 		err := cmd.Exec(db, row1)
 		if err != nil {
 			return err
@@ -43,7 +44,7 @@ func init() {
 func init() {
 	update := Row1Table.Update
 	cmd := sqlf.UpdateRowf("update %s set %s where %s", update.TableName, update.SetColumns.Updateable(), update.WhereColumns.PrimaryKey())
-	updateRow1 = func(db sqlf.Execer, row1 *Row1) error {
+	updateRow1 = func(db sqlx.Execer, row1 *Row1) error {
 		_, err := cmd.Exec(db, row1)
 		if err != nil {
 			return err

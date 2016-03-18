@@ -14,11 +14,6 @@ import (
 	"time"
 )
 
-func Selectf(format string, args ...interface{}) QueryCommand {
-	// TODO: not implemented
-	return nil
-}
-
 // TableInfo contains enough information about a database table
 // to assist with generating SQL strings.
 type TableInfo struct {
@@ -76,8 +71,9 @@ func Table(name string, row interface{}) *TableInfo {
 	}
 
 	ti.addColumns(ti.rowType, nil, nil)
-	ti.Select.TableName = TableName{clause: clauseSelectColumns, table: ti}
+	ti.Select.TableName = TableName{clause: clauseSelectFrom, table: ti}
 	ti.Select.Columns = ColumnList{clause: clauseSelectColumns, table: ti}.All()
+	ti.Select.OrderBy = ColumnList{clause: clauseSelectOrderBy, table: ti}.PrimaryKey()
 	ti.Insert.TableName = TableName{clause: clauseInsertInto, table: ti}
 	ti.Insert.Columns = ColumnList{clause: clauseInsertColumns, table: ti}.Insertable()
 	ti.Insert.Values = ColumnList{clause: clauseInsertValues, table: ti}.Insertable()
@@ -215,6 +211,7 @@ func (ti *TableInfo) Dialect() Dialect {
 type SelectInfo struct {
 	TableName   TableName
 	Columns     ColumnList
+	OrderBy     ColumnList
 	Placeholder Placeholder
 }
 
@@ -321,6 +318,7 @@ type sqlClause int
 const (
 	clauseSelectColumns sqlClause = iota
 	clauseSelectFrom
+	clauseSelectOrderBy
 	clauseInsertInto
 	clauseInsertColumns
 	clauseInsertValues
@@ -437,6 +435,32 @@ func (cil ColumnList) Include(names ...string) ColumnList {
 	})
 }
 
+// Exclude returns a column list that excludes the nominated columns.
+// This method can be appended to another method. For example:
+//
+//  table.Update.Columns.Updateable().Except("Name", "Age")
+//
+// will specify all updateable columns (ie non-primary key and
+// non-auto-increment) except for the columns corresponding to the
+// "Name" and "Age" fields.
+//
+// When specifying columns, use the name of field in the Go struct,
+// not the column name in the database table.
+func (cil ColumnList) Exclude(names ...string) ColumnList {
+	prevFilter := cil.filter
+	return cil.applyFilter(func(ci *columnInfo) bool {
+		if prevFilter != nil && !prevFilter(ci) {
+			return false
+		}
+		for _, name := range names {
+			if name == ci.fieldName {
+				return false
+			}
+		}
+		return true
+	})
+}
+
 // Insertable returns a column list of all columns in the associated
 // table that can be inserted. This list includes all columns except
 // an auto-increment column, if the table has one.
@@ -469,7 +493,7 @@ func (cil ColumnList) String() string {
 			}
 		}
 		switch cil.clause {
-		case clauseSelectColumns:
+		case clauseSelectColumns, clauseSelectOrderBy:
 			if ci.hasTableAlias() {
 				buf.WriteString(ci.tableAlias())
 				buf.WriteRune('.')
