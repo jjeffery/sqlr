@@ -14,6 +14,25 @@ import (
 	"time"
 )
 
+// Default contains the default settings, which can be overriden.
+// The default settings choose the SQL dialect based on the database
+// driver loaded. If the program uses more than one database driver,
+// this will not work.
+var Default Settings
+
+// Table creates a TableInfo with the specified table name
+// and schema as defined by the struct that is pointed to
+// by row. The dialect and column name mapping functions
+// are defined in the default settings.
+//
+//This function wil panic if row is not a struct
+// or a pointer to a struct. The contents of row
+// are ignored, only the structure fields and field tags
+// are used.
+func Table(name string, row interface{}) *TableInfo {
+	return Default.Table(name, row)
+}
+
 // TableInfo contains enough information about a database table
 // to assist with generating SQL strings.
 type TableInfo struct {
@@ -23,21 +42,21 @@ type TableInfo struct {
 	Update UpdateInfo
 	Delete DeleteInfo
 
-	rowType reflect.Type
-	columns []*columnInfo
-	dialect Dialect
-	alias   string
+	rowType  reflect.Type
+	columns  []*columnInfo
+	settings Settings
+	alias    string
 }
 
 // clone makes a complete, deep copy of the table.
 // This is important for taking a copy that can be modified.
 func (ti *TableInfo) clone() *TableInfo {
 	ti2 := &TableInfo{
-		Name:    ti.Name,
-		rowType: ti.rowType,
-		columns: make([]*columnInfo, len(ti.columns)),
-		dialect: ti.dialect,
-		alias:   ti.alias,
+		Name:     ti.Name,
+		rowType:  ti.rowType,
+		columns:  make([]*columnInfo, len(ti.columns)),
+		settings: ti.settings,
+		alias:    ti.alias,
 	}
 	// create a clone of all of the columns before cloning
 	// anything else.
@@ -52,6 +71,38 @@ func (ti *TableInfo) clone() *TableInfo {
 	return ti2
 }
 
+type Settings struct {
+	Dialect        Dialect
+	ColumnNameFunc func(name string) string
+}
+
+func (s Settings) dialect() Dialect {
+	if s.Dialect == nil {
+		return defaultDialect()
+	}
+	return s.Dialect
+}
+
+func (s Settings) columnName(name string) string {
+	if s.ColumnNameFunc == nil {
+		return ToDBName(name)
+	}
+	return s.ColumnNameFunc(name)
+}
+
+// Merge returns a new settings object which is a copy of
+// s, but with non-nil values from settings merged in.
+func (s Settings) Merge(settings Settings) Settings {
+	newSettings := s
+	if settings.Dialect != nil {
+		newSettings.Dialect = settings.Dialect
+	}
+	if settings.ColumnNameFunc != nil {
+		newSettings.ColumnNameFunc = settings.ColumnNameFunc
+	}
+	return newSettings
+}
+
 // Table creates a TableInfo with the specified table name
 // and schema as defined by the struct that is pointed to
 // by row.
@@ -60,8 +111,8 @@ func (ti *TableInfo) clone() *TableInfo {
 // or a pointer to a struct. The contents of row
 // are ignored, only the structure fields and field tags
 // are used.
-func Table(name string, row interface{}) *TableInfo {
-	ti := &TableInfo{Name: name}
+func (settings Settings) Table(name string, row interface{}) *TableInfo {
+	ti := &TableInfo{Name: name, settings: settings}
 
 	ti.rowType = reflect.TypeOf(row)
 	for ti.rowType.Kind() == reflect.Ptr {
@@ -142,7 +193,7 @@ func (ti *TableInfo) addColumns(rowType reflect.Type, fields []int, prefixes []s
 				} else if value, ok := tagSettings["COLUMN"]; ok {
 					prefix = value
 				} else {
-					prefix = ToDBName(field.Name)
+					prefix = ti.settings.columnName(field.Name)
 				}
 				prefix = strings.TrimSpace(prefix)
 				newPrefixes := prefixes
@@ -168,7 +219,7 @@ func (ti *TableInfo) addColumns(rowType reflect.Type, fields []int, prefixes []s
 				ci.columnName = value
 			}
 		} else {
-			ci.columnName = addPrefix(prefixes, ToDBName(ci.fieldName))
+			ci.columnName = addPrefix(prefixes, ci.table.settings.columnName(ci.fieldName))
 		}
 		if _, ok := tagSettings["PRIMARY_KEY"]; ok {
 			ci.primaryKey = true
@@ -182,11 +233,11 @@ func (ti *TableInfo) addColumns(rowType reflect.Type, fields []int, prefixes []s
 	}
 }
 
-// WithDialect creates a clone of the table with a different dialect.
 func (ti *TableInfo) WithDialect(dialect Dialect) *TableInfo {
+	settings := ti.settings
+	settings.Dialect = dialect
 	ti2 := ti.clone()
-	ti2.alias = "" // clear out any alias
-	ti2.dialect = dialect
+	ti2.settings = settings
 	return ti2
 }
 
@@ -203,10 +254,7 @@ func (ti *TableInfo) WithAlias(alias string) *TableInfo {
 
 // Dialect returns the SQL dialect to use with this table.
 func (ti *TableInfo) Dialect() Dialect {
-	if ti.dialect != nil {
-		return ti.dialect
-	}
-	return defaultDialect()
+	return ti.settings.dialect()
 }
 
 // SelectInfo contains information about a table that can
