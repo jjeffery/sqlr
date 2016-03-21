@@ -73,14 +73,11 @@ var (
 
 func init() {
 	DialectMySQL = dialect{quoteFunc: quoteFunc("`", "`")}
+	DialectSQLite = dialect{quoteFunc: quoteFunc("`", "`")}
 	DialectMSSQL = dialect{quoteFunc: quoteFunc("[", "]")}
 	DialectPG = dialect{
 		quoteFunc:       quoteFunc("\"", "\""),
 		placeholderFunc: placeholderFunc("$%d"),
-	}
-	DialectSQLite = dialect{
-		quoteFunc:       quoteFunc("\"", "\""),
-		placeholderFunc: placeholderFunc("?%d"),
 	}
 }
 
@@ -89,7 +86,6 @@ func defaultDialect() Dialect {
 		return DefaultDialect
 	}
 	for _, d := range sql.Drivers() {
-		println("driver:", d)
 		if strings.Contains(strings.ToLower(d), "mysql") {
 			return DialectMySQL
 		} else if d == "mssql" {

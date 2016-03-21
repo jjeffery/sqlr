@@ -445,7 +445,7 @@ func Queryf(format string, args ...interface{}) QueryCommand {
 	for _, arg := range args {
 		if cil, ok := arg.(ColumnList); ok {
 			if cil.clause.isInput() {
-				// input parameters for the UPDATE statement
+				// input parameters for the SELECT statement
 				cmd.inputs = append(cmd.inputs, cil.filtered()...)
 			}
 			if cil.clause == clauseSelectColumns {
