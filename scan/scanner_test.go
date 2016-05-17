@@ -129,6 +129,7 @@ func TestScan(t *testing.T) {
 			sql: "'missing quote",
 			tokens: []tokenLit{
 				{ILLEGAL, "'missing quote"},
+				{EOF, ""},
 			},
 		},
 		{ // numbers
