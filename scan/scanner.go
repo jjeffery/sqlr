@@ -25,6 +25,28 @@ const (
 	PLACEHOLDER
 )
 
+func (t Token) String() string {
+	switch t {
+	case ILLEGAL:
+		return "ILLEGAL"
+	case EOF:
+		return "EOF"
+	case WS:
+		return "WS"
+	case COMMENT:
+		return "COMMENT"
+	case IDENT:
+		return "IDENT"
+	case LITERAL:
+		return "LITERAL"
+	case OP:
+		return "OP"
+	case PLACEHOLDER:
+		return "PLACEHOLDER"
+	}
+	return fmt.Sprintf("UNKNOWN(%d)", t)
+}
+
 const (
 	eof       = rune(0)
 	operators = "%&()*+,-./:;<=>?^|{}"
