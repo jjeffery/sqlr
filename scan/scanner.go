@@ -22,6 +22,7 @@ const (
 	IDENT // includes keywords
 	LITERAL
 	OP
+	PLACEHOLDER
 )
 
 const (
@@ -102,11 +103,22 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 		s.unread()
 		return OP, runeToString(ch)
 	}
+	if ch == '$' {
+		ch2 := s.read()
+		s.unread()
+		if isDigit(ch2) {
+			return s.scanPlaceholder(ch)
+		}
+		return OP, runeToString(ch)
+	}
+	if ch == '?' {
+		return s.scanPlaceholder(ch)
+	}
 	if strings.ContainsRune(operators, ch) {
 		return OP, runeToString(ch)
 	}
 
-	panic("not implemented")
+	return ILLEGAL, runeToString(ch)
 }
 
 func (s *Scanner) scanWhitespace() (tok Token, lit string) {
@@ -148,7 +160,7 @@ func (s *Scanner) scanDelimitedIdentifier(startCh rune, endCh rune) (Token, stri
 	buf.WriteRune(startCh)
 	for {
 		if ch := s.read(); ch == eof {
-			break
+			return ILLEGAL, buf.String()
 		} else {
 			buf.WriteRune(ch)
 			if ch == endCh {
@@ -221,7 +233,7 @@ func (s *Scanner) scanQuote(startChs ...rune) (Token, string) {
 	}
 	for {
 		if ch := s.read(); ch == eof {
-			break
+			return ILLEGAL, buf.String()
 		} else {
 			buf.WriteRune(ch)
 			if ch == endCh {
@@ -235,6 +247,22 @@ func (s *Scanner) scanQuote(startChs ...rune) (Token, string) {
 		}
 	}
 	return LITERAL, buf.String()
+}
+
+func (s *Scanner) scanPlaceholder(startCh rune) (Token, string) {
+	var buf bytes.Buffer
+	buf.WriteRune(startCh)
+	for {
+		if ch := s.read(); ch == eof {
+			break
+		} else if isDigit(ch) {
+			buf.WriteRune(ch)
+		} else {
+			s.unread()
+			break
+		}
+	}
+	return PLACEHOLDER, buf.String()
 }
 
 func (s *Scanner) read() rune {
