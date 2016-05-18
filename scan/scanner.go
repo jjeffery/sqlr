@@ -1,3 +1,6 @@
+// Package scan implements a simple lexical scanner
+// for SQL statements. The main purpose of the scanner is
+// to modify sql statements to fix dialect differences.
 package scan
 
 import (
@@ -14,38 +17,15 @@ type Token int
 
 // Tokens
 const (
-	ILLEGAL Token = iota
-	EOF
-	WS
-	COMMENT
-
-	IDENT // includes keywords
-	LITERAL
-	OP
-	PLACEHOLDER
+	ILLEGAL     Token = iota // unexpected character
+	EOF                      // End of input
+	WS                       // White space
+	COMMENT                  // SQL comment
+	IDENT                    // identifer, including keywords such as "SELECT"
+	LITERAL                  // string or numeric literal
+	OP                       // operator
+	PLACEHOLDER              // prepared statement placeholder
 )
-
-func (t Token) String() string {
-	switch t {
-	case ILLEGAL:
-		return "ILLEGAL"
-	case EOF:
-		return "EOF"
-	case WS:
-		return "WS"
-	case COMMENT:
-		return "COMMENT"
-	case IDENT:
-		return "IDENT"
-	case LITERAL:
-		return "LITERAL"
-	case OP:
-		return "OP"
-	case PLACEHOLDER:
-		return "PLACEHOLDER"
-	}
-	return fmt.Sprintf("UNKNOWN(%d)", t)
-}
 
 const (
 	eof       = rune(0)
