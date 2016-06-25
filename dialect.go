@@ -22,7 +22,6 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// quoteName will
 func quoteFunc(begin string, end string) func(name string) string {
 	return func(name string) string {
 		var names []string

@@ -5,7 +5,7 @@ import (
 )
 
 func TestQuote(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		ident    string
 		isQuoted bool
 		unQuoted string
@@ -49,39 +49,39 @@ func TestQuote(t *testing.T) {
 			isQuoted: true,
 			unQuoted: "table `name`",
 			quoted: []string{
-                "\"table `name`\"",
+				"\"table `name`\"",
 				"`table ``name```",
 				"[table `name`]",
 				"'table `name`'",
 			},
 		},
-        {
-          ident: "some_identifier",
-          isQuoted: false,
-          unQuoted: "some_identifier",
+		{
+			ident:    "some_identifier",
+			isQuoted: false,
+			unQuoted: "some_identifier",
 			quoted: []string{
-                `"some_identifier"`,
+				`"some_identifier"`,
 				"`some_identifier`",
 				"[some_identifier]",
 				"'some_identifier'",
 			},
-        },
+		},
 	}
 
-	for i, tc := range testCases {
-		isQuoted := IsQuoted(tc.ident)
-		if isQuoted != tc.isQuoted {
-			t.Errorf("%d: isQuoted: expected=%v, actual=%v", i, tc.isQuoted, isQuoted)
+	for i, tt := range tests {
+		isQuoted := IsQuoted(tt.ident)
+		if isQuoted != tt.isQuoted {
+			t.Errorf("%d: isQuoted: expected=%v, actual=%v", i, tt.isQuoted, isQuoted)
 		}
-		unQuoted := Unquote(tc.ident)
-		if unQuoted != tc.unQuoted {
-			t.Errorf("%d: unQuoted: expected=%s, actual=%s", i, tc.unQuoted, unQuoted)
+		unQuoted := Unquote(tt.ident)
+		if unQuoted != tt.unQuoted {
+			t.Errorf("%d: unQuoted: expected=%s, actual=%s", i, tt.unQuoted, unQuoted)
 			continue
 		}
-		for _, q := range tc.quoted {
+		for _, q := range tt.quoted {
 			start := q[:1]
 			end := q[len(q)-1:]
-			quoted := Quote(tc.ident, start, end)
+			quoted := Quote(tt.ident, start, end)
 			if quoted != q {
 				t.Errorf("%d: quoted: expected=%s, actual=%s", i, q, quoted)
 			}
