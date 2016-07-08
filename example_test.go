@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/spexp/sqlf"
+	"github.com/jjeffery/sqlf"
 	"github.com/stretchr/testify/assert"
 )
 
