@@ -4,7 +4,7 @@ Package `sqlf` provides assistance in creating SQL statements.
 
 [![GoDoc](https://godoc.org/github.com/jjeffery/sqlf?status.svg)](https://godoc.org/github.com/jjeffery/sqlf)
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlf/master/LICENSE.md)
-[![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlf)](https://goreportcard.com/report/github.com jjeffery/sqlf)
+[![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlf)](https://goreportcard.com/report/github.com/jjeffery/sqlf)
 
 **NOTE:** This package is a work in progress. There is 
 no backwards compatibility guarantee at this time.
