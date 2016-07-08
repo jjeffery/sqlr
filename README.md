@@ -6,13 +6,13 @@ Package `sqlf` provides assistance in creating SQL statements.
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlf/master/LICENSE.md)
 [![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlf)](https://goreportcard.com/report/github.com jjeffery/sqlf)
 
-**NOTE** This package is a work in progress. There is 
+**NOTE:** This package is a work in progress. There is 
 no backwards compatibility guarantee at this time.
 
 ## Rationale
 
-There are a number of good ORM package for the Go language, with varying
-sets of features. There are times, however, when and ORM may not be 
+There are a number of good ORM packages for the Go language, with varying
+sets of features. There are times, however, when an ORM may not be 
 appropriate, and an SQL-based API might provide the desired simplicity,
 control, and/or performance.
 
