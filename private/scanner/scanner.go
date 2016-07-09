@@ -1,7 +1,6 @@
-// Package scan implements a simple lexical scanner
-// for SQL statements. The main purpose of the scanner is
-// to modify sql statements to fix dialect differences.
-package scan
+// Package scanner implements a simple lexical scanner
+// for SQL statements.
+package scanner
 
 import (
 	"bufio"
@@ -38,8 +37,8 @@ type Scanner struct {
 	err error
 }
 
-// NewScanner returns a new scanner.
-func NewScanner(r io.Reader) *Scanner {
+// New returns a new scanner that takes its input from r.
+func New(r io.Reader) *Scanner {
 	return &Scanner{
 		r: bufio.NewReader(r),
 	}

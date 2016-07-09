@@ -1,4 +1,4 @@
-package scan
+package scanner
 
 import (
 	"strings"
@@ -239,7 +239,7 @@ func TestScan(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		scanner := NewScanner(strings.NewReader(tc.sql))
+		scanner := New(strings.NewReader(tc.sql))
 		for j, expected := range tc.tokens {
 			tok, lit := scanner.Scan()
 			if tok != expected.token || lit != expected.lit {
