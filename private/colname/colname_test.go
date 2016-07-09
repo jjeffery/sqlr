@@ -2,6 +2,7 @@ package colname
 
 import (
 	"fmt"
+	"testing"
 )
 
 func Example() {
@@ -40,4 +41,33 @@ func Example() {
 	// StreetName
 	// HomeAddressStreetName
 	// HTMLElement
+}
+
+func TestSnakeJoin(t *testing.T) {
+	tests := []struct {
+		prefix, name, expected string
+	}{
+		{
+			prefix:   "",
+			name:     "name",
+			expected: "name",
+		},
+		{
+			prefix:   "prefix",
+			name:     "",
+			expected: "prefix",
+		},
+		{
+			prefix:   "prefix",
+			name:     "name",
+			expected: "prefix_name",
+		},
+	}
+
+	for _, tt := range tests {
+		actual := Snake.Join(tt.prefix, tt.name)
+		if actual != tt.expected {
+			t.Errorf("expected=%q, actual=%q", tt.expected, actual)
+		}
+	}
 }
