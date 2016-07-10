@@ -1,4 +1,4 @@
-package field
+package column
 
 import (
 	"database/sql"

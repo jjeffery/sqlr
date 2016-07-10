@@ -1,4 +1,4 @@
-package field
+package column
 
 import (
 	"fmt"
@@ -7,9 +7,9 @@ import (
 
 // Index is used to efficiently find the value for a database column
 // in the associated field within a structure.
-// In many cases an index is a single integer, which
+// In most cases an index is a single integer, which
 // represents the index of the relevant field in the structure. In the
-// case of embedded fields, a field index consists of more than
+// case of fields in embedded structs, a field index consists of more than
 // one integer.
 type Index []int
 

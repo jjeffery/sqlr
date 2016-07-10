@@ -1,11 +1,11 @@
-package field_test
+package column_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/jjeffery/sqlf/private/colname"
-	"github.com/jjeffery/sqlf/private/field"
+	"github.com/jjeffery/sqlf/private/column"
 )
 
 func TestNewList(t *testing.T) {
@@ -17,7 +17,7 @@ func TestNewList(t *testing.T) {
 	tests := []struct {
 		row        interface{}
 		convention colname.Convention
-		infos      []*field.Info
+		infos      []*column.Info
 	}{
 		{
 			row: struct {
@@ -25,16 +25,16 @@ func TestNewList(t *testing.T) {
 				Name string
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName: "id",
 					Path:       "ID",
-					Index:      field.NewIndex(0),
+					Index:      column.NewIndex(0),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "name",
 					Path:       "Name",
-					Index:      field.NewIndex(1),
+					Index:      column.NewIndex(1),
 				},
 			},
 		},
@@ -44,17 +44,17 @@ func TestNewList(t *testing.T) {
 				Name string
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName: "id",
 					Path:       "ID",
-					Index:      field.NewIndex(0),
+					Index:      column.NewIndex(0),
 					PrimaryKey: true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "name",
 					Path:       "Name",
-					Index:      field.NewIndex(1),
+					Index:      column.NewIndex(1),
 				},
 			},
 		},
@@ -64,18 +64,18 @@ func TestNewList(t *testing.T) {
 				Name string
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName:    "id",
 					Path:          "ID",
-					Index:         field.NewIndex(0),
+					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "name",
 					Path:       "Name",
-					Index:      field.NewIndex(1),
+					Index:      column.NewIndex(1),
 				},
 			},
 		},
@@ -90,33 +90,33 @@ func TestNewList(t *testing.T) {
 				}
 			}{},
 			convention: colname.Same,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName:    "ID",
 					Path:          "ID",
-					Index:         field.NewIndex(0),
+					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "Name",
 					Path:       "Name",
-					Index:      field.NewIndex(1),
+					Index:      column.NewIndex(1),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "AddressStreet",
 					Path:       "Address.Street",
-					Index:      field.NewIndex(2, 0),
+					Index:      column.NewIndex(2, 0),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "AddressSuburb",
 					Path:       "Address.Suburb",
-					Index:      field.NewIndex(2, 1),
+					Index:      column.NewIndex(2, 1),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "AddressPostcode",
 					Path:       "Address.Postcode",
-					Index:      field.NewIndex(2, 2),
+					Index:      column.NewIndex(2, 2),
 				},
 			},
 		},
@@ -135,33 +135,33 @@ func TestNewList(t *testing.T) {
 				}
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName:    "id",
 					Path:          "ID",
-					Index:         field.NewIndex(0),
+					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "address_street_number",
 					Path:       "Address.Street.Number",
-					Index:      field.NewIndex(2, 0, 0),
+					Index:      column.NewIndex(2, 0, 0),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "address_street_name",
 					Path:       "Address.Street.Name",
-					Index:      field.NewIndex(2, 0, 2),
+					Index:      column.NewIndex(2, 0, 2),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "address_suburb",
 					Path:       "Address.Suburb",
-					Index:      field.NewIndex(2, 1),
+					Index:      column.NewIndex(2, 1),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "address_postcode",
 					Path:       "Address.Postcode",
-					Index:      field.NewIndex(2, 2),
+					Index:      column.NewIndex(2, 2),
 				},
 			},
 		},
@@ -171,28 +171,28 @@ func TestNewList(t *testing.T) {
 				SomeData string
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName: "id",
 					Path:       "ID",
-					Index:      field.NewIndex(0, 0),
+					Index:      column.NewIndex(0, 0),
 					PrimaryKey: true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "version",
 					Path:       "Version",
-					Index:      field.NewIndex(0, 1),
+					Index:      column.NewIndex(0, 1),
 					Version:    true,
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "updated_at",
 					Path:       "UpdatedAt",
-					Index:      field.NewIndex(0, 2),
+					Index:      column.NewIndex(0, 2),
 				},
-				&field.Info{
+				&column.Info{
 					ColumnName: "some_data",
 					Path:       "SomeData",
-					Index:      field.NewIndex(1),
+					Index:      column.NewIndex(1),
 				},
 			},
 		},
@@ -207,23 +207,23 @@ func TestNewList(t *testing.T) {
 				no6 string
 			}{},
 			convention: colname.Snake,
-			infos: []*field.Info{
-				&field.Info{
+			infos: []*column.Info{
+				&column.Info{
 					ColumnName: "yes",
 					Path:       "Yes",
-					Index:      field.NewIndex(0),
+					Index:      column.NewIndex(0),
 				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		infos := field.NewList(tt.row, tt.convention)
+		infos := column.NewList(tt.row, tt.convention)
 		compareInfos(t, tt.infos, infos)
 	}
 }
 
-func compareInfos(t *testing.T, expected, actual []*field.Info) {
+func compareInfos(t *testing.T, expected, actual []*column.Info) {
 	if len(expected) != len(actual) {
 		t.Errorf("expected len=%d, actual len=%d", len(expected), len(actual))
 		t.FailNow()
@@ -234,7 +234,7 @@ func compareInfos(t *testing.T, expected, actual []*field.Info) {
 	}
 }
 
-func compareInfo(t *testing.T, info1, info2 *field.Info) {
+func compareInfo(t *testing.T, info1, info2 *column.Info) {
 	if info1.ColumnName != info2.ColumnName ||
 		info1.Path != info2.Path ||
 		!info1.Index.Equal(info2.Index) ||
