@@ -3,6 +3,7 @@
 package dialect
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -28,6 +29,12 @@ type Dialect interface {
 
 // New creates a dialect based on the name.
 func New(name string) Dialect {
+	if name == "" {
+		drivers := sql.Drivers()
+		if len(drivers) > 0 {
+			name = drivers[0]
+		}
+	}
 	//println("dialect name =", name)
 	switch strings.ToLower(name) {
 	case "pq", "postgres", "postgresql":
