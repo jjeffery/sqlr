@@ -31,7 +31,7 @@ func setup(t *testing.T) {
 
 	_, err = tx.Exec(`
 	create table users(
-		id int,
+		id integer primary key autoincrement,
 		name string,
 		updated_at datetime
 	)`)
@@ -40,7 +40,7 @@ func setup(t *testing.T) {
 }
 
 type User struct {
-	ID        int `sql:",autoincr"`
+	ID        int `sql:",pk autoincr"`
 	Name      string
 	UpdatedAt time.Time
 }
@@ -48,23 +48,40 @@ type User struct {
 func Test1(t *testing.T) {
 	setup(t)
 	table := sqlf.Table("users", User{})
-	stmt := sqlf.InsertRowPrintf(`
+	insertStmt := sqlf.InsertRowPrintf(`
 	insert into %s(%s) 
 	values(%s)`,
 		table.Insert.TableName,
 		table.Insert.Columns,
 		table.Insert.Values)
-	t.Logf("insert query: %s", stmt.Query())
+	t.Logf("insert query: %s", insertStmt.Query())
 	tx, err := db.Begin()
+	defer tx.Rollback()
 	checkError(t, err, "cannot begin tx")
 
 	u := &User{Name: "Name", UpdatedAt: time.Now()}
 
-	err = stmt.Exec(tx, u)
+	err = insertStmt.Exec(tx, u)
 	checkError(t, err, "cannot insert")
-	checkError(t, tx.Commit(), "cannot commit")
 
 	if u.ID != 1 {
 		t.Errorf("expected=1, actual=%d", u.ID)
 	}
+
+	updateStmt := sqlf.UpdateRowPrintf(`update %s set %s where %s`,
+		table.Update.TableName,
+		table.Update.SetColumns,
+		table.Update.WhereColumns)
+	t.Logf("update query: %s", updateStmt.Query())
+
+	u.Name = "Another name"
+	u.UpdatedAt = time.Now()
+	var rowsAffected int
+	rowsAffected, err = updateStmt.Exec(tx, u)
+	checkError(t, err, "cannot update")
+	if rowsAffected != 1 {
+		t.Errorf("rowsAffected: expected=1, actual=%d", rowsAffected)
+	}
+
+	checkError(t, tx.Commit(), "cannot commit")
 }
