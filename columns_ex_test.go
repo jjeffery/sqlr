@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/jjeffery/sqlf"
-
-	// loading a driver will causes the default
-	// dialect to be consistent with that driver (mysql)
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/jjeffery/sqlf/private/dialect"
 )
+
+func init() {
+	sqlf.DefaultSchema.Dialect = dialect.New("mysql")
+}
 
 func ExampleColumns() {
 	type Row struct {
