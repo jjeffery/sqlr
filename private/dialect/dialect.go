@@ -27,7 +27,12 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// New creates a dialect based on the name.
+// New creates a dialect based on the name. Supported dialects include:
+//
+//  mssql
+//  mysql
+//  postgres (pq, postgresql)
+//  sqlite3 (sqlite)
 func New(name string) Dialect {
 	if name == "" {
 		drivers := sql.Drivers()
