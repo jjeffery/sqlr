@@ -45,6 +45,8 @@ func New(name string) Dialect {
 		return dialectMSSQL
 	case "sqlite3", "sqlite":
 		return dialectSQLite
+	case "ql", "ql-mem":
+		return dialectQL
 	default:
 		return dialectDefault
 	}
@@ -83,6 +85,9 @@ var (
 		quoteFunc:       quoteFunc(`"`, `"`),
 		placeholderFunc: placeholderFunc("$%d"),
 	}
+
+	// github.com/cznic/ql: does not allow quoted identifers
+	dialectQL = dialectT{name: "ql", quoteFunc: quoteFunc("", "")}
 )
 
 func quoteFunc(begin string, end string) func(name string) string {
