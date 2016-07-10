@@ -24,7 +24,18 @@ const (
 // isInput identifies whether the SQL clause contains placeholders
 // for variable input.
 func (c sqlClause) isInput() bool {
-	return c == clauseInsertValues ||
-		c == clauseUpdateSet ||
-		c == clauseUpdateWhere
+	return c.matchAny(
+		clauseInsertValues,
+		clauseUpdateSet,
+		clauseUpdateWhere,
+		clauseDeleteWhere)
+}
+
+func (c sqlClause) matchAny(clauses ...sqlClause) bool {
+	for _, clause := range clauses {
+		if c == clause {
+			return true
+		}
+	}
+	return false
 }

@@ -76,17 +76,11 @@ func (cols Columns) String() string {
 				buf.WriteRune('.')
 			}
 			buf.WriteString(dialect.Quote(col.ColumnName))
-		case clauseDeleteWhere:
-			if cols.alias != "" {
-				buf.WriteString(dialect.Quote(cols.alias))
-				buf.WriteRune('.')
-			}
-			buf.WriteString(dialect.Quote(col.ColumnName))
 		case clauseInsertColumns:
 			buf.WriteString(dialect.Quote(col.ColumnName))
 		case clauseInsertValues:
 			buf.WriteString("?")
-		case clauseUpdateSet, clauseUpdateWhere:
+		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere:
 			buf.WriteString(dialect.Quote(col.ColumnName))
 			buf.WriteString("=?")
 		}
