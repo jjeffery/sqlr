@@ -26,12 +26,12 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName: "id",
 					Path:       "ID",
 					Index:      column.NewIndex(0),
 				},
-				&column.Info{
+				{
 					ColumnName: "name",
 					Path:       "Name",
 					Index:      column.NewIndex(1),
@@ -45,13 +45,13 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName: "id",
 					Path:       "ID",
 					Index:      column.NewIndex(0),
 					PrimaryKey: true,
 				},
-				&column.Info{
+				{
 					ColumnName: "name",
 					Path:       "Name",
 					Index:      column.NewIndex(1),
@@ -65,14 +65,14 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName:    "id",
 					Path:          "ID",
 					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&column.Info{
+				{
 					ColumnName: "name",
 					Path:       "Name",
 					Index:      column.NewIndex(1),
@@ -91,29 +91,29 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Same,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName:    "ID",
 					Path:          "ID",
 					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&column.Info{
+				{
 					ColumnName: "Name",
 					Path:       "Name",
 					Index:      column.NewIndex(1),
 				},
-				&column.Info{
+				{
 					ColumnName: "AddressStreet",
 					Path:       "Address.Street",
 					Index:      column.NewIndex(2, 0),
 				},
-				&column.Info{
+				{
 					ColumnName: "AddressSuburb",
 					Path:       "Address.Suburb",
 					Index:      column.NewIndex(2, 1),
 				},
-				&column.Info{
+				{
 					ColumnName: "AddressPostcode",
 					Path:       "Address.Postcode",
 					Index:      column.NewIndex(2, 2),
@@ -136,29 +136,29 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName:    "id",
 					Path:          "ID",
 					Index:         column.NewIndex(0),
 					PrimaryKey:    true,
 					AutoIncrement: true,
 				},
-				&column.Info{
+				{
 					ColumnName: "address_street_number",
 					Path:       "Address.Street.Number",
 					Index:      column.NewIndex(2, 0, 0),
 				},
-				&column.Info{
+				{
 					ColumnName: "address_street_name",
 					Path:       "Address.Street.Name",
 					Index:      column.NewIndex(2, 0, 2),
 				},
-				&column.Info{
+				{
 					ColumnName: "address_suburb",
 					Path:       "Address.Suburb",
 					Index:      column.NewIndex(2, 1),
 				},
-				&column.Info{
+				{
 					ColumnName: "address_postcode",
 					Path:       "Address.Postcode",
 					Index:      column.NewIndex(2, 2),
@@ -172,24 +172,24 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName: "id",
 					Path:       "ID",
 					Index:      column.NewIndex(0, 0),
 					PrimaryKey: true,
 				},
-				&column.Info{
+				{
 					ColumnName: "version",
 					Path:       "Version",
 					Index:      column.NewIndex(0, 1),
 					Version:    true,
 				},
-				&column.Info{
+				{
 					ColumnName: "updated_at",
 					Path:       "UpdatedAt",
 					Index:      column.NewIndex(0, 2),
 				},
-				&column.Info{
+				{
 					ColumnName: "some_data",
 					Path:       "SomeData",
 					Index:      column.NewIndex(1),
@@ -208,7 +208,7 @@ func TestNewList(t *testing.T) {
 			}{},
 			convention: colname.Snake,
 			infos: []*column.Info{
-				&column.Info{
+				{
 					ColumnName: "yes",
 					Path:       "Yes",
 					Index:      column.NewIndex(0),
