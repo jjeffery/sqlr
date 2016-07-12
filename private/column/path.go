@@ -1,19 +1,8 @@
 package column
 
-// Field contains the name of a StructField, and the associated
-// column name specified in its StructTag, if any.
-//
-// Fields are used to construct a Path, which in turn is used
-// to determine the column name associated with a field in a structure.
-type Field struct {
-	// FieldName is the name of the associated StructField.
-	FieldName string
-
-	// ColumnName is the associated column name, extracted
-	// from the StructTag. If no column name has been specified,
-	// this is
-	ColumnName string
-}
+import (
+	"strings"
+)
 
 // A Path contains information about all the StructFields traversed
 // to obtain the value for a column.
@@ -22,7 +11,15 @@ type Field struct {
 // the column name, either by the column name(s) specified
 // in the struct tags, or by applying a naming convention to the field
 // name(s).
-type Path []Field
+type Path []struct {
+	// FieldName is the name of the associated StructField.
+	FieldName string
+
+	// ColumnName is the associated column name, extracted
+	// from the StructTag. If no column name has been specified,
+	// this is
+	ColumnName string
+}
 
 // Clone creates a deep copy of path.
 func (path Path) Clone() Path {
@@ -44,7 +41,10 @@ func NewPath(fieldName, columnName string) Path {
 // a new path. The original path is unchanged.
 func (path Path) Append(fieldName, columnName string) Path {
 	clone := path.Clone()
-	clone = append(path, Field{
+	clone = append(path, struct {
+		FieldName  string
+		ColumnName string
+	}{
 		FieldName:  fieldName,
 		ColumnName: columnName,
 	})
@@ -61,4 +61,18 @@ func (path Path) Equal(other Path) bool {
 		}
 	}
 	return true
+}
+
+func (path Path) String() string {
+	if len(path) == 0 {
+		return ""
+	}
+	if len(path) == 1 {
+		return path[0].FieldName
+	}
+	var fieldNames []string
+	for _, item := range path {
+		fieldNames = append(fieldNames, item.FieldName)
+	}
+	return strings.Join(fieldNames, ".")
 }
