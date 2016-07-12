@@ -30,11 +30,12 @@ type TableInfo struct {
 		WhereColumns Columns   // Primary key columns and assocated placeholders for DELETE WHERE clause
 	}
 
-	dialect Dialect
-	rowType reflect.Type
-	name    string
-	alias   string
-	fields  []*column.Info
+	dialect    Dialect
+	convention Convention
+	rowType    reflect.Type
+	name       string
+	alias      string
+	fields     []*column.Info
 }
 
 func newTable(s *Schema, name string, row interface{}) *TableInfo {
@@ -46,10 +47,11 @@ func newTable(s *Schema, name string, row interface{}) *TableInfo {
 		panic(errors.New("row must be a struct"))
 	}
 	table := &TableInfo{
-		dialect: s.dialect(),
-		rowType: rowType,
-		name:    name,
-		fields:  column.NewList(row, s.convention()),
+		dialect:    s.dialect(),
+		convention: s.convention(),
+		rowType:    rowType,
+		name:       name,
+		fields:     column.ListForType(reflect.TypeOf(row)),
 	}
 	table.Select.TableName = newTableName(table, clauseSelectFrom)
 	table.Select.Columns = newColumns(table, clauseSelectColumns)

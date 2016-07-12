@@ -18,8 +18,7 @@ var (
 type Info struct {
 	Field         reflect.StructField
 	Index         Index
-	Path          string
-	ColumnName    string
+	Path          Path
 	PrimaryKey    bool
 	AutoIncrement bool
 	Version       bool

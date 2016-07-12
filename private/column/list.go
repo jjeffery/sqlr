@@ -12,44 +12,35 @@ var (
 	timeType    = reflect.TypeOf(time.Time{})
 )
 
-// Convention provides naming convention methods for
-// inferring a database column name from Go struct field names.
-type Convention interface {
-	ColumnName(fieldName string) string
-	Join(prefix, name string) string
-}
-
-// list is a collection of field infos.
-type fieldList []*Info
-
-// List returns a list of field information for the row type.
-func NewList(row interface{}, convention Convention) []*Info {
-	var list fieldList
-	var state = stateT{convention: convention}
-	list.addFields(reflect.TypeOf(row), state)
+// newList returns a list of column information for the row type.
+func newList(rowType reflect.Type) []*Info {
+	var list columnList
+	var state = stateT{}
+	list.addFields(rowType, state)
 	return list
 }
 
 type stateT struct {
-	convention Convention
-	index      Index
-	path       string
-	prefix     string
+	index Index
+	path  Path
 }
 
-func (list *fieldList) addFields(rowType reflect.Type, state stateT) {
+type columnList []*Info
+
+func (list *columnList) addFields(rowType reflect.Type, state stateT) {
 	for i := 0; i < rowType.NumField(); i++ {
 		field := rowType.Field(i)
 		list.addField(field, i, state)
 	}
 }
 
-func (list *fieldList) addField(field reflect.StructField, i int, state stateT) {
+func (list *columnList) addField(field reflect.StructField, i int, state stateT) {
 	columnName := columnNameFromTag(field.Tag)
 	if columnName == "-" {
 		// ignore field marked as not a column
 		return
 	}
+
 	if len(field.PkgPath) != 0 && !field.Anonymous {
 		// ignore unexported field
 		return
@@ -78,22 +69,7 @@ func (list *fieldList) addField(field reflect.StructField, i int, state stateT) 
 	// The field is not anonymous, and is not ignored, so it
 	// is either a field assocated with a column, or a struct
 	// with embedded fields.
-	//
-	// Get the column name. In the case of a struct with embedded
-	// fields, this will be the prefix to used in front of embedded fields.
-	if columnName == "" {
-		columnName = state.convention.ColumnName(field.Name)
-	}
-	if state.prefix == "" {
-		state.prefix = columnName
-	} else {
-		state.prefix = state.convention.Join(state.prefix, columnName)
-	}
-	if state.path == "" {
-		state.path = field.Name
-	} else {
-		state.path += "." + field.Name
-	}
+	state.path = state.path.Append(field.Name, columnName)
 
 	// An embedded structure will not be mapped recursively if it meets
 	// any of the following criteria:
@@ -109,10 +85,9 @@ func (list *fieldList) addField(field reflect.StructField, i int, state stateT) 
 	}
 
 	info := &Info{
-		Field:      field,
-		Index:      state.index,
-		Path:       state.path,
-		ColumnName: state.prefix,
+		Field: field,
+		Index: state.index,
+		Path:  state.path,
 	}
 
 	info.update()

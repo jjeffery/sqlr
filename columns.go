@@ -75,17 +75,35 @@ func (cols Columns) String() string {
 				buf.WriteString(dialect.Quote(cols.alias))
 				buf.WriteRune('.')
 			}
-			buf.WriteString(dialect.Quote(col.ColumnName))
+			buf.WriteString(cols.columnName(col))
 		case clauseInsertColumns:
-			buf.WriteString(dialect.Quote(col.ColumnName))
+			buf.WriteString(cols.columnName(col))
 		case clauseInsertValues:
 			buf.WriteString("?")
 		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere:
-			buf.WriteString(dialect.Quote(col.ColumnName))
+			buf.WriteString(cols.columnName(col))
 			buf.WriteString("=?")
 		}
 	}
 	return buf.String()
+}
+
+func (cols Columns) columnName(info *column.Info) string {
+	var path = info.Path
+	var columnName string
+
+	for _, field := range path {
+		name := field.ColumnName
+		if name == "" {
+			name = cols.table.convention.ColumnName(field.FieldName)
+		}
+		if columnName == "" {
+			columnName = name
+		} else {
+			columnName = cols.table.convention.Join(columnName, name)
+		}
+	}
+	return cols.table.dialect.Quote(columnName)
 }
 
 func (cols Columns) filtered() []*column.Info {

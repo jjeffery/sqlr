@@ -20,7 +20,6 @@ func NewIndex(vals ...int) Index {
 
 // Append a number to an existing index to create
 // a new index. The original index ix is unchanged.
-// field index (fi) is unchanged.
 //
 // If ix is nil, then Append returns an index
 // with a single index value.
@@ -53,7 +52,8 @@ func (ix Index) Equal(v Index) bool {
 }
 
 // ValueRW returns the value of the field from the structure v.
-// If v contains a nil pointer, map or slice then an empty value is created.
+// If any referenced field in v contains a nil pointer, then an
+// empty value is created.
 func (ix Index) ValueRW(v reflect.Value) reflect.Value {
 	for _, i := range ix {
 		v = reflect.Indirect(v).Field(i)
@@ -72,7 +72,7 @@ func (ix Index) ValueRW(v reflect.Value) reflect.Value {
 }
 
 // ValueRO returns a value from the structure v without
-// checking for nil pointers, maps or slices.
+// checking for nil pointers.
 func (ix Index) ValueRO(v reflect.Value) reflect.Value {
 	for _, i := range ix {
 		v = reflect.Indirect(v).Field(i)
