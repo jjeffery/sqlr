@@ -2,6 +2,9 @@ package column
 
 // Field contains the name of a StructField, and the associated
 // column name specified in its StructTag, if any.
+//
+// Fields are used to construct a Path, which in turn is used
+// to determine the column name associated with a field in a structure.
 type Field struct {
 	// FieldName is the name of the associated StructField.
 	FieldName string
