@@ -42,7 +42,7 @@ func Example() {
 		from users
 		where {where}
 	`)
-	selectAllRowsStmt := sqlf.PrepareSelect(UserRow{}, `
+	selectAllRowsStmt := sqlf.PrepareSelectRows(UserRow{}, `
 		select {columns}
 		from users
 		order by id

@@ -47,8 +47,8 @@ func (c *Config) WithConvention(convention Convention) *Config {
 	return c2
 }
 
-// Merge returns a copy of c with config from the others merged in.
-func (c *Config) Merge(others ...*Config) *Config {
+// merge returns a copy of c with config from the others merged in.
+func (c *Config) merge(others ...*Config) *Config {
 	c2 := c.clone()
 	for _, other := range others {
 		if other != nil {

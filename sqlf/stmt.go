@@ -7,14 +7,13 @@ import (
 var errNotImplemented = errors.New("not implemented")
 
 type InsertRowStmt struct {
-	// todo
-	err error
+	commonStmt
 }
 
 func PrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
-	return &InsertRowStmt{
-		err: errNotImplemented,
-	}
+	stmt := &InsertRowStmt{}
+	stmt.err = errNotImplemented
+	return stmt
 }
 
 func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
@@ -26,14 +25,13 @@ func (stmt *InsertRowStmt) WithConfig(cfg *Config) *InsertRowStmt {
 }
 
 type UpdateRowStmt struct {
-	// todo
-	err error
+	commonStmt
 }
 
 func PrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
-	return &UpdateRowStmt{
-		err: errNotImplemented,
-	}
+	stmt := &UpdateRowStmt{}
+	stmt.err = errNotImplemented
+	return stmt
 }
 
 func (stmt *UpdateRowStmt) Exec(db Execer, row interface{}) (int, error) {
@@ -45,14 +43,13 @@ func (stmt *UpdateRowStmt) WithConfig(cfg *Config) *UpdateRowStmt {
 }
 
 type GetRowStmt struct {
-	// todo
-	err error
+	commonStmt
 }
 
 func PrepareGetRow(row interface{}, sql string) *GetRowStmt {
-	return &GetRowStmt{
-		err: errNotImplemented,
-	}
+	stmt := &GetRowStmt{}
+	stmt.err = errNotImplemented
+	return stmt
 }
 
 func (stmt *GetRowStmt) Get(db Queryer, row interface{}) (int, error) {
@@ -64,14 +61,13 @@ func (stmt *GetRowStmt) WithConfig(cfg *Config) *GetRowStmt {
 }
 
 type SelectRowsStmt struct {
-	// todo
-	err error
+	commonStmt
 }
 
 func PrepareSelectRows(row interface{}, sql string) *SelectRowsStmt {
-	return &SelectRowsStmt{
-		err: errNotImplemented,
-	}
+	stmt := &SelectRowsStmt{}
+	stmt.err = errNotImplemented
+	return stmt
 }
 
 func (stmt *SelectRowsStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
@@ -80,4 +76,13 @@ func (stmt *SelectRowsStmt) Select(db Queryer, dest interface{}, args ...interfa
 
 func (stmt *SelectRowsStmt) WithConfig(cfg *Config) *SelectRowsStmt {
 	return stmt
+}
+
+type commonStmt struct {
+	err error
+}
+
+// String prints the SQL query associated with the statement.
+func (stmt *commonStmt) String() string {
+	return "not implemented"
 }
