@@ -28,10 +28,16 @@ type UpdateRowStmt struct {
 	commonStmt
 }
 
-func PrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
+func MustPrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
 	stmt := &UpdateRowStmt{}
 	stmt.err = errNotImplemented
 	return stmt
+}
+
+func PrepareUpdateRow(row interface{}, sql string) (*UpdateRowStmt, error) {
+	stmt := &UpdateRowStmt{}
+	stmt.err = errNotImplemented
+	return stmt, errNotImplemented
 }
 
 func (stmt *UpdateRowStmt) Exec(db Execer, row interface{}) (int, error) {

@@ -26,14 +26,14 @@ func Example() {
 		insert into users({columns})
 		values({values})
 	`)
-	updateRowStmt := sqlf.PrepareUpdateRow(UserRow{}, `
+	updateRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
 		update users
 		set {set}
 		where {where}
 	`)
 	// A statement for deleting one row is prepared using the
 	// same function as a statement updating one row.
-	deleteRowStmt := sqlf.PrepareUpdateRow(UserRow{}, `
+	deleteRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
 		delete from users
 		where {where}
 	`)
