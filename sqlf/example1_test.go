@@ -22,7 +22,7 @@ func Example() {
 	db, err := sql.Open("sqlite3", ":memory:")
 	exitIfError(err)
 
-	insertRowStmt := sqlf.PrepareInsertRow(UserRow{}, `
+	insertRowStmt := sqlf.MustPrepareInsertRow(UserRow{}, `
 		insert into users({columns})
 		values({values})
 	`)
@@ -37,12 +37,12 @@ func Example() {
 		delete from users
 		where {where}
 	`)
-	getRowStmt := sqlf.PrepareGetRow(UserRow{}, `
+	getRowStmt := sqlf.MustPrepareGetRow(UserRow{}, `
 		select {columns}
 		from users
 		where {where}
 	`)
-	selectAllRowsStmt := sqlf.PrepareSelectRows(UserRow{}, `
+	selectAllRowsStmt := sqlf.MustPrepareSelect(UserRow{}, `
 		select {columns}
 		from users
 		order by id

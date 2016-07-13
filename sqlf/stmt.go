@@ -10,10 +10,16 @@ type InsertRowStmt struct {
 	commonStmt
 }
 
-func PrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
-	stmt := &InsertRowStmt{}
-	stmt.err = errNotImplemented
+func MustPrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
+	stmt, err := PrepareInsertRow(row, sql)
+	if err != nil {
+		panic(err)
+	}
 	return stmt
+}
+
+func PrepareInsertRow(row interface{}, sql string) (*InsertRowStmt, error) {
+	return nil, errNotImplemented
 }
 
 func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
@@ -52,10 +58,16 @@ type GetRowStmt struct {
 	commonStmt
 }
 
-func PrepareGetRow(row interface{}, sql string) *GetRowStmt {
-	stmt := &GetRowStmt{}
-	stmt.err = errNotImplemented
+func MustPrepareGetRow(row interface{}, sql string) *GetRowStmt {
+	stmt, err := PrepareGetRow(row, sql)
+	if err != nil {
+		panic(err)
+	}
 	return stmt
+}
+
+func PrepareGetRow(row interface{}, sql string) (*GetRowStmt, error) {
+	return nil, errNotImplemented
 }
 
 func (stmt *GetRowStmt) Get(db Queryer, row interface{}) (int, error) {
@@ -66,21 +78,27 @@ func (stmt *GetRowStmt) WithConfig(cfg *Config) *GetRowStmt {
 	return stmt
 }
 
-type SelectRowsStmt struct {
+type SelectStmt struct {
 	commonStmt
 }
 
-func PrepareSelectRows(row interface{}, sql string) *SelectRowsStmt {
-	stmt := &SelectRowsStmt{}
-	stmt.err = errNotImplemented
+func MustPrepareSelect(row interface{}, sql string) *SelectStmt {
+	stmt, err := PrepareSelect(row, sql)
+	if err != nil {
+		panic(err)
+	}
 	return stmt
 }
 
-func (stmt *SelectRowsStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
+func PrepareSelect(row interface{}, sql string) (*SelectStmt, error) {
+	return nil, errNotImplemented
+}
+
+func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
 	return errNotImplemented
 }
 
-func (stmt *SelectRowsStmt) WithConfig(cfg *Config) *SelectRowsStmt {
+func (stmt *SelectStmt) WithConfig(cfg *Config) *SelectStmt {
 	return stmt
 }
 

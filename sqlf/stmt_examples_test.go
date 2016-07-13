@@ -14,13 +14,13 @@ func ExamplePrepareInsertRow() {
 		Name    string
 	}
 
-	stmt := sqlf.PrepareInsertRow(User{}, `
+	stmt := sqlf.MustPrepareInsertRow(User{}, `
 		insert into users({columns}) 
 		values({values})
 	`)
 	fmt.Println(stmt.String())
 
-	stmt = sqlf.PrepareInsertRow(User{}, `
+	stmt = sqlf.MustPrepareInsertRow(User{}, `
 		insert into users({columns including ID}) 
 		values({values})
 	`)
@@ -39,7 +39,7 @@ func ExamplePrepareSelectRows() {
 		Name    string
 	}
 
-	stmt := sqlf.PrepareSelectRows(User{}, `
+	stmt := sqlf.MustPrepareSelect(User{}, `
 		select distinct {columns alias u} 
 		from users u
 		inner join user_search_terms t on t.user_id = u.id

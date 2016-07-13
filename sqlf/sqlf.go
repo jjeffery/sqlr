@@ -5,7 +5,7 @@ import (
 )
 
 // Execer implements a single method, Exec, which executes a
-// query without returning any rows. The args for any parameter
+// query without returning any rows. The args are for any parameter
 // placeholders in the query.
 //
 // The *DB and *Tx types in the standard library package "database/sql"
