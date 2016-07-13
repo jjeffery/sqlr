@@ -44,21 +44,40 @@ func (stmt *UpdateRowStmt) WithConfig(cfg *Config) *UpdateRowStmt {
 	return stmt
 }
 
-type SelectStmt struct {
+type GetRowStmt struct {
 	// todo
 	err error
 }
 
-func PrepareSelect(row interface{}, sql string) *SelectStmt {
-	return &SelectStmt{
+func PrepareGetRow(row interface{}, sql string) *GetRowStmt {
+	return &GetRowStmt{
 		err: errNotImplemented,
 	}
 }
 
-func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
+func (stmt *GetRowStmt) Get(db Queryer, row interface{}) (int, error) {
+	return 0, errNotImplemented
+}
+
+func (stmt *GetRowStmt) WithConfig(cfg *Config) *GetRowStmt {
+	return stmt
+}
+
+type SelectRowsStmt struct {
+	// todo
+	err error
+}
+
+func PrepareSelectRows(row interface{}, sql string) *SelectRowsStmt {
+	return &SelectRowsStmt{
+		err: errNotImplemented,
+	}
+}
+
+func (stmt *SelectRowsStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
 	return errNotImplemented
 }
 
-func (stmt *SelectStmt) WithConfig(cfg *Config) *SelectStmt {
+func (stmt *SelectRowsStmt) WithConfig(cfg *Config) *SelectRowsStmt {
 	return stmt
 }

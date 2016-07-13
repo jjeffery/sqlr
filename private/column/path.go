@@ -17,7 +17,7 @@ type Path []struct {
 
 	// ColumnName is the associated column name, extracted
 	// from the StructTag. If no column name has been specified,
-	// this is
+	// this field is blank.
 	ColumnName string
 }
 
@@ -25,7 +25,7 @@ type Path []struct {
 func (path Path) Clone() Path {
 	// Because the main purpose of cloning is to append
 	// another item, create the clone to be the same length,
-	// but with capacity for an additional index.
+	// but with capacity for an additional item.
 	clone := make(Path, len(path), len(path)+1)
 	copy(clone, path)
 	return path

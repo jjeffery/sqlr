@@ -3,6 +3,7 @@ package column
 import (
 	"database/sql"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -11,6 +12,32 @@ var (
 	sqlScanType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 	timeType    = reflect.TypeOf(time.Time{})
 )
+
+// typeMap contains a map of type to column information used
+// to cache results for ListForType.
+var typeMap = struct {
+	mu sync.RWMutex
+	m  map[reflect.Type][]*Info
+}{
+	m: make(map[reflect.Type][]*Info),
+}
+
+// ListForType returns a list of column information
+// associated with the specified type, which must be a struct.
+func ListForType(rowType reflect.Type) []*Info {
+	typeMap.mu.RLock()
+	list, ok := typeMap.m[rowType]
+	typeMap.mu.RUnlock()
+	if ok {
+		return list
+	}
+
+	typeMap.mu.Lock()
+	defer typeMap.mu.Unlock()
+	list = newList(rowType)
+	typeMap.m[rowType] = list
+	return list
+}
 
 // newList returns a list of column information for the row type.
 func newList(rowType reflect.Type) []*Info {
@@ -90,7 +117,7 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 		Path:  state.path,
 	}
 
-	info.update()
+	info.updateOptsFromTag()
 
 	*list = append(*list, info)
 }

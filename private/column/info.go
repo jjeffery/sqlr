@@ -8,7 +8,7 @@ import (
 
 // used for parsing tag names
 var (
-	tagNames = []string{"sql", "db"}
+	tagNames = []string{"sqlf", "sql", "db"}
 	splitRE  = regexp.MustCompile("[ ,]+")
 )
 
@@ -24,9 +24,12 @@ type Info struct {
 	Version       bool
 }
 
-func (info *Info) update() {
+func (info *Info) updateOptsFromTag() {
 	for _, key := range tagNames {
 		str := info.Field.Tag.Get(key)
+		if str == "" {
+			continue
+		}
 		parts := strings.SplitN(str, ",", 2)
 		if len(parts) > 1 {
 			opts := splitRE.Split(strings.ToLower(parts[1]), -1)
@@ -39,9 +42,13 @@ func (info *Info) update() {
 					if i+1 < len(opts) && opts[i+1] == "key" {
 						info.PrimaryKey = true
 					}
+				case "auto":
+					if i+1 < len(opts) && strings.HasPrefix(opts[i+1], "incr") {
+						info.AutoIncrement = true
+					}
 				case "version":
 					info.Version = true
-				case "autoincr", "identity", "auto_increment":
+				case "autoincr", "autoincrement", "identity", "auto_increment", "auto_incr":
 					info.AutoIncrement = true
 				}
 			}
