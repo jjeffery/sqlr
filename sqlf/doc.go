@@ -1,26 +1,21 @@
 /*
-Package sqlf provides assistance for writing and executing SQL statements.
+Package sqlf aims to make it easy to construct and execute SQL
+statements for common scenarios. Supported scenarios include:
 
-It is intended for programmers who are comfortable with
+ * Insert a single row based on a Go struct
+ * Update a single row based on a Go struct
+ * Select a single row into a Go struct
+ * Select zero, one or more rows int a a slice of Go structs
+
+This package is intended for programmers who are comfortable with
 writing SQL, but would like assistance with the sometimes tedious
 process of preparing SELECT, INSERT, UPDATE and DELETE statements
 for tables that have a large number of columns.
 
-Select all columns from a table by primary key
- sqlf query: select {columns} from users where {where}
- mysql:      select `id`,`version`,`login`,`hash_pwd`,`full_name` from users where `id`=?
- postgres:   select "id","version","login","hash_pwd","full_name" from users where "id"=$1
-
-Select all columns from a table by "login" column
- sqlf query: select {columns} from users where {where login}
- mysql:      select `id`,`version`,`login`,`hash_pwd`,`full_name` from users where `login`=?
- postgres:   select "id","version","login","hash_pwd","full_name" from users where "login"=$1
-
-
-Insert a row into table (where column id is an auto-increment column)
- sqlf.PrepareInsertRow(User{}, "insert into users({columns}) values ({values})")
- mysql:     insert into users(`version`,`login`,`hash_pwd`,`full_name`) values(?,?,?,?)
- postgres:  insert into users("version","login","hash_pwd","full_name") values($1,$2,$3,$4)
-
+This package is designed to work seamlessly with the standard library
+"database/sql" package. It does not provide any layer on top of *sql.DB
+or *sql.Tx. If the calling program has a need to execute queries independently
+of this package, it can use "database/sql" directly, or make use of any other
+third party package that uses "database/sql".
 */
 package sqlf
