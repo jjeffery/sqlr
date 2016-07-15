@@ -40,21 +40,28 @@ func (cols Columns) Parse(clause sqlClause, text string) (Columns, error) {
 
 	// TODO: update filter based on text
 	scan := scanner.New(strings.NewReader(text))
-	scan.AddKeywords("alias")
+	scan.AddKeywords("alias", "all", "pk")
 
 	for {
-		tok, _ := scan.Scan()
+		tok, lit := scan.Scan()
 		if tok == scanner.EOF {
 			break
 		}
 
 		// TODO: dodgy job to get going quickly
 		if tok == scanner.KEYWORD {
-			tok2, lit2 := scan.Scan()
-			for tok2 == scanner.WS {
-				tok2, lit2 = scan.Scan()
+			switch strings.ToLower(lit) {
+			case "alias":
+				tok2, lit2 := scan.Scan()
+				for tok2 == scanner.WS {
+					tok2, lit2 = scan.Scan()
+				}
+				cols2.alias = lit2
+			case "all":
+				cols2.filter = columnFilterAll
+			case "pk":
+				cols2.filter = columnFilterPK
 			}
-			cols2.alias = lit2
 		}
 	}
 

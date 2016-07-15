@@ -28,7 +28,7 @@ func ExamplePrepareInsertRow() {
 
 	// Output:
 	// insert into users(`login`,`hash_pwd`,`name`) values(?,?,?)
-	// insert into users(`id`, `login`,`hash_pwd`,`name`) values(?,?,?,?)
+	// insert into users(`id`,`login`,`hash_pwd`,`name`) values(?,?,?,?)
 }
 
 func ExamplePrepareSelectRows() {
@@ -48,5 +48,5 @@ func ExamplePrepareSelectRows() {
 	fmt.Println(stmt.String())
 
 	// Output:
-	// select distinct u.`id`, u.`login`,u.`hash_pwd`,u.`name` from users u inner join user_search_terms t on t.user_id = u.id where t.search_term like ?
+	// select distinct u.`id`,u.`login`,u.`hash_pwd`,u.`name` from users u inner join user_search_terms t on t.user_id = u.id where t.search_term like ?
 }

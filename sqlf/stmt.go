@@ -408,8 +408,7 @@ func (stmt *commonStmt) scanSQL(query string) error {
 						insertColumns = &cols
 					}
 				}
-			}
-			if scanner.IsQuoted(lit) {
+			} else if scanner.IsQuoted(lit) {
 				lit = scanner.Unquote(lit)
 				buf.WriteString(stmt.dialect.Quote(lit))
 			} else {
