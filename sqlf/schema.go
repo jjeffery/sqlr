@@ -38,12 +38,14 @@ type Schema struct {
 	// of database columns from the associated Go struct field names.
 	Convention Convention
 
+	// Logger is used for diagnostic logging. If set then all statements
+	// created for this schema will share this logger.
 	Logger Logger
 }
 
-func (cfg *Schema) dialect() dialect.Dialect {
-	if cfg.Dialect != nil {
-		return cfg.Dialect
+func (s *Schema) dialect() dialect.Dialect {
+	if s.Dialect != nil {
+		return s.Dialect
 	}
 	if DefaultSchema.Dialect != nil {
 		return DefaultSchema.Dialect
@@ -51,9 +53,9 @@ func (cfg *Schema) dialect() dialect.Dialect {
 	return dialect.New("")
 }
 
-func (cfg *Schema) convention() Convention {
-	if cfg.Convention != nil {
-		return cfg.Convention
+func (s *Schema) convention() Convention {
+	if s.Convention != nil {
+		return s.Convention
 	}
 	if DefaultSchema.Convention != nil {
 		return DefaultSchema.Convention
@@ -61,50 +63,18 @@ func (cfg *Schema) convention() Convention {
 	return colname.Snake
 }
 
-func (s *Schema) MustPrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
-	stmt, err := s.PrepareInsertRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
-	return stmt
+func (s *Schema) NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
+	return newInsertRowStmt(s, row, sql)
 }
 
-func (s *Schema) PrepareInsertRow(row interface{}, sql string) (*InsertRowStmt, error) {
-	return prepareInsertRow(s, row, sql)
+func (s *Schema) NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
+	return newUpdateRowStmt(s, row, sql)
 }
 
-func (s *Schema) MustPrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
-	stmt, err := s.PrepareUpdateRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
-	return stmt
+func (s *Schema) NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
+	return newGetRowStmt(s, row, sql)
 }
 
-func (s *Schema) PrepareUpdateRow(row interface{}, sql string) (*UpdateRowStmt, error) {
-	return prepareUpdateRow(s, row, sql)
-}
-
-func (s *Schema) MustPrepareGetRow(row interface{}, sql string) *GetRowStmt {
-	stmt, err := s.PrepareGetRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
-	return stmt
-}
-
-func (s *Schema) PrepareGetRow(row interface{}, sql string) (*GetRowStmt, error) {
-	return prepareGetRow(s, row, sql)
-}
-
-func (s *Schema) MustPrepareSelect(row interface{}, sql string) *SelectStmt {
-	stmt, err := s.PrepareSelect(row, sql)
-	if err != nil {
-		panic(err)
-	}
-	return stmt
-}
-
-func (s *Schema) PrepareSelect(row interface{}, sql string) (*SelectStmt, error) {
-	return prepareSelect(s, row, sql)
+func (s *Schema) NewSelectStmt(row interface{}, sql string) *SelectStmt {
+	return newSelectStmt(DefaultSchema, row, sql)
 }

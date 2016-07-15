@@ -14,24 +14,24 @@ import (
 
 var errNotImplemented = errors.New("not implemented")
 
+// InsertRowStmt inserts a single row. It is safe for concurrent
+// access by multiple goroutines.
 type InsertRowStmt struct {
 	commonStmt
 	autoIncrColumn *column.Info
 }
 
-func MustPrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
-	stmt, err := PrepareInsertRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
-	return stmt
+// NewInsertRowStmt returns a new InsertRowStmt for the given
+// row and SQL. The dialect and naming conventions are inferred
+// from DefaultSchema.
+func NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
+	return newInsertRowStmt(DefaultSchema, row, sql)
 }
 
-func prepareInsertRow(schema *Schema, row interface{}, sql string) (*InsertRowStmt, error) {
+func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStmt {
 	stmt := &InsertRowStmt{}
-	if err := stmt.prepareExecRow(schema, row, sql); err != nil {
-		return nil, err
-	}
+	sql = checkSQL(sql, insertFormat)
+	stmt.err = stmt.prepareExecRow(schema, row, sql)
 
 	for _, col := range stmt.columns {
 		if col.AutoIncrement {
@@ -52,11 +52,7 @@ func prepareInsertRow(schema *Schema, row interface{}, sql string) (*InsertRowSt
 		}
 	}
 
-	return stmt, nil
-}
-
-func PrepareInsertRow(row interface{}, sql string) (*InsertRowStmt, error) {
-	return prepareInsertRow(DefaultSchema, row, sql)
+	return stmt
 }
 
 func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
@@ -87,31 +83,41 @@ func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
 	return nil
 }
 
-type UpdateRowStmt struct {
+// ExecRowStmt updates or deletes a single row. It is safe for concurrent
+// access by multiple goroutines.
+type ExecRowStmt struct {
 	commonStmt
 }
 
-func MustPrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
-	stmt, err := PrepareUpdateRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
+// NewUpdateRowStmt returns a new ExecRowStmt for the given
+// row and SQL. The dialect and naming conventions are inferred
+// from DefaultSchema.
+func NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
+	return newUpdateRowStmt(DefaultSchema, row, sql)
+}
+
+func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
+	stmt := &ExecRowStmt{}
+	sql = checkSQL(sql, updateFormat)
+	stmt.err = stmt.prepareExecRow(schema, row, sql)
 	return stmt
 }
 
-func prepareUpdateRow(schema *Schema, row interface{}, sql string) (*UpdateRowStmt, error) {
-	stmt := &UpdateRowStmt{}
-	if err := stmt.prepareExecRow(schema, row, sql); err != nil {
-		return nil, err
-	}
-	return stmt, nil
+// NewDeleteRowStmt returns a new ExecRowStmt for the given
+// row and SQL. The dialect and naming conventions are inferred
+// from DefaultSchema.
+func NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
+	return newDeleteRowStmt(DefaultSchema, row, sql)
 }
 
-func PrepareUpdateRow(row interface{}, sql string) (*UpdateRowStmt, error) {
-	return prepareUpdateRow(DefaultSchema, row, sql)
+func newDeleteRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
+	stmt := &ExecRowStmt{}
+	sql = checkSQL(sql, deleteFormat)
+	stmt.err = stmt.prepareExecRow(schema, row, sql)
+	return stmt
 }
 
-func (stmt *UpdateRowStmt) Exec(db Execer, row interface{}) (int, error) {
+func (stmt *ExecRowStmt) Exec(db Execer, row interface{}) (int, error) {
 	result, err := stmt.doExec(db, row)
 	if err != nil {
 		return 0, err
@@ -129,40 +135,30 @@ type GetRowStmt struct {
 	commonStmt
 }
 
-func MustPrepareGetRow(row interface{}, sql string) *GetRowStmt {
-	stmt, err := PrepareGetRow(row, sql)
-	if err != nil {
-		panic(err)
-	}
+// NewGetRowStmt returns a new GetRowStmt for the given
+// row and SQL. The dialect and naming conventions are inferred
+// from DefaultSchema.
+func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
+	return newGetRowStmt(DefaultSchema, row, sql)
+}
+
+func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
+	stmt := &GetRowStmt{}
+	stmt.err = stmt.prepareCommon(schema, row, sql)
 	return stmt
 }
 
-func PrepareGetRow(row interface{}, sql string) (*GetRowStmt, error) {
-	stmt := &GetRowStmt{}
-	if err := stmt.prepareCommon(DefaultSchema, row, sql); err != nil {
-		return nil, err
-	}
-	return stmt, nil
-}
-
-func prepareGetRow(schema *Schema, row interface{}, sql string) (*GetRowStmt, error) {
-	stmt := &GetRowStmt{}
-	if err := stmt.prepareCommon(schema, row, sql); err != nil {
-		return nil, err
-	}
-	return stmt, nil
-}
-
-func (stmt *GetRowStmt) errorPtrType() error {
-	expectedType := stmt.expectedTypeString()
-	return fmt.Errorf("expected dest to be *%s", expectedType)
-}
-
+// Get a single row into dest based on the fields populated in dest.
 func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
+	errorPtrType := func() error {
+		expectedTypeName := stmt.expectedTypeName()
+		return fmt.Errorf("expected dest to be *%s", expectedTypeName)
+	}
+
 	destValue := reflect.ValueOf(dest)
 
 	if destValue.Kind() != reflect.Ptr {
-		return 0, stmt.errorPtrType()
+		return 0, errorPtrType()
 	}
 	if destValue.IsNil() {
 		return 0, errors.New("nil pointer passed")
@@ -171,7 +167,7 @@ func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
 	rowValue := reflect.Indirect(destValue)
 	rowType := rowValue.Type()
 	if rowType != stmt.rowType {
-		return 0, stmt.errorPtrType()
+		return 0, errorPtrType()
 	}
 
 	args, err := stmt.getArgs(dest)
@@ -179,7 +175,10 @@ func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
 		return 0, nil
 	}
 
-	stmt.Printf("query=%q, args=%v\n", stmt.query, args)
+	if stmt.Logger != nil {
+		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
+		stmt.Logger.Print(msg)
+	}
 	rows, err := db.Query(stmt.query, args...)
 	if err != nil {
 		return 0, err
@@ -209,27 +208,17 @@ type SelectStmt struct {
 	commonStmt
 }
 
-func MustPrepareSelect(row interface{}, sql string) *SelectStmt {
-	stmt, err := PrepareSelect(row, sql)
-	if err != nil {
-		panic(err)
+func NewSelectStmt(row interface{}, sql string) *SelectStmt {
+	return newSelectStmt(DefaultSchema, row, sql)
+}
+
+func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
+	stmt := &SelectStmt{}
+	stmt.err = stmt.prepareCommon(schema, row, sql)
+	if stmt.err == nil && len(stmt.inputs) > 0 {
+		stmt.err = errors.New("unexpected inputs in query")
 	}
 	return stmt
-}
-
-func prepareSelect(schema *Schema, row interface{}, sql string) (*SelectStmt, error) {
-	stmt := &SelectStmt{}
-	if err := stmt.prepareCommon(schema, row, sql); err != nil {
-		return nil, err
-	}
-	if len(stmt.inputs) > 0 {
-		return nil, errors.New("unexpected inputs in query")
-	}
-	return stmt, nil
-}
-
-func PrepareSelect(row interface{}, sql string) (*SelectStmt, error) {
-	return prepareSelect(DefaultSchema, row, sql)
 }
 
 func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
@@ -287,16 +276,18 @@ func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}
 }
 
 func (stmt *SelectStmt) errorSliceType() error {
-	expectedType := stmt.expectedTypeString()
+	expectedType := stmt.expectedTypeName()
 	return fmt.Errorf("Expected dest to be pointer to []%s or []*%s", expectedType, expectedType)
 }
 
 type commonStmt struct {
+	// Logger is used for diagnostic logging.
+	Logger Logger
+
 	rowType    reflect.Type
 	query      string
 	dialect    Dialect
 	convention Convention
-	logger     Logger
 	columns    []*column.Info
 	inputs     []*column.Info
 	outputs    []*column.Info
@@ -308,12 +299,6 @@ func (stmt *commonStmt) String() string {
 	return stmt.query
 }
 
-func (stmt *commonStmt) Printf(format string, args ...interface{}) {
-	if stmt.logger != nil {
-		stmt.logger.Printf(format, args...)
-	}
-}
-
 func (stmt *commonStmt) prepareCommon(schema *Schema, row interface{}, sql string) error {
 	stmt.rowType = reflect.TypeOf(row)
 	if stmt.rowType.Kind() == reflect.Ptr {
@@ -322,11 +307,14 @@ func (stmt *commonStmt) prepareCommon(schema *Schema, row interface{}, sql strin
 	stmt.columns = column.ListForType(stmt.rowType)
 	stmt.convention = schema.convention()
 	stmt.dialect = schema.dialect()
-	stmt.logger = schema.Logger
+	stmt.Logger = schema.Logger
 	if err := stmt.scanSQL(sql); err != nil {
 		return err
 	}
-	stmt.Printf("prepared=%q", stmt.query)
+	if stmt.Logger != nil {
+		msg := fmt.Sprintf("prepared=%q", stmt.query)
+		stmt.Logger.Print(msg)
+	}
 	return nil
 }
 
@@ -340,7 +328,7 @@ func (stmt *commonStmt) prepareExecRow(schema *Schema, row interface{}, sql stri
 	return nil
 }
 
-func (stmt *commonStmt) addColumns(cols Columns) {
+func (stmt *commonStmt) addColumns(cols columnsT) {
 	if cols.clause.isInput() {
 		for _, col := range cols.filtered() {
 			stmt.inputs = append(stmt.inputs, col)
@@ -356,7 +344,7 @@ func (stmt *commonStmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
 	columns := newColumns(stmt.columns, stmt.convention, stmt.dialect)
-	var insertColumns *Columns
+	var insertColumns *columnsT
 	placeholderCount := 0
 	var clause sqlClause
 	var buf bytes.Buffer
@@ -424,15 +412,25 @@ func (stmt *commonStmt) scanSQL(query string) error {
 }
 
 func (stmt commonStmt) doExec(db Execer, row interface{}) (sql.Result, error) {
+	if stmt.err != nil {
+		return nil, stmt.err
+	}
 	args, err := stmt.getArgs(row)
 	if err != nil {
 		return nil, err
 	}
-	stmt.Printf("query=%q, args=%v\n", stmt.query, args)
+	if stmt.Logger != nil {
+		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
+		stmt.Logger.Print(msg)
+	}
 	return db.Exec(stmt.query, args...)
 }
 
 func (stmt commonStmt) getArgs(row interface{}) ([]interface{}, error) {
+	if stmt.err != nil {
+		return nil, stmt.err
+	}
+
 	var args []interface{}
 
 	rowVal := reflect.ValueOf(row)
@@ -440,7 +438,8 @@ func (stmt commonStmt) getArgs(row interface{}) ([]interface{}, error) {
 		rowVal = rowVal.Elem()
 	}
 	if rowVal.Type() != stmt.rowType {
-		return nil, stmt.errorType()
+		expectedType := stmt.expectedTypeName()
+		return nil, fmt.Errorf("expected type %s or *(%s)", expectedType, expectedType)
 	}
 
 	for _, input := range stmt.inputs {
@@ -450,11 +449,6 @@ func (stmt commonStmt) getArgs(row interface{}) ([]interface{}, error) {
 	return args, nil
 }
 
-func (stmt commonStmt) errorType() error {
-	expectedType := stmt.expectedTypeString()
-	return fmt.Errorf("expected type %s or *(%s)", expectedType, expectedType)
-}
-
-func (stmt commonStmt) expectedTypeString() string {
+func (stmt commonStmt) expectedTypeName() string {
 	return fmt.Sprintf("%s.%s", stmt.rowType.PkgPath(), stmt.rowType.Name())
 }

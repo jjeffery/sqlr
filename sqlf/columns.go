@@ -8,14 +8,14 @@ import (
 	"github.com/jjeffery/sqlf/private/scanner"
 )
 
-// Columns represents a set of columns associated with
+// columnsT represents a set of columns associated with
 // a table for use in a specific SQL clause.
 //
-// Each Columns set represents a subset of the columns
+// Each columnsT set represents a subset of the columns
 // in the table. For example a column list for the WHERE
 // clause in a row update statement will only contain the
 // columns for the primary key.
-type Columns struct {
+type columnsT struct {
 	allColumns []*column.Info
 	convention Convention
 	dialect    Dialect
@@ -24,8 +24,8 @@ type Columns struct {
 	alias      string
 }
 
-func newColumns(allColumns []*column.Info, convention Convention, dialect Dialect) Columns {
-	return Columns{
+func newColumns(allColumns []*column.Info, convention Convention, dialect Dialect) columnsT {
+	return columnsT{
 		allColumns: allColumns,
 		convention: convention,
 		dialect:    dialect,
@@ -33,7 +33,7 @@ func newColumns(allColumns []*column.Info, convention Convention, dialect Dialec
 	}
 }
 
-func (cols Columns) Parse(clause sqlClause, text string) (Columns, error) {
+func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 	cols2 := cols
 	cols2.clause = clause
 	cols2.filter = clause.defaultFilter()
@@ -69,7 +69,7 @@ func (cols Columns) Parse(clause sqlClause, text string) (Columns, error) {
 }
 
 // Alias returns a columns collection with the specified alias.
-func (cols Columns) Alias(alias string) Columns {
+func (cols columnsT) Alias(alias string) columnsT {
 	cols2 := cols
 	cols2.alias = alias
 	return cols2
@@ -77,7 +77,7 @@ func (cols Columns) Alias(alias string) Columns {
 
 // PK returns a columns collection that contains
 // the primary key column or columns.
-func (cols Columns) PK() Columns {
+func (cols columnsT) PK() columnsT {
 	cols2 := cols
 	cols2.filter = func(col *column.Info) bool {
 		return col.PrimaryKey
@@ -88,7 +88,7 @@ func (cols Columns) PK() Columns {
 // PKV returns a columns collection that contains the
 // primary key column or columns, plus the optimistic
 // locking version column, if it exists.
-func (cols Columns) PKV() Columns {
+func (cols columnsT) PKV() columnsT {
 	cols2 := cols
 	cols2.filter = func(col *column.Info) bool {
 		return col.PrimaryKey || col.Version
@@ -99,7 +99,7 @@ func (cols Columns) PKV() Columns {
 // String returns a string representation of the columns.
 // The string returned depends on the SQL clause in which the
 // columns appear.
-func (cols Columns) String() string {
+func (cols columnsT) String() string {
 	var buf bytes.Buffer
 	for i, col := range cols.filtered() {
 		if i > 0 {
@@ -128,7 +128,7 @@ func (cols Columns) String() string {
 	return buf.String()
 }
 
-func (cols Columns) columnName(info *column.Info) string {
+func (cols columnsT) columnName(info *column.Info) string {
 	var path = info.Path
 	var columnName string
 
@@ -146,7 +146,7 @@ func (cols Columns) columnName(info *column.Info) string {
 	return cols.dialect.Quote(columnName)
 }
 
-func (cols Columns) filtered() []*column.Info {
+func (cols columnsT) filtered() []*column.Info {
 	v := make([]*column.Info, 0, len(cols.allColumns))
 	for _, col := range cols.allColumns {
 		if cols.filter == nil || cols.filter(col) {
@@ -156,13 +156,13 @@ func (cols Columns) filtered() []*column.Info {
 	return v
 }
 
-func (cols Columns) updateable() Columns {
+func (cols columnsT) updateable() columnsT {
 	cols2 := cols
 	cols2.filter = columnFilterUpdateable
 	return cols2
 }
 
-func (cols Columns) insertable() Columns {
+func (cols columnsT) insertable() columnsT {
 	cols2 := cols
 	cols2.filter = columnFilterInsertable
 	return cols2

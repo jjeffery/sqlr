@@ -24,6 +24,18 @@ type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
+// Logger implements a single method, Print, which prints a message
+// for diagnostic purposes. Any implementation of this interface must
+// support concurrent access by multiple goroutines.
+//
+// The Logger type in the standard library package "log" implements
+// this interface.
+//
+// Note that according to the Go naming conventions for single-method
+// interfaces, this interface should be called "Printer". The name
+// "Logger" has been chosen because it better reflects the intention
+// of this interface, and it matches the name of the Logger type in
+// the log package.
 type Logger interface {
-	Printf(format string, args ...interface{})
+	Print(v ...interface{})
 }

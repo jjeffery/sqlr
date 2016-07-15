@@ -24,27 +24,27 @@ func Example() {
 	exitIfError(err)
 	setupSchema(db)
 
-	insertRowStmt := sqlf.MustPrepareInsertRow(UserRow{}, `
+	insertRowStmt := sqlf.NewInsertRowStmt(UserRow{}, `
 		insert into users({})
 		values({})
 	`)
-	updateRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
+	updateRowStmt := sqlf.NewUpdateRowStmt(UserRow{}, `
 		update users
 		set {}
 		where {}
 	`)
 	// A statement for deleting one row is prepared using the
 	// same function as a statement updating one row.
-	deleteRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
+	deleteRowStmt := sqlf.NewUpdateRowStmt(UserRow{}, `
 		delete from users
 		where {}
 	`)
-	getRowStmt := sqlf.MustPrepareGetRow(UserRow{}, `
+	getRowStmt := sqlf.NewGetRowStmt(UserRow{}, `
 		select {}
 		from users
 		where {}
 	`)
-	selectAllRowsStmt := sqlf.MustPrepareSelect(UserRow{}, `
+	selectAllRowsStmt := sqlf.NewSelectStmt(UserRow{}, `
 		select {}
 		from users
 		order by id
