@@ -27,6 +27,7 @@ func (c sqlClause) isInput() bool {
 	return c.matchAny(
 		clauseInsertValues,
 		clauseUpdateSet,
+		clauseSelectWhere,
 		clauseUpdateWhere,
 		clauseDeleteWhere)
 }

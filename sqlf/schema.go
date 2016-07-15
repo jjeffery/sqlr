@@ -37,6 +37,8 @@ type Schema struct {
 	// Convention contains methods for inferring the name
 	// of database columns from the associated Go struct field names.
 	Convention Convention
+
+	Logger Logger
 }
 
 func (cfg *Schema) dialect() dialect.Dialect {
@@ -60,7 +62,7 @@ func (cfg *Schema) convention() Convention {
 }
 
 func (s *Schema) MustPrepareInsertRow(row interface{}, sql string) *InsertRowStmt {
-	stmt, err := PrepareInsertRow(row, sql)
+	stmt, err := s.PrepareInsertRow(row, sql)
 	if err != nil {
 		panic(err)
 	}
@@ -68,11 +70,11 @@ func (s *Schema) MustPrepareInsertRow(row interface{}, sql string) *InsertRowStm
 }
 
 func (s *Schema) PrepareInsertRow(row interface{}, sql string) (*InsertRowStmt, error) {
-	return &InsertRowStmt{}, nil
+	return prepareInsertRow(s, row, sql)
 }
 
 func (s *Schema) MustPrepareUpdateRow(row interface{}, sql string) *UpdateRowStmt {
-	stmt, err := PrepareUpdateRow(row, sql)
+	stmt, err := s.PrepareUpdateRow(row, sql)
 	if err != nil {
 		panic(err)
 	}
@@ -80,11 +82,11 @@ func (s *Schema) MustPrepareUpdateRow(row interface{}, sql string) *UpdateRowStm
 }
 
 func (s *Schema) PrepareUpdateRow(row interface{}, sql string) (*UpdateRowStmt, error) {
-	return &UpdateRowStmt{}, nil
+	return prepareUpdateRow(s, row, sql)
 }
 
 func (s *Schema) MustPrepareGetRow(row interface{}, sql string) *GetRowStmt {
-	stmt, err := PrepareGetRow(row, sql)
+	stmt, err := s.PrepareGetRow(row, sql)
 	if err != nil {
 		panic(err)
 	}
@@ -92,11 +94,11 @@ func (s *Schema) MustPrepareGetRow(row interface{}, sql string) *GetRowStmt {
 }
 
 func (s *Schema) PrepareGetRow(row interface{}, sql string) (*GetRowStmt, error) {
-	return &GetRowStmt{}, nil
+	return prepareGetRow(s, row, sql)
 }
 
 func (s *Schema) MustPrepareSelect(row interface{}, sql string) *SelectStmt {
-	stmt, err := PrepareSelect(row, sql)
+	stmt, err := s.PrepareSelect(row, sql)
 	if err != nil {
 		panic(err)
 	}
@@ -104,5 +106,5 @@ func (s *Schema) MustPrepareSelect(row interface{}, sql string) *SelectStmt {
 }
 
 func (s *Schema) PrepareSelect(row interface{}, sql string) (*SelectStmt, error) {
-	return &SelectStmt{}, nil
+	return prepareSelect(s, row, sql)
 }

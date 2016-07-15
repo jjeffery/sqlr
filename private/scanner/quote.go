@@ -37,6 +37,7 @@ var quotePairs = []quotePair{
 	newQuotePair("`", "`"),
 	newQuotePair("[", "]"),
 	newQuotePair("'", "'"),
+	newQuotePair("{", "}"),
 }
 
 // IsQuoted returns true if the identifier is a quoted identifier.

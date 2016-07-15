@@ -2,8 +2,8 @@ package sqlf_test
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
+	"os"
 
 	"github.com/jjeffery/sqlf/sqlf"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,29 +21,30 @@ type UserRow struct {
 func Example() {
 	db, err := sql.Open("sqlite3", ":memory:")
 	exitIfError(err)
+	setupSchema(db)
 
 	insertRowStmt := sqlf.MustPrepareInsertRow(UserRow{}, `
-		insert into users({columns})
-		values({values})
+		insert into users({})
+		values({})
 	`)
 	updateRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
 		update users
-		set {set}
-		where {where}
+		set {}
+		where {}
 	`)
 	// A statement for deleting one row is prepared using the
 	// same function as a statement updating one row.
 	deleteRowStmt := sqlf.MustPrepareUpdateRow(UserRow{}, `
 		delete from users
-		where {where}
+		where {}
 	`)
 	getRowStmt := sqlf.MustPrepareGetRow(UserRow{}, `
-		select {columns}
+		select {}
 		from users
-		where {where}
+		where {}
 	`)
 	selectAllRowsStmt := sqlf.MustPrepareSelect(UserRow{}, `
-		select {columns}
+		select {}
 		from users
 		order by id
 	`)
@@ -67,6 +68,7 @@ func Example() {
 		u := &UserRow{ID: 3}
 		_, err = getRowStmt.Get(tx, u)
 		exitIfError(err)
+		printRow(u)
 
 		_, err = deleteRowStmt.Exec(tx, u)
 		exitIfError(err)
@@ -89,7 +91,7 @@ func Example() {
 		err = selectAllRowsStmt.Select(tx, &users)
 		exitIfError(err)
 		for _, u := range users {
-			fmt.Printf("User %d: %s, %s", u.ID, u.FamilyName, u.GivenName)
+			printRow(u)
 		}
 	}
 
@@ -100,10 +102,28 @@ func Example() {
 
 func exitIfError(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Output(2, err.Error())
+		os.Exit(1)
 	}
 }
 
 func init() {
 	log.SetFlags(log.Lshortfile)
+}
+
+func setupSchema(db *sql.DB) {
+	sqlf.DefaultSchema.Logger = log.New(os.Stderr, "sqlf: ", 0)
+	_, err := db.Exec(`
+		create table users(
+			id integer primary key autoincrement,
+			given_name text,
+			family_name text
+		)
+	`)
+	log.Printf("Table created")
+	exitIfError(err)
+}
+
+func printRow(u *UserRow) {
+	log.Printf("User %d: %s, %s", u.ID, u.FamilyName, u.GivenName)
 }

@@ -23,3 +23,7 @@ type Execer interface {
 type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
+
+type Logger interface {
+	Printf(format string, args ...interface{})
+}
