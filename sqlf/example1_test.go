@@ -2,6 +2,7 @@ package sqlf_test
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -54,7 +55,7 @@ func Example() {
 	defer tx.Rollback()
 
 	// insert three rows, IDs are automatically generated (1, 2, 3)
-	for _, givenName := range []string{"John", "Joan", "Jane"} {
+	for _, givenName := range []string{"John", "Jane", "Joan"} {
 		u := &UserRow{
 			GivenName:  givenName,
 			FamilyName: "Citizen",
@@ -91,7 +92,7 @@ func Example() {
 		err = selectAllRowsStmt.Select(tx, &users)
 		exitIfError(err)
 		for _, u := range users {
-			printRow(u)
+			fmt.Printf("User %d: %s, %s\n", u.ID, u.FamilyName, u.GivenName)
 		}
 	}
 

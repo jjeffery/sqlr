@@ -2,8 +2,10 @@ package sqlf
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/jjeffery/sqlf/private/column"
+	"github.com/jjeffery/sqlf/private/scanner"
 )
 
 // Columns represents a set of columns associated with
@@ -37,6 +39,24 @@ func (cols Columns) Parse(clause sqlClause, text string) (Columns, error) {
 	cols2.filter = clause.defaultFilter()
 
 	// TODO: update filter based on text
+	scan := scanner.New(strings.NewReader(text))
+	scan.AddKeywords("alias")
+
+	for {
+		tok, _ := scan.Scan()
+		if tok == scanner.EOF {
+			break
+		}
+
+		// TODO: dodgy job to get going quickly
+		if tok == scanner.KEYWORD {
+			tok2, lit2 := scan.Scan()
+			for tok2 == scanner.WS {
+				tok2, lit2 = scan.Scan()
+			}
+			cols2.alias = lit2
+		}
+	}
 
 	return cols2, nil
 }
@@ -74,7 +94,6 @@ func (cols Columns) PKV() Columns {
 // columns appear.
 func (cols Columns) String() string {
 	var buf bytes.Buffer
-	dialect := cols.dialect
 	for i, col := range cols.filtered() {
 		if i > 0 {
 			if cols.clause == clauseUpdateWhere {
@@ -86,7 +105,7 @@ func (cols Columns) String() string {
 		switch cols.clause {
 		case clauseSelectColumns, clauseSelectOrderBy:
 			if cols.alias != "" {
-				buf.WriteString(dialect.Quote(cols.alias))
+				buf.WriteString(cols.alias)
 				buf.WriteRune('.')
 			}
 			buf.WriteString(cols.columnName(col))

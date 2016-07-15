@@ -233,7 +233,62 @@ func PrepareSelect(row interface{}, sql string) (*SelectStmt, error) {
 }
 
 func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
-	return errNotImplemented
+	destValue := reflect.ValueOf(dest)
+
+	if destValue.Kind() != reflect.Ptr {
+		return stmt.errorSliceType()
+	}
+	if destValue.IsNil() {
+		return errors.New("Select: nil pointer passed as dest")
+	}
+
+	sliceValue := reflect.Indirect(destValue)
+	sliceType := sliceValue.Type()
+	if sliceType.Kind() != reflect.Slice {
+		return stmt.errorSliceType()
+	}
+
+	rowType := sliceType.Elem()
+	isPtr := rowType.Kind() == reflect.Ptr
+	if isPtr {
+		rowType = rowType.Elem()
+	}
+	if rowType != stmt.rowType {
+		return stmt.errorSliceType()
+	}
+
+	rows, err := db.Query(stmt.query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	scanValues := make([]interface{}, len(stmt.columns))
+
+	for rows.Next() {
+		rowValuePtr := reflect.New(rowType)
+		rowValue := reflect.Indirect(rowValuePtr)
+		for i, col := range stmt.columns {
+			cellValue := col.Index.ValueRW(rowValue)
+			scanValues[i] = cellValue.Addr().Interface()
+		}
+		err = rows.Scan(scanValues...)
+		if err != nil {
+			return err
+		}
+		if isPtr {
+			sliceValue.Set(reflect.Append(sliceValue, rowValuePtr))
+		} else {
+			sliceValue.Set(reflect.Append(sliceValue, rowValue))
+		}
+	}
+
+	return rows.Err()
+}
+
+func (stmt *SelectStmt) errorSliceType() error {
+	expectedType := stmt.expectedTypeString()
+	return fmt.Errorf("Expected dest to be pointer to []%s or []*%s", expectedType, expectedType)
 }
 
 type commonStmt struct {

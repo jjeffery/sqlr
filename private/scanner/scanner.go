@@ -20,7 +20,8 @@ const (
 	EOF                      // End of input
 	WS                       // White space
 	COMMENT                  // SQL comment
-	IDENT                    // identifer, including keywords such as "SELECT"
+	IDENT                    // identifer, which may be quoted
+	KEYWORD                  // keyword as per AddKeywords
 	LITERAL                  // string or numeric literal
 	OP                       // operator
 	PLACEHOLDER              // prepared statement placeholder
@@ -33,15 +34,28 @@ const (
 
 // Scanner is a simple lexical scanner for SQL statements.
 type Scanner struct {
-	r   *bufio.Reader
-	err error
+	r        *bufio.Reader
+	keywords map[string]bool
+	err      error
 }
 
 // New returns a new scanner that takes its input from r.
 func New(r io.Reader) *Scanner {
 	return &Scanner{
-		r: bufio.NewReader(r),
+		r:        bufio.NewReader(r),
+		keywords: make(map[string]bool),
 	}
+}
+
+func (s *Scanner) AddKeywords(keywords ...string) {
+	for _, keyword := range keywords {
+		key := strings.TrimSpace(strings.ToLower(keyword))
+		s.keywords[key] = true
+	}
+}
+
+func (s *Scanner) isKeyword(lit string) bool {
+	return s.keywords[strings.ToLower(lit)]
 }
 
 // Scan the next SQL token.
@@ -194,7 +208,12 @@ func (s *Scanner) scanIdentifier(startCh rune) (Token, string) {
 			buf.WriteRune(ch)
 		}
 	}
-	return IDENT, buf.String()
+	lit := buf.String()
+	if s.isKeyword(lit) {
+		return KEYWORD, lit
+	}
+
+	return IDENT, lit
 }
 
 func (s *Scanner) scanNumber(startCh rune) (Token, string) {
