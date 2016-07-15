@@ -75,6 +75,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 	if ch == '\'' {
 		return s.scanQuote(ch)
 	}
+	if ch == '{' {
+		return s.scanDelimitedIdentifier('{', '}')
+	}
 	if strings.ContainsRune("NnXx", ch) {
 		ch2 := s.read()
 		if ch2 == '\'' {

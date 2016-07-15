@@ -178,7 +178,7 @@ func TestScan(t *testing.T) {
 				{EOF, ""},
 			},
 		},
-		// placehoder
+		// placeholder
 		{
 			sql: "select * from [tbl] t where t.id = ? and t.version = ?",
 			tokens: []tokenLit{
@@ -211,6 +211,20 @@ func TestScan(t *testing.T) {
 				{OP, "="},
 				{WS, " "},
 				{PLACEHOLDER, "?"},
+				{EOF, ""},
+			},
+		},
+		// placeholder
+		{
+			sql: "select {whatever} from [tbl]",
+			tokens: []tokenLit{
+				{IDENT, "select"},
+				{WS, " "},
+				{IDENT, "{whatever}"},
+				{WS, " "},
+				{IDENT, "from"},
+				{WS, " "},
+				{IDENT, "[tbl]"},
 				{EOF, ""},
 			},
 		},
