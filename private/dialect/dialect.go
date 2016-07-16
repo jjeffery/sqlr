@@ -91,7 +91,7 @@ var (
 		placeholderFunc: placeholderFunc("$%d"),
 	}
 
-	// github.com/cznic/ql: does not allow quoted identifers
+	// github.com/cznic/ql: does not allow quoted identifiers
 	dialectQL = dialectT{name: "ql", quoteFunc: quoteFunc("", "")}
 )
 

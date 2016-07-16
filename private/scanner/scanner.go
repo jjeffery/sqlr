@@ -49,6 +49,8 @@ func New(r io.Reader) *Scanner {
 	}
 }
 
+// AddKeywords informs the scanner of keywords. Keywords
+// are not case sensitive.
 func (s *Scanner) AddKeywords(keywords ...string) {
 	for _, keyword := range keywords {
 		key := strings.TrimSpace(strings.ToLower(keyword))
@@ -182,19 +184,19 @@ func (s *Scanner) scanDelimitedIdentifier(startCh rune, endCh rune) (Token, stri
 	var buf bytes.Buffer
 	buf.WriteRune(startCh)
 	for {
-		if ch := s.read(); ch == eof {
+		ch := s.read()
+		if ch == eof {
 			return ILLEGAL, buf.String()
-		} else {
-			buf.WriteRune(ch)
-			if ch == endCh {
-				// double endCh is an escape
-				ch2 := s.read()
-				if ch2 != endCh {
-					s.unread()
-					break
-				}
-				buf.WriteRune(ch2)
+		}
+		buf.WriteRune(ch)
+		if ch == endCh {
+			// double endCh is an escape
+			ch2 := s.read()
+			if ch2 != endCh {
+				s.unread()
+				break
 			}
+			buf.WriteRune(ch2)
 		}
 	}
 	return IDENT, buf.String()
@@ -260,17 +262,18 @@ func (s *Scanner) scanQuote(startChs ...rune) (Token, string) {
 		buf.WriteRune(ch)
 	}
 	for {
-		if ch := s.read(); ch == eof {
+
+		ch := s.read()
+		if ch == eof {
 			return ILLEGAL, buf.String()
-		} else {
-			buf.WriteRune(ch)
-			if ch == endCh {
-				if ch2 := s.read(); ch2 == endCh {
-					buf.WriteRune(ch2)
-				} else {
-					s.unread()
-					break
-				}
+		}
+		buf.WriteRune(ch)
+		if ch == endCh {
+			if ch2 := s.read(); ch2 == endCh {
+				buf.WriteRune(ch2)
+			} else {
+				s.unread()
+				break
 			}
 		}
 	}

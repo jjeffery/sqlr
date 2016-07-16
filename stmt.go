@@ -22,7 +22,9 @@ type InsertRowStmt struct {
 }
 
 // NewInsertRowStmt returns a new InsertRowStmt for the given
-// row and SQL. The dialect and naming conventions are inferred
+// row and SQL.
+// It is safe for concurrent access by multiple goroutines.
+// The dialect and naming conventions are inferred
 // from DefaultSchema.
 func NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
 	return newInsertRowStmt(DefaultSchema, row, sql)
@@ -42,7 +44,7 @@ func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStm
 
 	if stmt.autoIncrColumn != nil {
 		// Some DBs allow the auto-increment column to be specified.
-		// Work out if this statment is doing this.
+		// Work out if this statement is doing this.
 		for _, col := range stmt.inputs {
 			if col == stmt.autoIncrColumn {
 				// this statement is setting the auto-increment column explicitly
@@ -55,6 +57,7 @@ func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStm
 	return stmt
 }
 
+// Exec executes the insert statement using the row as arguments.
 func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
 
 	// field for setting the auto-increment value
@@ -89,8 +92,9 @@ type ExecRowStmt struct {
 	commonStmt
 }
 
-// NewUpdateRowStmt returns a new ExecRowStmt for updating a single
-// row. The dialect and naming conventions are obtained from DefaultSchema.
+// NewUpdateRowStmt returns a new ExecRowStmt for updating a single row.
+// It is safe for concurrent access by multiple goroutines.
+// The dialect and naming conventions are obtained from DefaultSchema.
 func NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newUpdateRowStmt(DefaultSchema, row, sql)
 }
@@ -103,7 +107,9 @@ func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 }
 
 // NewDeleteRowStmt returns a new ExecRowStmt for deleting a single
-// row. The dialect and naming conventions are obtained from DefaultSchema.
+// row.
+// It is safe for concurrent access by multiple goroutines.
+// The dialect and naming conventions are obtained from DefaultSchema.
 func NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newDeleteRowStmt(DefaultSchema, row, sql)
 }
@@ -138,7 +144,9 @@ type GetRowStmt struct {
 }
 
 // NewGetRowStmt returns a new GetRowStmt for the given
-// row and SQL. The dialect and naming conventions are obtained
+// row and SQL.
+// It is safe for concurrent access by multiple goroutines.
+// The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 	return newGetRowStmt(DefaultSchema, row, sql)

@@ -23,7 +23,7 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// New creates a dialect based on the name. Supported dialects include:
+// NewDialect creates a dialect based on the name. Supported dialects include:
 //
 //  mssql
 //  mysql

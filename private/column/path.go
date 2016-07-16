@@ -51,6 +51,7 @@ func (path Path) Append(fieldName, columnName string) Path {
 	return clone
 }
 
+// Equal returns true if path and other are equal.
 func (path Path) Equal(other Path) bool {
 	if len(path) != len(other) {
 		return false

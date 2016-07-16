@@ -81,7 +81,6 @@ func columnNameFromTag(tags reflect.StructTag) string {
 			}
 		}
 	}
-	return ""
 }
 
 // newScanner returns a scanner for reading the contents of the struct tag.

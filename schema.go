@@ -63,18 +63,32 @@ func (s *Schema) convention() Convention {
 	return colname.Snake
 }
 
+// NewInsertRowStmt returns a new InsertRowStmt for the given
+// row and SQL.
+// It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
 	return newInsertRowStmt(s, row, sql)
 }
 
+// NewUpdateRowStmt returns a new ExecRowStmt for updating a single row.
 func (s *Schema) NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newUpdateRowStmt(s, row, sql)
 }
 
+// NewDeleteRowStmt returns a new ExecRowStmt for deleting a single row.
+// It is safe for concurrent access by multiple goroutines.
+func (s *Schema) NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
+	return newDeleteRowStmt(s, row, sql)
+}
+
+// GetRowStmt executes a query that returns a single row.
+// It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 	return newGetRowStmt(s, row, sql)
 }
 
+// SelectStmt executes a query that returns multiple rows.
+// It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewSelectStmt(row interface{}, sql string) *SelectStmt {
 	return newSelectStmt(DefaultSchema, row, sql)
 }
