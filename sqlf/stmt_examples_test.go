@@ -86,6 +86,49 @@ func ExampleGetRowStmt() {
 	// ID=1, GivenName="John", FamilyName="Citizen"
 }
 
+func ExampleExecRowStmt() {
+	type User struct {
+		ID         int64 `sql:",primary key auto increment"`
+		GivenName  string
+		FamilyName string
+	}
+
+	updateStmt := sqlf.NewUpdateRowStmt(User{}, `users`)
+	deleteStmt := sqlf.NewDeleteRowStmt(User{}, `users`)
+	fmt.Println(updateStmt.String())
+	fmt.Println(deleteStmt.String())
+
+	var db *sql.DB = openTestDB()
+
+	// Get user with specified primary key
+	u := &User{ID: 1}
+	_, err := sqlf.NewGetRowStmt(User{}, `users`).Get(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Update row
+	u.GivenName = "Donald"
+	n, err := updateStmt.Exec(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("number of rows updated:", n)
+
+	// Delete row
+	n, err = deleteStmt.Exec(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("number of rows deleted:", n)
+
+	// Output:
+	// update users set `given_name`=?,`family_name`=? where `id`=?
+	// delete from users where `id`=?
+	// number of rows updated: 1
+	// number of rows deleted: 1
+}
+
 func ExampleNewDeleteRowStmt() {
 	type User struct {
 		ID         int64 `sql:",primary key auto increment"`
@@ -106,11 +149,43 @@ func ExampleNewDeleteRowStmt() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Number of rows deleted = %d\n", n)
+	fmt.Println("number of rows deleted:", n)
 
 	// Output:
 	// delete from users where `id`=?
-	// Number of rows deleted = 1
+	// number of rows deleted: 1
+}
+
+func ExampleupdateRowStmt() {
+	type User struct {
+		ID         int64 `sql:",primary key auto increment"`
+		GivenName  string
+		FamilyName string
+	}
+
+	updateStmt := sqlf.NewUpdateRowStmt(User{}, `users`)
+	fmt.Println(updateStmt.String())
+
+	var db *sql.DB = openTestDB()
+
+	// Get user with specified primary key
+	u := &User{ID: 1}
+	_, err := sqlf.NewGetRowStmt(User{}, `users`).Get(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Update row
+	u.GivenName = "Donald"
+	n, err := updateStmt.Exec(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("number of rows updated:", n)
+
+	// Output:
+	// update users set `given_name`=?,`family_name`=? where `id`=?
+	// number of rows updated: 1
 }
 
 func ExampleSelectStmt() {
