@@ -82,43 +82,114 @@ if err != nil {
 }
 ```
 
+This example code is using SQLite, but the `sqlstmt` package supports any
+SQL dialect via a very simple `Dialect` interface, and the following SQL
+dialects are supported out of the box:
+
+* SQLite
+* PostgreSQL
+* MySQL
+* MS SQL
+
 ### Inserting a row
 
 ```go
 
-// create the statement -- this only needs to be done once
+// create the statement -- this only needs to be done once, at
+// program initialization time
 insertRow := sqlstmt.NewInsertRowStmt(User{}, "users")
 
-// perform the insertStmt using a db connection opened earlier
-err := insertRow.Exec(db, &User{
+// create the row object and populate with data
+u := &User{
 	GivenName: "Jane",
 	FamilyName: "Citizen",
 	EmailAddress: "jane@citizen.com",
-})
+}
+
+// execute the insert statement using a db connection opened earlier
+err := insertRow.Exec(db, u)
 
 if err != nil {
 	log.Fatal(err)
 }
+
+fmt.Println("User ID:", u.ID)
+
+// Output: User ID: 1
 ```
 
 Because the `id` column is an auto-increment column, the value of `u.ID` will
 contain the auto-generated value after the insert row statement has been run.
 
-### Getting a row
+### Updating a row
 
 Continuing from the previous example:
 
 ```go
+// create the statement -- this only needs to be done once, at
+// program initialization time
+updateRow := sqlstmt.NewUpdateRowStmt(User{}, "users")
+
+// change user details
+u.EmailAddress = "jane.citizen.314159@gmail.com"
+
+// execute the update statement
+n, err = updateRow.Exec(db, u)
+
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println("Rows updated:", n)
+
+// Output: Rows updated: 1
+```
+
+### Deleting a row
+
+Continuing from the previous example:
+
+```go
+// create the statement -- this only needs to be done once, at
+// program initialization time
+deleteRow := sqlstmt.NewDeleteRowStmt(User{}, "users")
+
+// execute the delete statement
+n, err = updateRow.Exec(db, u)
+
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println("Rows updated:", n)
+
+// Output: Rows updated: 1
+```
+
+### Getting a row by primary key
+
+Pretending that we have not deleted the row in the previous example:
+
+```go
 getRow := sqlstmt.NewGetRowStmt(User{}, "users")
 
+// create a row variable and populate with the primary key of the row
+// that we are after
 u := &User{ID: 1}
+
 n, err := getRow.Get(db, u)
 
 if err != nil {
 	log.Fatal(err)
 }
 
-// n is the number of rows returned, 0=not found, 1=found
+fmt.Println("Rows returned:", n)
+fmt.Println("User email:", u.EmailAddress)
 
+// Output:
+// Rows returned: 1
+// User email: jane.citizen.314159@gmail.com
 ```
+
+
 
