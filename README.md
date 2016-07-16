@@ -303,9 +303,9 @@ The `sqlstmt` package is designed to be as SQL-agnostic as possible, but
 when it is generating SQL it does need to know the following:
 
 * How to quote column names to ensure they are not interpreted as an SQL keyword
-  * PostgreSQL uses double quotes: `"column_name"`
-  * MySQL uses back ticks: `\`column_name\``
-  * MS SQL Server uses square braces: `[column_name]`
+  * PostgreSQL uses double quotes: "column_name"
+  * MySQL uses back ticks: \`column_name\`
+  * MS SQL Server uses square braces: [column_name]
 * How to write placeholders for arguments
   * PostgreSQL uses numbered placeholders: `$1`, `$2`, etc
   * Almost everyone else uses question marks: `?`
