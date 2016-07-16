@@ -34,6 +34,8 @@ const (
 
 // Scanner is a simple lexical scanner for SQL statements.
 type Scanner struct {
+	IgnoreWhiteSpace bool
+
 	r        *bufio.Reader
 	keywords map[string]bool
 	err      error
@@ -61,6 +63,9 @@ func (s *Scanner) isKeyword(lit string) bool {
 // Scan the next SQL token.
 func (s *Scanner) Scan() (tok Token, lit string) {
 	ch := s.read()
+	for s.IgnoreWhiteSpace && isWhitespace(ch) {
+		ch = s.read()
+	}
 	if ch == eof {
 		return EOF, ""
 	}

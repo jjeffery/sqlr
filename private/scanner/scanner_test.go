@@ -13,17 +13,19 @@ func TestScan(t *testing.T) {
 	testCases := []struct {
 		sql    string
 		tokens []tokenLit
+
+		ignoreWhiteSpaceTokens []tokenLit
 	}{
 		{
-			sql: "select * from [tbl] t where t.id = 'one'",
+			sql: "select * from [from] t where t.id = 'one'",
 			tokens: []tokenLit{
-				{IDENT, "select"},
+				{KEYWORD, "select"},
 				{WS, " "},
 				{OP, "*"},
 				{WS, " "},
-				{IDENT, "from"},
+				{KEYWORD, "from"},
 				{WS, " "},
-				{IDENT, "[tbl]"},
+				{IDENT, "[from]"},
 				{WS, " "},
 				{IDENT, "t"},
 				{WS, " "},
@@ -35,6 +37,20 @@ func TestScan(t *testing.T) {
 				{WS, " "},
 				{OP, "="},
 				{WS, " "},
+				{LITERAL, "'one'"},
+				{EOF, ""},
+			},
+			ignoreWhiteSpaceTokens: []tokenLit{
+				{KEYWORD, "select"},
+				{OP, "*"},
+				{KEYWORD, "from"},
+				{IDENT, "[from]"},
+				{IDENT, "t"},
+				{IDENT, "where"},
+				{IDENT, "t"},
+				{OP, "."},
+				{IDENT, "id"},
+				{OP, "="},
 				{LITERAL, "'one'"},
 				{EOF, ""},
 			},
@@ -91,7 +107,7 @@ func TestScan(t *testing.T) {
 		{ // comments
 			sql: "select -- this is a comment\n5-2-- another comment",
 			tokens: []tokenLit{
-				{IDENT, "select"},
+				{KEYWORD, "select"},
 				{WS, " "},
 				{COMMENT, "-- this is a comment\n"},
 				{LITERAL, "5"},
@@ -182,11 +198,11 @@ func TestScan(t *testing.T) {
 		{
 			sql: "select * from [tbl] t where t.id = ? and t.version = ?",
 			tokens: []tokenLit{
-				{IDENT, "select"},
+				{KEYWORD, "select"},
 				{WS, " "},
 				{OP, "*"},
 				{WS, " "},
-				{IDENT, "from"},
+				{KEYWORD, "from"},
 				{WS, " "},
 				{IDENT, "[tbl]"},
 				{WS, " "},
@@ -218,11 +234,11 @@ func TestScan(t *testing.T) {
 		{
 			sql: "select {whatever} from [tbl]",
 			tokens: []tokenLit{
-				{IDENT, "select"},
+				{KEYWORD, "select"},
 				{WS, " "},
 				{IDENT, "{whatever}"},
 				{WS, " "},
-				{IDENT, "from"},
+				{KEYWORD, "from"},
 				{WS, " "},
 				{IDENT, "[tbl]"},
 				{EOF, ""},
@@ -252,13 +268,25 @@ func TestScan(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testCases {
-		scanner := New(strings.NewReader(tc.sql))
-		for j, expected := range tc.tokens {
+	check := func(scanner *Scanner, tokens []tokenLit) {
+		if len(tokens) == 0 {
+			return
+		}
+		for i, expected := range tokens {
 			tok, lit := scanner.Scan()
 			if tok != expected.token || lit != expected.lit {
-				t.Errorf("%d,%d: expected (%v,%s), got (%v,%s)", i, j, expected.token, expected.lit, tok, lit)
+				t.Errorf("%d: expected (%v,%s), got (%v,%s)", i, expected.token, expected.lit, tok, lit)
 			}
 		}
+	}
+
+	for _, tc := range testCases {
+		scanner := New(strings.NewReader(tc.sql))
+		scanner.AddKeywords("select", "from")
+		check(scanner, tc.tokens)
+		scanner = New(strings.NewReader(tc.sql))
+		scanner.AddKeywords("select", "from")
+		scanner.IgnoreWhiteSpace = true
+		check(scanner, tc.ignoreWhiteSpaceTokens)
 	}
 }
