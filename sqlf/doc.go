@@ -4,6 +4,7 @@ statements for common scenarios. Supported scenarios include:
 
  * Insert a single row based on a Go struct
  * Update a single row based on a Go struct
+ * Delete a single row based on a Go struct
  * Select a single row into a Go struct
  * Select zero, one or more rows int a a slice of Go structs
 
