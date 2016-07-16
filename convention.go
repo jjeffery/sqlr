@@ -3,7 +3,7 @@ package sqlstmt
 import "github.com/jjeffery/sqlstmt/private/colname"
 
 // Convention provides naming convention methods for
-// inferring a database column name from Go struct field names.
+// inferring database column names from Go struct field names.
 type Convention interface {
 	// ColumnName returns the name of a database column based
 	// on the name of a Go struct field.
