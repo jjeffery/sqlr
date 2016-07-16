@@ -32,6 +32,7 @@ func Example() {
 		select {}
 		from users
 		order by id
+		limit ? offset ? -- example of placeholders
 	`)
 
 	tx, err := db.Begin()
@@ -72,7 +73,7 @@ func Example() {
 	// select rows from table and print
 	{
 		var users []*UserRow
-		err = selectAllRows.Select(tx, &users)
+		err = selectAllRows.Select(tx, &users, 100, 0)
 		exitIfError(err)
 		for _, u := range users {
 			fmt.Printf("User %d: %s, %s\n", u.ID, u.FamilyName, u.GivenName)
