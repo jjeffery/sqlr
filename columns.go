@@ -43,6 +43,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 	// TODO: update filter based on text
 	scan := scanner.New(strings.NewReader(text))
 	scan.AddKeywords("alias", "all", "pk")
+	scan.IgnoreWhiteSpace = true
 
 	for {
 		tok, lit := scan.Scan()
@@ -54,10 +55,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 		if tok == scanner.KEYWORD {
 			switch strings.ToLower(lit) {
 			case "alias":
-				tok2, lit2 := scan.Scan()
-				for tok2 == scanner.WS {
-					tok2, lit2 = scan.Scan()
-				}
+				_, lit2 := scan.Scan()
 				cols2.alias = lit2
 			case "all":
 				cols2.filter = columnFilterAll
@@ -68,34 +66,6 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 	}
 
 	return cols2, nil
-}
-
-// Alias returns a columns collection with the specified alias.
-func (cols columnsT) Alias(alias string) columnsT {
-	cols2 := cols
-	cols2.alias = alias
-	return cols2
-}
-
-// PK returns a columns collection that contains
-// the primary key column or columns.
-func (cols columnsT) PK() columnsT {
-	cols2 := cols
-	cols2.filter = func(col *column.Info) bool {
-		return col.PrimaryKey
-	}
-	return cols2
-}
-
-// PKV returns a columns collection that contains the
-// primary key column or columns, plus the optimistic
-// locking version column, if it exists.
-func (cols columnsT) PKV() columnsT {
-	cols2 := cols
-	cols2.filter = func(col *column.Info) bool {
-		return col.PrimaryKey || col.Version
-	}
-	return cols2
 }
 
 // String returns a string representation of the columns.
@@ -160,18 +130,6 @@ func (cols columnsT) filtered() []*column.Info {
 		}
 	}
 	return v
-}
-
-func (cols columnsT) updateable() columnsT {
-	cols2 := cols
-	cols2.filter = columnFilterUpdateable
-	return cols2
-}
-
-func (cols columnsT) insertable() columnsT {
-	cols2 := cols
-	cols2.filter = columnFilterInsertable
-	return cols2
 }
 
 func columnFilterAll(col *column.Info) bool {

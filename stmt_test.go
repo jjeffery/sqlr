@@ -229,6 +229,32 @@ func TestNewSelectStmt(t *testing.T) {
 		},
 		{
 			row: struct {
+				ID   string `sql:"primary key auto increment"`
+				Name string
+			}{},
+			sql: "select {} from tbl where name like ? order by {pk}",
+			queries: map[string]string{
+				"mysql":    "select `id`,`name` from tbl where name like ? order by `id`",
+				"postgres": `select "id","name" from tbl where name like $1 order by "id"`,
+			},
+		},
+		{
+			row: struct {
+				ID   string `sql:"primary key auto increment"`
+				Name struct {
+					Given  string
+					Family string
+				}
+			}{},
+			sql: "select {} from tbl where name like ? order by {pk}",
+			queries: map[string]string{
+				"mysql":    "select `id`,`name_given`,`name_family` from tbl where name like ? order by `id`",
+				"postgres": `select "id","name_given","name_family" from tbl where name like $1 order by "id"`,
+			},
+		},
+
+		{
+			row: struct {
 				ID    string `sql:"primary key auto increment"`
 				Hash  string `sql:"pk"`
 				Name  string
