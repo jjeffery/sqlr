@@ -156,7 +156,7 @@ func ExampleNewDeleteRowStmt() {
 	// number of rows deleted: 1
 }
 
-func ExampleupdateRowStmt() {
+func ExampleNewUpdateRowStmt() {
 	type User struct {
 		ID         int64 `sql:",primary key auto increment"`
 		GivenName  string
