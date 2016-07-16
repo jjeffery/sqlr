@@ -182,7 +182,7 @@ func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
 
 	args, err := stmt.getArgs(dest)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	if stmt.Logger != nil {
