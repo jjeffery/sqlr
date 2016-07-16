@@ -116,7 +116,7 @@ func (c sqlClause) nextClause(keyword string) sqlClause {
 		return clauseInsertColumns
 	case "order":
 		switch c {
-		case clauseSelectFrom, clauseSelectColumns:
+		case clauseSelectFrom, clauseSelectColumns, clauseSelectWhere:
 			return clauseSelectOrderBy
 		}
 	case "select":

@@ -59,7 +59,6 @@ func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStm
 
 // Exec executes the insert statement using the row as arguments.
 func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
-
 	// field for setting the auto-increment value
 	var field reflect.Value
 	if stmt.autoIncrColumn != nil {
@@ -377,7 +376,6 @@ func (stmt *commonStmt) scanSQL(query string) error {
 		case scanner.WS:
 			buf.WriteRune(' ')
 		case scanner.COMMENT:
-		// strip comment
 		case scanner.LITERAL, scanner.OP:
 			buf.WriteString(lit)
 		case scanner.PLACEHOLDER:

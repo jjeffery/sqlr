@@ -19,16 +19,18 @@ type columnsT struct {
 	allColumns []*column.Info
 	convention Convention
 	dialect    Dialect
+	counter    func() int
 	filter     func(col *column.Info) bool
 	clause     sqlClause
 	alias      string
 }
 
-func newColumns(allColumns []*column.Info, convention Convention, dialect Dialect) columnsT {
+func newColumns(allColumns []*column.Info, convention Convention, dialect Dialect, counter func() int) columnsT {
 	return columnsT{
 		allColumns: allColumns,
 		convention: convention,
 		dialect:    dialect,
+		counter:    counter,
 		clause:     clauseSelectColumns,
 	}
 }
@@ -103,7 +105,10 @@ func (cols columnsT) String() string {
 	var buf bytes.Buffer
 	for i, col := range cols.filtered() {
 		if i > 0 {
-			if cols.clause == clauseUpdateWhere {
+			if cols.clause.matchAny(
+				clauseUpdateWhere,
+				clauseDeleteWhere,
+				clauseSelectWhere) {
 				buf.WriteString(" and ")
 			} else {
 				buf.WriteRune(',')
@@ -119,10 +124,11 @@ func (cols columnsT) String() string {
 		case clauseInsertColumns:
 			buf.WriteString(cols.columnName(col))
 		case clauseInsertValues:
-			buf.WriteString("?")
+			buf.WriteString(cols.dialect.Placeholder(cols.counter()))
 		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere, clauseSelectWhere:
 			buf.WriteString(cols.columnName(col))
-			buf.WriteString("=?")
+			buf.WriteRune('=')
+			buf.WriteString(cols.dialect.Placeholder(cols.counter()))
 		}
 	}
 	return buf.String()
