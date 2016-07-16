@@ -18,5 +18,7 @@ This package is designed to work seamlessly with the standard library
 or *sql.Tx. If the calling program has a need to execute queries independently
 of this package, it can use "database/sql" directly, or make use of any other
 third party package that uses "database/sql".
+
+More information about this package is found at https://github.com/jjeffery/sqlstmt.
 */
 package sqlstmt
