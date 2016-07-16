@@ -14,7 +14,7 @@ const (
 	selectFormat = "select {} from %s order by {} limit ? offset ?"
 )
 
-var whiteSpaceRE = regexp.MustCompile(`\w`)
+var whiteSpaceRE = regexp.MustCompile(`\s`)
 
 // checkSQL inspects the contents of sql, and if it contains a table
 // name (ie has not whitespace), then it returns SQL formatted with the
