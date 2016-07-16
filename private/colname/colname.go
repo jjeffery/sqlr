@@ -1,10 +1,5 @@
-// Package colname contains functions for deriving
-// a database table column name from a Go struct
-// field name.
-//
-// Each function accepts a field name and an optional
-// prefix. The prefix will be non-blank when naming
-// a field within an embedded structure.
+// Package colname is concerned with inferring database table
+// column names from the names of the associated Go struct fields.
 package colname
 
 import (
