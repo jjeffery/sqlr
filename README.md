@@ -72,12 +72,22 @@ type User struct {
 Note the use of struct tags to include information about the primary key
 and auto-increment behaviour.
 
+The following examples assume that a database has been opened and the 
+`*sql.DB` is stored in variable `db`:
+
+```go
+db, err := sql.Open("sqlite3", ":memory:")
+if err != nil {
+	log.Fatal(err)
+}
+```
+
 ### Inserting a row
 
 ```go
 
 // create the statement -- this only needs to be done once
-insertRow := sqlstmt.NewInsertStmt(User{}, "users")
+insertRow := sqlstmt.NewInsertRowStmt(User{}, "users")
 
 // perform the insertStmt using a db connection opened earlier
 err := insertRow.Exec(db, &User{
@@ -85,5 +95,30 @@ err := insertRow.Exec(db, &User{
 	FamilyName: "Citizen",
 	EmailAddress: "jane@citizen.com",
 })
+
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+Because the `id` column is an auto-increment column, the value of `u.ID` will
+contain the auto-generated value after the insert row statement has been run.
+
+### Getting a row
+
+Continuing from the previous example:
+
+```go
+getRow := sqlstmt.NewGetRowStmt(User{}, "users")
+
+u := &User{ID: 1}
+n, err := getRow.Get(db, u)
+
+if err != nil {
+	log.Fatal(err)
+}
+
+// n is the number of rows returned, 0=not found, 1=found
+
 ```
 
