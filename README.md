@@ -28,6 +28,7 @@ no backwards compatibility guarantee at this time.
 - [Column mapping](#column-mapping)
   - [Simple structs](#simple-structs)
   - [Anonymous structs](#anonymous-structs)
+  - [Embedded structs](#embedded-structs)
 - [Column naming conventions](#column-naming-conventions)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -489,6 +490,7 @@ type CustomerContact struct {
 // * postal_address_city
 // * postal_address_postcode
 // * postal_address_country
+```
 
 ## Column naming conventions
 
