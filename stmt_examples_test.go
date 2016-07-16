@@ -61,7 +61,7 @@ func ExampleInsertRowStmt() {
 
 func ExampleGetRowStmt() {
 	type User struct {
-		ID         int64 `sql:",primary key auto increment"`
+		ID         int64 `sql:"primary key auto increment"`
 		GivenName  string
 		FamilyName string
 	}
@@ -88,7 +88,7 @@ func ExampleGetRowStmt() {
 
 func ExampleExecRowStmt() {
 	type User struct {
-		ID         int64 `sql:",primary key auto increment"`
+		ID         int64 `sql:"primary key auto increment"`
 		GivenName  string
 		FamilyName string
 	}
@@ -131,7 +131,7 @@ func ExampleExecRowStmt() {
 
 func ExampleNewDeleteRowStmt() {
 	type User struct {
-		ID         int64 `sql:",primary key auto increment"`
+		ID         int64 `sql:"primary key auto increment"`
 		GivenName  string
 		FamilyName string
 	}
@@ -158,7 +158,7 @@ func ExampleNewDeleteRowStmt() {
 
 func ExampleNewUpdateRowStmt() {
 	type User struct {
-		ID         int64 `sql:",primary key auto increment"`
+		ID         int64 `sql:"primary key auto increment"`
 		GivenName  string
 		FamilyName string
 	}

@@ -14,7 +14,7 @@ import (
 // Note that the sqlstmt package becomes more useful when tables
 // have many more columns than shown in this example.
 type UserRow struct {
-	ID         int64 `sql:",primary key autoincrement"`
+	ID         int64 `sql:"primary key autoincrement"`
 	GivenName  string
 	FamilyName string
 }
