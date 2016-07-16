@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjeffery/sqlf/private/column"
+	"github.com/jjeffery/sqlstmt/private/column"
 )
 
 func TestNewList(t *testing.T) {
@@ -36,8 +36,8 @@ func TestNewList(t *testing.T) {
 		},
 		{
 			row: struct {
-				ID   int `sql:",primary key"`
-				Name string
+				ID   int    `sql:",primary key"`
+				Name string `sql:"'primary' key"`
 			}{},
 			infos: []*column.Info{
 				{
@@ -46,15 +46,15 @@ func TestNewList(t *testing.T) {
 					PrimaryKey: true,
 				},
 				{
-					Path:  column.NewPath("Name", ""),
+					Path:  column.NewPath("Name", "primary"),
 					Index: column.NewIndex(1),
 				},
 			},
 		},
 		{
 			row: struct {
-				ID   int `sql:",pk autoincr"`
-				Name string
+				ID   int    `sql:"primary key auto increment"`
+				Name string `sql:"[primary] key"`
 			}{},
 			infos: []*column.Info{
 				{
@@ -64,7 +64,7 @@ func TestNewList(t *testing.T) {
 					AutoIncrement: true,
 				},
 				{
-					Path:  column.NewPath("Name", ""),
+					Path:  column.NewPath("Name", "primary"),
 					Index: column.NewIndex(1),
 				},
 			},
