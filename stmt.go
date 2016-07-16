@@ -77,7 +77,7 @@ func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
 	if field.IsValid() {
 		n, err := result.LastInsertId()
 		if err != nil {
-			return nil
+			return err
 		}
 		// TODO: could catch a panic here if the type is not int8, 1nt16, int32, int64
 		field.SetInt(n)
