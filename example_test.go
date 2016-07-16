@@ -24,26 +24,10 @@ func Example() {
 	exitIfError(err)
 	setupSchema(db)
 
-	insertRow := sqlstmt.NewInsertRowStmt(UserRow{}, `
-		insert into users({})
-		values({})
-	`)
-	updateRow := sqlstmt.NewUpdateRowStmt(UserRow{}, `
-		update users
-		set {}
-		where {}
-	`)
-	// A statement for deleting one row is prepared using the
-	// same function as a statement updating one row.
-	deleteRow := sqlstmt.NewUpdateRowStmt(UserRow{}, `
-		delete from users
-		where {}
-	`)
-	getRow := sqlstmt.NewGetRowStmt(UserRow{}, `
-		select {}
-		from users
-		where {}
-	`)
+	insertRow := sqlstmt.NewInsertRowStmt(UserRow{}, `users`)
+	updateRow := sqlstmt.NewUpdateRowStmt(UserRow{}, `users`)
+	deleteRow := sqlstmt.NewDeleteRowStmt(UserRow{}, `users`)
+	getRow := sqlstmt.NewGetRowStmt(UserRow{}, `users`)
 	selectAllRows := sqlstmt.NewSelectStmt(UserRow{}, `
 		select {}
 		from users
