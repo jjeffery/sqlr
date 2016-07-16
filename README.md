@@ -530,7 +530,7 @@ The `sqlstmt` package comes with two naming conventions out of the box:
 * `ConventionSnake`: the default, "snake_case" convention; and
 * `ConventionSame`: a convention where the column name is identical to the Go field name.
 
-To set a convention other than the default, set the `Schema`.`Convention` property:
+To set a convention other than the default, set the `Schema.Convention` property:
 
 ```go
 // set the default naming convention so that column names are
@@ -541,4 +541,10 @@ sqlstmt.DefaultSchema.Convention = sqlstmt.ConventionSame
 mySchema := &sqlstmt.Schema{
 	Convention: newMyCustomNamingConvention(),
 }
+
+// This will use the default convention (which is now sqlstmt.ConventionSame)
+stmt1 := sqlstmt.NewInsertRowStmt(Widget{}, "widgets")
+
+// This will use the custom convention associated with the mySchema
+stmt2 := mySchema.NewUpdateRowStmt(Gadget{}, "gadgets")
 ```
