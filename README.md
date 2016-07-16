@@ -9,6 +9,22 @@ Package `sqlstmt` provides assistance in creating SQL statements.
 **NOTE:** This package is a work in progress. There is 
 no backwards compatibility guarantee at this time.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+
+- [Rationale](#rationale)
+- [Obtaining the package](#obtaining-the-package)
+- [Examples](#examples)
+  - [Inserting a row](#inserting-a-row)
+  - [Updating a row](#updating-a-row)
+  - [Deleting a row](#deleting-a-row)
+  - [Getting a row by primary key](#getting-a-row-by-primary-key)
+  - [Performing queries](#performing-queries)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 ## Rationale
 
 There are a number of ORM packages for the Go language, with varying
@@ -45,7 +61,7 @@ Note that if you are interested in running the unit tests, you will need
 package `github.com/mattn/sqlite3`, which requires cgo and a C compiler
 setup to compile correctly.
 
-## Example
+## Examples
 
 Note that there are more examples in the 
 [GoDoc](https://godoc.org/github.com/jjeffery/sqlstmt) documentation.
