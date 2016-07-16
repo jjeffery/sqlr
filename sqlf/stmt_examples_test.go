@@ -86,7 +86,34 @@ func ExampleGetRowStmt() {
 	// ID=1, GivenName="John", FamilyName="Citizen"
 }
 
-func ExamplePrepareSelectRows() {
+func ExampleNewDeleteRowStmt() {
+	type User struct {
+		ID         int64 `sql:",primary key auto increment"`
+		GivenName  string
+		FamilyName string
+	}
+
+	stmt := sqlf.NewDeleteRowStmt(User{}, `users`)
+	fmt.Println(stmt.String())
+
+	// creates a row with ID=1
+	var db *sql.DB = openTestDB()
+
+	// Delete user with specified primary key
+	u := &User{ID: 1}
+	n, err := stmt.Exec(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Number of rows deleted = %d\n", n)
+
+	// Output:
+	// delete from users where `id`=?
+	// Number of rows deleted = 1
+}
+
+func ExampleSelectStmt() {
 	type User struct {
 		ID      int64 `sql:",primary key auto increment"`
 		Login   string
