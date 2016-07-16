@@ -81,13 +81,13 @@ func (s *Schema) NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newDeleteRowStmt(s, row, sql)
 }
 
-// GetRowStmt executes a query that returns a single row.
+// NewGetRowStmt executes a query that returns a single row.
 // It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 	return newGetRowStmt(s, row, sql)
 }
 
-// SelectStmt executes a query that returns multiple rows.
+// NewSelectStmt executes a query that returns multiple rows.
 // It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewSelectStmt(row interface{}, sql string) *SelectStmt {
 	return newSelectStmt(DefaultSchema, row, sql)
