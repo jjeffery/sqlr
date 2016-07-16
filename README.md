@@ -21,6 +21,10 @@ no backwards compatibility guarantee at this time.
   - [Deleting a row](#deleting-a-row)
   - [Getting a row by primary key](#getting-a-row-by-primary-key)
   - [Performing queries](#performing-queries)
+- [SQL dialects](#sql-dialects)
+  - [The default dialect](#the-default-dialect)
+  - [Specifying the SQL dialect](#specifying-the-sql-dialect)
+  - [Using multiple dialects](#using-multiple-dialects)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -305,6 +309,8 @@ when it is generating SQL it does need to know the following:
 * How to write placeholders for arguments
   * PostgreSQL uses numbered placeholders: `$1`, `$2`, etc
   * Almost everyone else uses question marks: `?`
+
+### The default dialect
 
 Most programs use only one SQL driver, and in these circumstances `sqlstmt`
 will do the right thing.
