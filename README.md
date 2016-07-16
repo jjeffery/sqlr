@@ -29,6 +29,11 @@ calls to have the correct number of arguments in the correct order.
 
 Package `sqlstmt` attempts to solve this problem by enabling construction of
 SQL statements using an API based on the contents of Go language structures.
+The philosophy behind the design if the `sqlstmt` API is:
+
+1. Simple CRUD operations should be very easy to construct.
+2. Slightly more complex operations should be possible with a little more effort.
+3. Fallback to using `database/sql` for queries that are too complex to be handled easily by this package.
 
 ## Obtaining the package
 
@@ -119,7 +124,7 @@ fmt.Println("User ID:", u.ID)
 ```
 
 Because the `id` column is an auto-increment column, the value of `u.ID` will
-contain the auto-generated value after the insert row statement has been run.
+contain the auto-generated value after the insert row statement has been executed.
 
 ### Updating a row
 
