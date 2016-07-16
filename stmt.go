@@ -359,12 +359,20 @@ func (stmt *commonStmt) addColumns(cols columnsT) {
 	}
 }
 
+// counter is used for keeping track of placeholders
+type counter int
+
+func (c *counter) Next() int {
+	*c++
+	return int(*c)
+}
+
 func (stmt *commonStmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
-	columns := newColumns(stmt.columns, stmt.convention, stmt.dialect)
+	var counter counter
+	columns := newColumns(stmt.columns, stmt.convention, stmt.dialect, counter.Next)
 	var insertColumns *columnsT
-	placeholderCount := 0
 	var clause sqlClause
 	var buf bytes.Buffer
 	for {
@@ -376,11 +384,11 @@ func (stmt *commonStmt) scanSQL(query string) error {
 		case scanner.WS:
 			buf.WriteRune(' ')
 		case scanner.COMMENT:
+			// strip comment
 		case scanner.LITERAL, scanner.OP:
 			buf.WriteString(lit)
 		case scanner.PLACEHOLDER:
-			placeholderCount++
-			buf.WriteString(stmt.dialect.Placeholder(placeholderCount))
+			buf.WriteString(stmt.dialect.Placeholder(counter.Next()))
 		case scanner.IDENT:
 			if lit[0] == '{' {
 				if !clause.acceptsColumns() {
