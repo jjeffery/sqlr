@@ -23,15 +23,18 @@ with `database/sql` easier &mdash; a good example  is `github.com/jmoiron/sqlx`.
 While packages such as `sqlx` go a long way towards handling the results
 of SQL queries, it can still be quite tedious to construct the SQL for a
 query in the first place. This is particularly so for queries against
-database tables that have many columns and hence many placeholders (ie "?")
+database tables that have many columns and hence many placeholders (ie `?`)
 in the SQL -- it can be error-prone constructing and maintaining the API 
 calls to have the correct number of arguments in the correct order.
 
-Package `sqlstmt` attempts to make the generation of SQL statements easier
-by using an API that builds SQL statements based on the contents of Go language 
-structures.
+Package `sqlstmt` attempts to solve this problem by enabling construction of
+SQL statements using an API based on the contents of Go language structures.
 
 ## Example
 
 Coming soon.
+
+Note that there are more examples in the 
+[GoDoc](https://godoc.org/github.com/jjeffery/sqlstmt) documentation.
+
 
