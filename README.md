@@ -545,6 +545,6 @@ mySchema := &sqlstmt.Schema{
 // This will use the default convention (which is now sqlstmt.ConventionSame)
 stmt1 := sqlstmt.NewInsertRowStmt(Widget{}, "widgets")
 
-// This will use the custom convention associated with the mySchema
+// This will use the custom convention associated with mySchema
 stmt2 := mySchema.NewUpdateRowStmt(Gadget{}, "gadgets")
 ```
