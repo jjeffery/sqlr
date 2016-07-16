@@ -4,6 +4,8 @@ Package `sqlstmt` provides assistance in creating SQL statements.
 
 [![GoDoc](https://godoc.org/github.com/jjeffery/sqlstmt?status.svg)](https://godoc.org/github.com/jjeffery/sqlstmt)
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlstmt/master/LICENSE.md)
+[![Build Status (Linux)](https://travis-ci.org/jjeffery/sqlstmt.svg?branch=master)](https://travis-ci.org/jjeffery/stmt)
+[![Coverage Status](https://coveralls.io/repos/github/jjeffery/sqlstmt/badge.svg?branch=master)](https://coveralls.io/github/jjeffery/sqlstmt?branch=master)
 [![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlstmt)](https://goreportcard.com/report/github.com/jjeffery/sqlstmt)
 
 **NOTE:** This package is still a work in progress. The API is reasonably stable, but there is 
