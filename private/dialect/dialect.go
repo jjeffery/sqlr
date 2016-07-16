@@ -92,7 +92,11 @@ var (
 	}
 
 	// github.com/cznic/ql: does not allow quoted identifiers
-	dialectQL = dialectT{name: "ql", quoteFunc: quoteFunc("", "")}
+	dialectQL = dialectT{
+		name:            "ql",
+		quoteFunc:       quoteFunc("", ""),
+		placeholderFunc: placeholderFunc("?%d"),
+	}
 )
 
 func quoteFunc(begin string, end string) func(name string) string {

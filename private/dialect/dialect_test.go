@@ -1,6 +1,8 @@
 package dialect
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"testing"
 )
 
@@ -41,6 +43,20 @@ func TestNew(t *testing.T) {
 			expectedPlaceholder: "?",
 		},
 		{
+			driverName:          "ql-mem",
+			dataSource:          "memory",
+			expectedName:        "ql",
+			expectedQuoted:      "xxx",
+			expectedPlaceholder: "?2",
+		},
+		{
+			driverName:          "ql-mem",
+			dataSource:          "database.dat",
+			expectedName:        "ql",
+			expectedQuoted:      "xxx",
+			expectedPlaceholder: "?2",
+		},
+		{
 			driverName:          "whatever",
 			dataSource:          "server=.;user id=dbo;password=whatever",
 			expectedName:        "default",
@@ -60,5 +76,20 @@ func TestNew(t *testing.T) {
 func compareString(t *testing.T, expected, actual string) {
 	if expected != actual {
 		t.Fatalf("expected=%q, actual=%q", expected, actual)
+	}
+}
+
+type testDriver struct{}
+
+func (d *testDriver) Open(name string) (driver.Conn, error) {
+	return nil, nil
+}
+
+func TestInferFromDriver(t *testing.T) {
+	sql.Register("mysql", &testDriver{})
+	dialect := New("")
+
+	if dialect.Name() != "mysql" {
+		t.Errorf("expected=%q, actual=%q", "mysql", dialect.Name())
 	}
 }
