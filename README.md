@@ -25,6 +25,10 @@ no backwards compatibility guarantee at this time.
   - [The default dialect](#the-default-dialect)
   - [Specifying the SQL dialect](#specifying-the-sql-dialect)
   - [Using multiple dialects](#using-multiple-dialects)
+- [Column mapping](#column-mapping)
+  - [Simple structs](#simple-structs)
+  - [Anonymous structs](#anonymous-structs)
+- [Column naming conventions](#column-naming-conventions)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
