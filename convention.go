@@ -1,4 +1,4 @@
-package sqlf
+package sqlstmt
 
 // Convention provides naming convention methods for
 // inferring a database column name from Go struct field names.

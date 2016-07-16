@@ -1,7 +1,7 @@
-package sqlf
+package sqlstmt
 
 import (
-	"github.com/jjeffery/sqlf/private/dialect"
+	"github.com/jjeffery/sqlstmt/private/dialect"
 )
 
 // Dialect is an interface used to handle differences

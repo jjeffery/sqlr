@@ -1,5 +1,5 @@
 /*
-Package sqlf aims to make it easy to construct and execute SQL
+Package sqlstmt aims to make it easy to construct and execute SQL
 statements for common scenarios. Supported scenarios include:
 
  * Insert a single row based on a Go struct
@@ -19,4 +19,4 @@ or *sql.Tx. If the calling program has a need to execute queries independently
 of this package, it can use "database/sql" directly, or make use of any other
 third party package that uses "database/sql".
 */
-package sqlf
+package sqlstmt

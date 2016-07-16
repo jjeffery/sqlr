@@ -1,11 +1,11 @@
-package sqlf
+package sqlstmt
 
 import (
 	"bytes"
 	"strings"
 
-	"github.com/jjeffery/sqlf/private/column"
-	"github.com/jjeffery/sqlf/private/scanner"
+	"github.com/jjeffery/sqlstmt/private/column"
+	"github.com/jjeffery/sqlstmt/private/scanner"
 )
 
 // columnsT represents a set of columns associated with

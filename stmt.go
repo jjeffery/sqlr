@@ -1,4 +1,4 @@
-package sqlf
+package sqlstmt
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jjeffery/sqlf/private/column"
-	"github.com/jjeffery/sqlf/private/scanner"
+	"github.com/jjeffery/sqlstmt/private/column"
+	"github.com/jjeffery/sqlstmt/private/scanner"
 )
 
 var errNotImplemented = errors.New("not implemented")

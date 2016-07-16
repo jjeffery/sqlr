@@ -1,11 +1,11 @@
-package sqlf_test
+package sqlstmt_test
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 
-	"github.com/jjeffery/sqlf/sqlf"
+	"github.com/jjeffery/sqlstmt"
 )
 
 func openTestDB() *sql.DB {
@@ -35,12 +35,12 @@ func openTestDB() *sql.DB {
 
 func ExampleInsertRowStmt() {
 	type User struct {
-		ID         int64 `sql:",primary key auto increment"`
+		ID         int64 `sql:"primary key auto increment"`
 		GivenName  string
 		FamilyName string
 	}
 
-	stmt := sqlf.NewInsertRowStmt(User{}, `users`)
+	stmt := sqlstmt.NewInsertRowStmt(User{}, `users`)
 	fmt.Println(stmt.String())
 
 	var db *sql.DB = openTestDB()
@@ -66,7 +66,7 @@ func ExampleGetRowStmt() {
 		FamilyName string
 	}
 
-	stmt := sqlf.NewGetRowStmt(User{}, `users`)
+	stmt := sqlstmt.NewGetRowStmt(User{}, `users`)
 	fmt.Println(stmt.String())
 
 	var db *sql.DB = openTestDB()
@@ -93,8 +93,8 @@ func ExampleExecRowStmt() {
 		FamilyName string
 	}
 
-	updateStmt := sqlf.NewUpdateRowStmt(User{}, `users`)
-	deleteStmt := sqlf.NewDeleteRowStmt(User{}, `users`)
+	updateStmt := sqlstmt.NewUpdateRowStmt(User{}, `users`)
+	deleteStmt := sqlstmt.NewDeleteRowStmt(User{}, `users`)
 	fmt.Println(updateStmt.String())
 	fmt.Println(deleteStmt.String())
 
@@ -102,7 +102,7 @@ func ExampleExecRowStmt() {
 
 	// Get user with specified primary key
 	u := &User{ID: 1}
-	_, err := sqlf.NewGetRowStmt(User{}, `users`).Get(db, u)
+	_, err := sqlstmt.NewGetRowStmt(User{}, `users`).Get(db, u)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func ExampleNewDeleteRowStmt() {
 		FamilyName string
 	}
 
-	stmt := sqlf.NewDeleteRowStmt(User{}, `users`)
+	stmt := sqlstmt.NewDeleteRowStmt(User{}, `users`)
 	fmt.Println(stmt.String())
 
 	// creates a row with ID=1
@@ -163,14 +163,14 @@ func ExampleNewUpdateRowStmt() {
 		FamilyName string
 	}
 
-	updateStmt := sqlf.NewUpdateRowStmt(User{}, `users`)
+	updateStmt := sqlstmt.NewUpdateRowStmt(User{}, `users`)
 	fmt.Println(updateStmt.String())
 
 	var db *sql.DB = openTestDB()
 
 	// Get user with specified primary key
 	u := &User{ID: 1}
-	_, err := sqlf.NewGetRowStmt(User{}, `users`).Get(db, u)
+	_, err := sqlstmt.NewGetRowStmt(User{}, `users`).Get(db, u)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -190,13 +190,13 @@ func ExampleNewUpdateRowStmt() {
 
 func ExampleSelectStmt() {
 	type User struct {
-		ID      int64 `sql:",primary key auto increment"`
+		ID      int64 `sql:"primary key auto increment"`
 		Login   string
 		HashPwd string
 		Name    string
 	}
 
-	stmt := sqlf.NewSelectStmt(User{}, `
+	stmt := sqlstmt.NewSelectStmt(User{}, `
 		select distinct {alias u} 
 		from users u
 		inner join user_search_terms t on t.user_id = u.id

@@ -1,4 +1,4 @@
-package sqlf
+package sqlstmt
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package sqlf_test
+package sqlstmt_test
 
 import (
 	"database/sql"
@@ -6,15 +6,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/jjeffery/sqlf/sqlf"
+	"github.com/jjeffery/sqlstmt"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // The UserRow struct represents a single row in the users table.
-// Note that the sqlf package becomes more useful when tables
+// Note that the sqlstmt package becomes more useful when tables
 // have many more columns than shown in this example.
 type UserRow struct {
-	ID         int64 `sql:",primary key auto increment"`
+	ID         int64 `sql:",primary key autoincrement"`
 	GivenName  string
 	FamilyName string
 }
@@ -24,27 +24,27 @@ func Example() {
 	exitIfError(err)
 	setupSchema(db)
 
-	insertRowStmt := sqlf.NewInsertRowStmt(UserRow{}, `
+	insertRow := sqlstmt.NewInsertRowStmt(UserRow{}, `
 		insert into users({})
 		values({})
 	`)
-	updateRowStmt := sqlf.NewUpdateRowStmt(UserRow{}, `
+	updateRow := sqlstmt.NewUpdateRowStmt(UserRow{}, `
 		update users
 		set {}
 		where {}
 	`)
 	// A statement for deleting one row is prepared using the
 	// same function as a statement updating one row.
-	deleteRowStmt := sqlf.NewUpdateRowStmt(UserRow{}, `
+	deleteRow := sqlstmt.NewUpdateRowStmt(UserRow{}, `
 		delete from users
 		where {}
 	`)
-	getRowStmt := sqlf.NewGetRowStmt(UserRow{}, `
+	getRow := sqlstmt.NewGetRowStmt(UserRow{}, `
 		select {}
 		from users
 		where {}
 	`)
-	selectAllRowsStmt := sqlf.NewSelectStmt(UserRow{}, `
+	selectAllRows := sqlstmt.NewSelectStmt(UserRow{}, `
 		select {}
 		from users
 		order by id
@@ -60,36 +60,35 @@ func Example() {
 			GivenName:  givenName,
 			FamilyName: "Citizen",
 		}
-		err = insertRowStmt.Exec(tx, u)
+		err = insertRow.Exec(tx, u)
 		exitIfError(err)
 	}
 
 	// get user with ID of 3 and then delete it
 	{
 		u := &UserRow{ID: 3}
-		_, err = getRowStmt.Get(tx, u)
+		_, err = getRow.Get(tx, u)
 		exitIfError(err)
-		printRow(u)
 
-		_, err = deleteRowStmt.Exec(tx, u)
+		_, err = deleteRow.Exec(tx, u)
 		exitIfError(err)
 	}
 
 	// update family name for user with ID of 2
 	{
 		u := &UserRow{ID: 2}
-		_, err = getRowStmt.Get(tx, u)
+		_, err = getRow.Get(tx, u)
 		exitIfError(err)
 
 		u.FamilyName = "Doe"
-		_, err = updateRowStmt.Exec(tx, u)
+		_, err = updateRow.Exec(tx, u)
 		exitIfError(err)
 	}
 
 	// select rows from table and print
 	{
 		var users []*UserRow
-		err = selectAllRowsStmt.Select(tx, &users)
+		err = selectAllRows.Select(tx, &users)
 		exitIfError(err)
 		for _, u := range users {
 			fmt.Printf("User %d: %s, %s\n", u.ID, u.FamilyName, u.GivenName)
@@ -109,11 +108,13 @@ func exitIfError(err error) {
 }
 
 func init() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(0)
+
+	// uncomment to log SQL statements
+	//sqlstmt.DefaultSchema.Logger = log.New(os.Stderr, "sqlstmt: ", log.Flags())
 }
 
 func setupSchema(db *sql.DB) {
-	sqlf.DefaultSchema.Logger = log.New(os.Stderr, "sqlf: ", 0)
 	_, err := db.Exec(`
 		create table users(
 			id integer primary key autoincrement,
@@ -121,10 +122,5 @@ func setupSchema(db *sql.DB) {
 			family_name text
 		)
 	`)
-	log.Printf("Table created")
 	exitIfError(err)
-}
-
-func printRow(u *UserRow) {
-	log.Printf("User %d: %s, %s", u.ID, u.FamilyName, u.GivenName)
 }

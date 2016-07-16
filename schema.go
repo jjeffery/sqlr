@@ -1,8 +1,8 @@
-package sqlf
+package sqlstmt
 
 import (
-	"github.com/jjeffery/sqlf/private/colname"
-	"github.com/jjeffery/sqlf/private/dialect"
+	"github.com/jjeffery/sqlstmt/private/colname"
+	"github.com/jjeffery/sqlstmt/private/dialect"
 )
 
 // DefaultSchema contains the default schema, which can be
