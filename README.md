@@ -30,11 +30,60 @@ calls to have the correct number of arguments in the correct order.
 Package `sqlstmt` attempts to solve this problem by enabling construction of
 SQL statements using an API based on the contents of Go language structures.
 
-## Example
+## Obtaining the package
 
-Coming soon.
+```bash
+go get github.com/jjeffery/sqlstmt
+```
+
+Note that if you are interested in running the unit tests, you will need
+package `github.com/mattn/sqlite3`, which requires cgo and a C compiler
+setup to compile correctly.
+
+## Example
 
 Note that there are more examples in the 
 [GoDoc](https://godoc.org/github.com/jjeffery/sqlstmt) documentation.
 
+The following examples use a fairly simple database schema. Note that
+this package becomes much more useful for database schemas where tables
+have many columns (and hence the row structs have many fields).
+
+```sql
+create table users(
+	id integer primary key autoincrement,
+	given_name text
+	family_name text
+	email_address text
+)
+```
+
+A corresponding Go struct for representing a row in the `users` table is:
+
+```go
+type User struct {
+	ID           int `sql:primary key autoincrement`
+	GivenName    string
+	FamilyName   string
+	EmailAddress string
+}
+```
+
+Note the use of struct tags to include information about the primary key
+and auto-increment behaviour.
+
+### Inserting a row
+
+```go
+
+// create the statement -- this only needs to be done once
+insertRow := sqlstmt.NewInsertStmt(User{}, "users")
+
+// perform the insertStmt using a db connection opened earlier
+err := insertRow.Exec(db, &User{
+	GivenName: "Jane",
+	FamilyName: "Citizen",
+	EmailAddress: "jane@citizen.com",
+})
+```
 
