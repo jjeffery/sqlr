@@ -53,6 +53,24 @@ func TestNewList(t *testing.T) {
 		},
 		{
 			row: struct {
+				ID   int    `sql:",primary key identity"`
+				Name string `sql:""`
+			}{},
+			infos: []*column.Info{
+				{
+					Path:          column.NewPath("ID", ""),
+					Index:         column.NewIndex(0),
+					PrimaryKey:    true,
+					AutoIncrement: true,
+				},
+				{
+					Path:  column.NewPath("Name", ""),
+					Index: column.NewIndex(1),
+				},
+			},
+		},
+		{
+			row: struct {
 				ID   int    `sql:"primary key auto increment"`
 				Name string `sql:"[primary] key"`
 			}{},
@@ -195,6 +213,13 @@ func TestNewList(t *testing.T) {
 	for _, tt := range tests {
 		infos := column.ListForType(reflect.TypeOf(tt.row))
 		compareInfos(t, tt.infos, infos)
+	}
+
+	// test that lists cache
+	list1 := column.ListForType(reflect.TypeOf(Common{}))
+	list2 := column.ListForType(reflect.TypeOf(Common{}))
+	if !reflect.DeepEqual(list1, list2) {
+		t.Errorf("expected list1 and list2 to have identical contents")
 	}
 }
 
