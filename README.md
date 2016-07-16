@@ -6,7 +6,7 @@ Package `sqlstmt` provides assistance in creating SQL statements.
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlstmt/master/LICENSE.md)
 [![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlstmt)](https://goreportcard.com/report/github.com/jjeffery/sqlstmt)
 
-**NOTE:** This package is a work in progress. There is 
+**NOTE:** This package is still a work in progress. The API is reasonably stable, but there is 
 no backwards compatibility guarantee at this time.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -27,29 +27,33 @@ no backwards compatibility guarantee at this time.
 
 ## Rationale
 
-There are a number of ORM packages for the Go language, with varying
-sets of features. There are times, however, when an ORM may not be 
-appropriate, and an SQL-based approach might provide the desired simplicity,
-control, and performance.
+Package `sqlstmt` aims to make it easy to construct and execute SQL
+statements for common scenarios. Supported scenarios include:
 
-Using an SQL-based API such as `database/sql`, however, can be a little tedious
-and error prone. There are some popular packages available that make working
-with `database/sql` easier &mdash; a good example  is `github.com/jmoiron/sqlx`.
+* Insert a single row based on a Go struct
+* Update a single row based on a Go struct
+* Delete a single row based on a Go struct
+* Select a single row into a Go struct
+* Select zero, one or more rows int a a slice of Go structs
 
-While packages such as `sqlx` go a long way towards handling the results
-of SQL queries, it can still be quite tedious to construct the SQL for a
-query in the first place. This is particularly so for queries against
-database tables that have many columns and hence many placeholders (ie `?`)
-in the SQL -- it can be error-prone constructing and maintaining the API 
-calls to have the correct number of arguments in the correct order.
+This package is intended for programmers who are comfortable with
+writing SQL, but would like assistance with the sometimes tedious
+process of preparing SELECT, INSERT, UPDATE and DELETE statements
+for tables that have a large number of columns.
 
-Package `sqlstmt` attempts to solve this problem by enabling construction of
-SQL statements using an API based on the contents of Go language structures.
+This package is designed to work seamlessly with the standard library
+"database/sql" package. It does not provide any layer on top of *sql.DB
+or *sql.Tx. If the calling program has a need to execute queries independently
+of this package, it can use "database/sql" directly, or make use of any other
+third party package that uses "database/sql".
+
 The philosophy behind the design if the `sqlstmt` API is:
 
-1. Simple CRUD operations should be very easy to construct.
-2. Slightly more complex operations should be possible with a little more effort.
-3. Fallback to using `database/sql` for queries that are too complex to be handled easily by this package.
+* Simple, single-row CRUD operations should be easy to construct
+* Slightly more complex operations should be possible with only a little more effort
+* Handle different SQL dialects and naming conventions using simple interfaces
+* Support popular SQL dialects out of the box with minimal setup
+* Easily fallback to using `database/sql` and other third-party packages for any functionality that is not handled by this package
 
 ## Obtaining the package
 
@@ -287,4 +291,74 @@ from users u
 inner join user_search_terms t
   on t.user_id = u.id
 where u.term like ?
+```
+
+## SQL dialects
+
+The `sqlstmt` package is designed to be as SQL-agnostic as possible, but 
+when it is generating SQL it does need to know the following:
+
+* How to quote column names to ensure they are not interpreted as an SQL keyword
+  * PostgreSQL uses double quotes: `"column_name"`
+  * MySQL uses back ticks: `\`column_name\``
+  * MS SQL Server uses square braces: `[column_name]`
+* How to write placeholders for arguments
+  * PostgreSQL uses numbered placeholders: `$1`, `$2`, etc
+  * Almost everyone else uses question marks: `?`
+
+Most programs use only one SQL driver, and in these circumstances `sqlstmt`
+will do the right thing.
+
+If a program is using PostgreSQL, it will load the appropriate driver somewhere,
+probably in the `main` package:
+
+```go
+import _ "github.com/lib/pq"
+```
+
+By default `sqlstmt` will check the list of loaded SQL drivers and pick the
+first one to decide on the SQL dialect to use. In this example it will
+automatically choose the "postgres" dialect.
+
+### Specifying the SQL dialect
+
+If your program references multiple SQL drivers, it may be necesary to 
+specify which dialect is in use. This can be done when opening the 
+database connection:
+
+```go
+// open the database
+db, err := sql.Open("postgres", "user=test dbname=test sslmode=disable")
+if err != nil {
+	log.Fatal(err)
+}
+
+// specify the dialect in use
+sqlstmt.DefaultSchema.Dialect = sqlstmt.NewDialect("postgres")
+```
+
+### Using multiple dialects
+
+If your program makes use of multiple database backends and you want
+to use `sqlstmt` for both of them, the best thing to do is to specify
+a `sqlstmt.Schema` for each of the database backends.
+
+```go
+var pgSchema = &sqlstmt.Schema{
+	Dialect: sqlstmt.NewDialect("postgres"),
+}
+
+var mysqlSchema = &sqlstmt.Schema{
+	Dialect: sqlstmt.NewDialect("mysql"),
+}
+```
+
+When the time comes to create statements, use the appropriate schema:
+
+```go
+// insert statement for widgets in postgres database
+var insertWidget = pgSchema.NewInsertRowStmt(Widget{}, "widgets")
+
+// update statement for gadgets in mysql database
+var updateGadget = mysqlSchema.NewUpdateRowStmt(Gadget{}, "gadgets")
 ```
