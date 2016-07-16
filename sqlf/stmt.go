@@ -89,9 +89,8 @@ type ExecRowStmt struct {
 	commonStmt
 }
 
-// NewUpdateRowStmt returns a new ExecRowStmt for the given
-// row and SQL. The dialect and naming conventions are inferred
-// from DefaultSchema.
+// NewUpdateRowStmt returns a new ExecRowStmt for updating a single
+// row. The dialect and naming conventions are obtained from DefaultSchema.
 func NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newUpdateRowStmt(DefaultSchema, row, sql)
 }
@@ -103,9 +102,8 @@ func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 	return stmt
 }
 
-// NewDeleteRowStmt returns a new ExecRowStmt for the given
-// row and SQL. The dialect and naming conventions are inferred
-// from DefaultSchema.
+// NewDeleteRowStmt returns a new ExecRowStmt for deleting a single
+// row. The dialect and naming conventions are obtained from DefaultSchema.
 func NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
 	return newDeleteRowStmt(DefaultSchema, row, sql)
 }
@@ -117,6 +115,8 @@ func newDeleteRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 	return stmt
 }
 
+// Exec executes the statement using the row as arguments. Returns the
+// number of rows affected.
 func (stmt *ExecRowStmt) Exec(db Execer, row interface{}) (int, error) {
 	result, err := stmt.doExec(db, row)
 	if err != nil {
@@ -131,12 +131,14 @@ func (stmt *ExecRowStmt) Exec(db Execer, row interface{}) (int, error) {
 	return int(n), nil
 }
 
+// GetRowStmt executes a query that returns a single row.
+// It is safe for concurrent access by multiple goroutines.
 type GetRowStmt struct {
 	commonStmt
 }
 
 // NewGetRowStmt returns a new GetRowStmt for the given
-// row and SQL. The dialect and naming conventions are inferred
+// row and SQL. The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 	return newGetRowStmt(DefaultSchema, row, sql)
@@ -144,6 +146,7 @@ func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 
 func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
 	stmt := &GetRowStmt{}
+	sql = checkSQL(sql, getFormat)
 	stmt.err = stmt.prepareCommon(schema, row, sql)
 	return stmt
 }
@@ -204,16 +207,22 @@ func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
 	return 1, nil
 }
 
+// SelectStmt executes a query that returns multiple rows.
+// It is safe for concurrent access by multiple goroutines.
 type SelectStmt struct {
 	commonStmt
 }
 
+// NewSelectStmt returns a new SelectStmt for the given
+// row and SQL. The dialect and naming conventions are obtained
+// from DefaultSchema.
 func NewSelectStmt(row interface{}, sql string) *SelectStmt {
 	return newSelectStmt(DefaultSchema, row, sql)
 }
 
 func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 	stmt := &SelectStmt{}
+	sql = checkSQL(sql, selectFormat)
 	stmt.err = stmt.prepareCommon(schema, row, sql)
 	if stmt.err == nil && len(stmt.inputs) > 0 {
 		stmt.err = errors.New("unexpected inputs in query")
@@ -221,6 +230,9 @@ func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 	return stmt
 }
 
+// Select executes the statement's query and returns the resulting
+// rows in the slice pointed to by dest. The args are for any
+// placeholder parameters in the query.
 func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
 	destValue := reflect.ValueOf(dest)
 
