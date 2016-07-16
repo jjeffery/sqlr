@@ -229,10 +229,10 @@ fmt.Println("User email:", u.EmailAddress)
 
 ### Performing queries
 
-Performing a query that returns zero, one or more rows usually involves
-writing some SQL, and this is where it becomes necessary to write some
-SQL. The `sqlstmt` package provides an extended syntax that is shorthand
-for having to explicitly list all columns and SQL placeholders.
+Performing a query that returns zero, one or more rows involves
+writing some SQL. The `sqlstmt` package provides an extended syntax that 
+provides a shorthand alternative to explicitly listing all columns and 
+parameter placeholders.
 
 ```go
 familyNameQuery := sqlstmt.NewSelectStmt(User{}, `
