@@ -1,34 +1,89 @@
 package sqlf_test
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/jjeffery/sqlf/sqlf"
 )
 
-func ExamplePrepareInsertRow() {
+func openTestDB() *sql.DB {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = db.Exec(`
+		create table users(
+			id integer primary key autoincrement,
+			given_name text,
+			family_name text
+		)
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = db.Exec(`
+		insert into users(given_name, family_name)
+		values('John', 'Citizen')
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return db
+}
+
+func ExampleInsertRowStmt() {
 	type User struct {
-		ID      int64 `sql:",primary key auto increment"`
-		Login   string
-		HashPwd string
-		Name    string
+		ID         int64 `sql:",primary key auto increment"`
+		GivenName  string
+		FamilyName string
 	}
 
-	stmt := sqlf.NewInsertRowStmt(User{}, `
-		insert into users({}) 
-		values({})
-	`)
+	stmt := sqlf.NewInsertRowStmt(User{}, `users`)
 	fmt.Println(stmt.String())
 
-	stmt = sqlf.NewInsertRowStmt(User{}, `
-		insert into users({all}) 
-		values({})
-	`)
-	fmt.Println(stmt.String())
+	var db *sql.DB = openTestDB()
+
+	// Get user with specified primary key
+	u := &User{GivenName: "Jane", FamilyName: "Doe"}
+	err := stmt.Exec(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Inserted row: ID=%d\n", u.ID)
 
 	// Output:
-	// insert into users(`login`,`hash_pwd`,`name`) values(?,?,?)
-	// insert into users(`id`,`login`,`hash_pwd`,`name`) values(?,?,?,?)
+	// insert into users(`given_name`,`family_name`) values(?,?)
+	// Inserted row: ID=2
+}
+
+func ExampleGetRowStmt() {
+	type User struct {
+		ID         int64 `sql:",primary key auto increment"`
+		GivenName  string
+		FamilyName string
+	}
+
+	stmt := sqlf.NewGetRowStmt(User{}, `users`)
+	fmt.Println(stmt.String())
+
+	var db *sql.DB = openTestDB()
+
+	// Get user with specified primary key
+	u := &User{ID: 1}
+	_, err := stmt.Get(db, u)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("ID=%d, GivenName=%q, FamilyName=%q\n",
+		u.ID, u.GivenName, u.FamilyName)
+
+	// Output:
+	// select `id`,`given_name`,`family_name` from users where `id`=?
+	// ID=1, GivenName="John", FamilyName="Citizen"
 }
 
 func ExamplePrepareSelectRows() {
