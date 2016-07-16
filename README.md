@@ -1,4 +1,4 @@
-# sqlf: Formatting SQL statements
+# sqlstmt: SQL statements
 
 Package `sqlstmt` provides assistance in creating SQL statements. 
 
