@@ -145,9 +145,9 @@ if err != nil {
 	log.Fatal(err)
 }
 
-fmt.Println("Rows updated:", n)
+fmt.Println("Number of rows updated:", n)
 
-// Output: Rows updated: 1
+// Output: Number of rows updated: 1
 ```
 
 ### Deleting a row
@@ -166,9 +166,9 @@ if err != nil {
 	log.Fatal(err)
 }
 
-fmt.Println("Rows updated:", n)
+fmt.Println("Number of rows deleted:", n)
 
-// Output: Rows updated: 1
+// Output: Number of rows deleted: 1
 ```
 
 ### Getting a row by primary key
@@ -196,5 +196,79 @@ fmt.Println("User email:", u.EmailAddress)
 // User email: jane.citizen.314159@gmail.com
 ```
 
+### Performing queries
 
+Performing a query that returns zero, one or more rows usually involves
+writing some SQL, and this is where it becomes necessary to write some
+SQL. The `sqlstmt` package provides an extended syntax that is shorthand
+for having to explicitly list all columns and SQL placeholders.
 
+```go
+familyNameQuery := sqlstmt.NewSelectStmt(User{}, `
+	select {}
+	from users
+	where family_name = ?
+`)
+
+// declare a slice of users for receiving the result of the query
+var users []User
+
+// perform the query, specifying an argument for each of the
+// placeholders in the SQL query
+err = familyNameQuery.Select(db, &users, "Citizen")
+if err != nil {
+	log.Fatal(err)
+}
+
+// at this point, the users slice will contain one object for each
+// row returned by the SQL query
+for _, u := range users {
+	doSomethingWith(u)
+}
+```
+
+Note the non-standard `{}` in the SQL query above. The `sqlstmt` statement
+knows to substitute in column names in the appropriate format. In the 
+example above, the SQL generated will look like the following:
+
+```sql
+select `id`,`family_name`,`given_name`,`email_address`
+from users
+where family_name = ?
+```
+
+For queries that involve multiple tables, it is always a good idea to
+use table aliases when specifying tables:
+
+```go
+searchTermQuery := sqlstmt.NewSelectStmt(User{}, `
+	select {alias u}
+	from users u
+	inner join user_search_terms t
+	  on t.user_id = u.id
+	where u.term like ?
+`)
+
+// declare a slice of users for receiving the result of the query
+var users []User
+
+// perform the query, specifying an argument for each of the
+// placeholders in the SQL query
+err = searchTermQuery.Select(db, &users, "Cit%")
+if err != nil {
+	log.Fatal(err)
+}
+
+for _, u := range users {
+	doSomethingWith(u)
+}
+```
+
+The SQL generated in this example looks like the following:
+```sql
+select u.`id`,u.`family_name`,u.`given_name`,u.`email_address`
+from users u
+inner join user_search_terms t
+  on t.user_id = u.id
+where u.term like ?
+```
