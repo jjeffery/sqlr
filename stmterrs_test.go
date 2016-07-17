@@ -168,6 +168,7 @@ func TestSelectStmtErrors(t *testing.T) {
 	const errorTypePtr = "Expected dest to be pointer to " +
 		"[]github.com/jjeffery/sqlstmt.Row or " +
 		"[]*github.com/jjeffery/sqlstmt.Row"
+	var notAnArrayOfRows []NotARow
 	tests := []struct {
 		dest     interface{}
 		sql      string
@@ -180,6 +181,10 @@ func TestSelectStmtErrors(t *testing.T) {
 			errText: errorTypePtr,
 		},
 		{
+			dest:    make([]Row, 0),
+			errText: errorTypePtr,
+		},
+		{
 			dest:    nil,
 			errText: errorTypePtr,
 		},
@@ -189,6 +194,10 @@ func TestSelectStmtErrors(t *testing.T) {
 		},
 		{
 			dest:    &NotARow{},
+			errText: errorTypePtr,
+		},
+		{
+			dest:    &notAnArrayOfRows,
 			errText: errorTypePtr,
 		},
 	}
