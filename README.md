@@ -193,7 +193,7 @@ Continuing from the previous example:
 deleteRow := sqlstmt.NewDeleteRowStmt(User{}, "users")
 
 // execute the delete statement
-n, err = updateRow.Exec(db, u)
+n, err = deleteRow.Exec(db, u)
 
 if err != nil {
 	log.Fatal(err)
@@ -271,7 +271,7 @@ where family_name = ?
 ```
 
 For queries that involve multiple tables, it is always a good idea to
-use table aliases when specifying tables:
+use table aliases:
 
 ```go
 searchTermQuery := sqlstmt.NewSelectStmt(User{}, `
