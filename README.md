@@ -51,7 +51,7 @@ writing SQL, but would like assistance with the sometimes tedious
 process of preparing SELECT, INSERT, UPDATE and DELETE statements
 for tables that have a large number of columns. It is designed to 
 work seamlessly with the standard library `database/sql` package
-in that it does not provide any layer on top of *sql.DB or *sql.Tx. 
+in that it does not provide any layer on top of `*sql.DB` or `*sql.Tx`. 
 If the calling program has a need to execute queries independently
 of this package, it can use `database/sql` directly, or make use of 
 any other third party package.
