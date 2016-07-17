@@ -32,6 +32,7 @@ no backwards compatibility guarantee at this time.
   - [Anonymous structs](#anonymous-structs)
   - [Embedded structs](#embedded-structs)
 - [Column naming conventions](#column-naming-conventions)
+- [Contributing](#contributing)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -156,6 +157,11 @@ fmt.Println("User ID:", u.ID)
 
 Because the `id` column is an auto-increment column, the value of `u.ID` will
 contain the auto-generated value after the insert row statement has been executed.
+
+> Note, however, that the Postgres driver `github.com/lib/pq` does not support
+> the `Result.LastInsertId` method, and so this feature does not work for that
+> driver. See the `pq` package [GoDoc](http://godoc.org/github.com/lib/pq) for
+> a work-around.
 
 ### Updating a row
 
@@ -418,6 +424,17 @@ type User struct {
 // * date_of_birth
 ```
 
+If you need to override the column name to be an SQL keyword, (which is
+not recommended), you can use quotes to specify the column name.
+
+```go
+// Not recommended
+type User struct {
+	ID int64 `sql:"'primary' primary key"` // setting column name to SQL keyword
+	// ... rest of struct here
+}
+```
+
 ### Anonymous structs
 
 Sometimes there are a set of common columns, used by each table.
@@ -550,3 +567,11 @@ stmt1 := sqlstmt.NewInsertRowStmt(Widget{}, "widgets")
 // This will use the custom convention associated with mySchema
 stmt2 := mySchema.NewUpdateRowStmt(Gadget{}, "gadgets")
 ```
+
+## Contributing
+
+Pull requests are welcome. Please include tests providing full test coverage 
+of your changes.
+
+If you are raising an issue that describes a bug, please include a minimal
+example that reproduces the bug.
