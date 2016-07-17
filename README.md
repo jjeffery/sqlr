@@ -42,7 +42,7 @@ no backwards compatibility guarantee at this time.
 Package `sqlstmt` aims to make it easy to construct and execute SQL
 statements for common scenarios. Supported scenarios include:
 
-* Insert, update and delete a single row based on a Go struct
+* Insert, update and delete a single row based on the contents of a Go struct
 * Select a single row into a Go struct
 * Select zero, one or more rows int a a slice of Go structs
 
@@ -60,8 +60,7 @@ The philosophy behind the design if the `sqlstmt` API is:
 
 * Simple, single-row CRUD operations should be easy to construct
 * Slightly more complex operations should be possible with only a little more effort
-* Handle different SQL dialects and naming conventions using simple interfaces
-* Support popular SQL dialects out of the box with minimal setup
+* Support popular SQL dialects out of the box; provide for further customization through simple interfaces
 * Easily fallback to using `database/sql` and other third-party packages for any functionality that is not handled by this package
 
 ## Obtaining the package
@@ -135,8 +134,8 @@ insertRow := sqlstmt.NewInsertRowStmt(User{}, "users")
 
 // create the row object and populate with data
 u := &User{
-	GivenName: "Jane",
-	FamilyName: "Citizen",
+	GivenName:    "Jane",
+	FamilyName:   "Citizen",
 	EmailAddress: "jane@citizen.com",
 }
 
