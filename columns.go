@@ -2,6 +2,7 @@ package sqlstmt
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/jjeffery/sqlstmt/private/column"
@@ -49,6 +50,9 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 		tok, lit := scan.Scan()
 		if tok == scanner.EOF {
 			break
+		}
+		if tok == scanner.ILLEGAL {
+			return cols, fmt.Errorf("illegal char: %q", lit)
 		}
 
 		// TODO: dodgy job to get going quickly

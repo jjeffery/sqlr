@@ -160,6 +160,9 @@ func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
 
 // Get a single row into dest based on the fields populated in dest.
 func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
+	if stmt.err != nil {
+		return 0, stmt.err
+	}
 	errorPtrType := func() error {
 		expectedTypeName := stmt.expectedTypeName()
 		return fmt.Errorf("expected dest to be *%s", expectedTypeName)
@@ -241,6 +244,9 @@ func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 // rows in the slice pointed to by dest. The args are for any
 // placeholder parameters in the query.
 func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
+	if stmt.err != nil {
+		return stmt.err
+	}
 	destValue := reflect.ValueOf(dest)
 
 	if destValue.Kind() != reflect.Ptr {
@@ -398,7 +404,7 @@ func (stmt *commonStmt) scanSQL(query string) error {
 				lit = strings.TrimSpace(scanner.Unquote(lit))
 				if clause == clauseInsertValues {
 					if lit != "" {
-						return fmt.Errorf("columns for %q clause always match the %q clause",
+						return fmt.Errorf("columns for %q clause must match the %q clause",
 							clause, clauseInsertColumns)
 					}
 					if insertColumns == nil {
