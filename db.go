@@ -4,27 +4,22 @@ import (
 	"database/sql"
 )
 
-// Execer implements a single method, Exec, which executes a
-// query without returning any rows. The args are for any parameter
-// placeholders in the query.
+// DB is the interface that wraps the database access methods
+// used by this package.
 //
 // The *DB and *Tx types in the standard library package "database/sql"
 // both implement this interface.
-type Execer interface {
+type DB interface {
+	// Exec executes a query without returning any rows.
+	// The args are for any placeholder parameters in the query.
 	Exec(query string, args ...interface{}) (sql.Result, error)
-}
 
-// Queryer implements a single method, Query, which executes
-// a query that returns zero, one or more rows. The args are
-// for any parameter placeholders in the query.
-//
-// The *DB and *Tx types in the standard library package "database/sql"
-// both implement this interface.
-type Queryer interface {
+	// Query executes a query that returns rows, typically a SELECT.
+	// The args are for any placeholder parameters in the query.
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
-// Logger implements a single method, Print, which prints a message
+// Logger wraps a single method, Print, which prints a message
 // for diagnostic purposes. Any implementation of this interface must
 // support concurrent access by multiple goroutines.
 //

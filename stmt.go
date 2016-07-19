@@ -58,7 +58,7 @@ func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStm
 }
 
 // Exec executes the insert statement using the row as arguments.
-func (stmt *InsertRowStmt) Exec(db Execer, row interface{}) error {
+func (stmt *InsertRowStmt) Exec(db DB, row interface{}) error {
 	// field for setting the auto-increment value
 	var field reflect.Value
 	if stmt.autoIncrColumn != nil {
@@ -122,7 +122,7 @@ func newDeleteRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 
 // Exec executes the statement using the row as arguments. Returns the
 // number of rows affected.
-func (stmt *ExecRowStmt) Exec(db Execer, row interface{}) (int, error) {
+func (stmt *ExecRowStmt) Exec(db DB, row interface{}) (int, error) {
 	result, err := stmt.doExec(db, row)
 	if err != nil {
 		return 0, err
@@ -159,7 +159,7 @@ func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
 }
 
 // Get a single row into dest based on the fields populated in dest.
-func (stmt *GetRowStmt) Get(db Queryer, dest interface{}) (int, error) {
+func (stmt *GetRowStmt) Get(db DB, dest interface{}) (int, error) {
 	if stmt.err != nil {
 		return 0, stmt.err
 	}
@@ -243,7 +243,7 @@ func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 // Select executes the statement's query and returns the resulting
 // rows in the slice pointed to by dest. The args are for any
 // placeholder parameters in the query.
-func (stmt *SelectStmt) Select(db Queryer, dest interface{}, args ...interface{}) error {
+func (stmt *SelectStmt) Select(db DB, dest interface{}, args ...interface{}) error {
 	if stmt.err != nil {
 		return stmt.err
 	}
@@ -443,7 +443,7 @@ func (stmt *commonStmt) scanSQL(query string) error {
 	return nil
 }
 
-func (stmt commonStmt) doExec(db Execer, row interface{}) (sql.Result, error) {
+func (stmt commonStmt) doExec(db DB, row interface{}) (sql.Result, error) {
 	if stmt.err != nil {
 		return nil, stmt.err
 	}
