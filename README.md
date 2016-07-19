@@ -44,7 +44,7 @@ statements for common scenarios. Supported scenarios include:
 
 * Insert, update and delete a single row based on the contents of a Go struct
 * Select a single row into a Go struct
-* Select zero, one or more rows int a a slice of Go structs
+* Select zero, one or more rows into a slice of Go structs
 
 This package is intended for programmers who are comfortable with
 writing SQL, but would like assistance with the sometimes tedious
@@ -324,7 +324,7 @@ when it is generating SQL it does need to know the following:
 Most programs use only one SQL driver, and in these circumstances `sqlstmt`
 will do the right thing.
 
-If a program is using PostgreSQL, it will load the appropriate driver somewhere,
+For example, if a program is using Postgres, it will need to load the appropriate driver,
 probably in the `main` package:
 
 ```go
@@ -332,8 +332,9 @@ import _ "github.com/lib/pq"
 ```
 
 By default `sqlstmt` will check the list of loaded SQL drivers and pick the
-first one to decide on the SQL dialect to use. In this example it will
-automatically choose the "postgres" dialect.
+first one to decide on the SQL dialect to use. If only one SQL driver has been
+loaded, it will choose correctly. In this example it will automatically choose 
+the "postgres" dialect.
 
 ### Specifying the SQL dialect
 
@@ -421,7 +422,7 @@ type User struct {
 ```
 
 If you need to override the column name to be an SQL keyword, (which is
-not recommended), you can use quotes to specify the column name.
+rarely a good idea), you can use quotes to specify the column name.
 
 ```go
 // Not recommended
