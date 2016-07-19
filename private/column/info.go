@@ -31,7 +31,7 @@ func (info *Info) updateOptsFromTag() {
 			return
 		case scanner.KEYWORD:
 			switch strings.ToLower(lit) {
-			case "pk":
+			case "pk", "primary_key":
 				info.PrimaryKey = true
 			case "autoincrement", "autoincr":
 				info.AutoIncrement = true
@@ -93,6 +93,7 @@ func newScanner(tag reflect.StructTag) *scanner.Scanner {
 			scan.IgnoreWhiteSpace = true
 			scan.AddKeywords(
 				"pk",
+				"primary_key",
 				"primary",
 				"autoincrement",
 				"autoincr",
