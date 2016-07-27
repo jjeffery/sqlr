@@ -5,8 +5,7 @@ import (
 	"github.com/jjeffery/sqlstmt/private/dialect"
 )
 
-// DefaultSchema contains the default schema, which can be
-// modified as required.
+// Default is the default schema, which can be modified as required.
 //
 // The default schema has sensible defaults. If not explicitly
 // specified, the dialect is determined by the SQL database drivers
@@ -15,7 +14,7 @@ import (
 //
 // The default naming convention uses "snake case". So a struct field
 // named "GivenName" will have an associated column name of "given_name".
-var DefaultSchema *Schema = &Schema{}
+var Default *Schema = &Schema{}
 
 // Schema contains configuration information that is common
 // to statements prepared for the same database schema.
@@ -47,8 +46,8 @@ func (s *Schema) dialect() dialect.Dialect {
 	if s.Dialect != nil {
 		return s.Dialect
 	}
-	if DefaultSchema.Dialect != nil {
-		return DefaultSchema.Dialect
+	if Default.Dialect != nil {
+		return Default.Dialect
 	}
 	return dialect.New("")
 }
@@ -57,8 +56,8 @@ func (s *Schema) convention() Convention {
 	if s.Convention != nil {
 		return s.Convention
 	}
-	if DefaultSchema.Convention != nil {
-		return DefaultSchema.Convention
+	if Default.Convention != nil {
+		return Default.Convention
 	}
 	return colname.Snake
 }
@@ -90,5 +89,5 @@ func (s *Schema) NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
 // NewSelectStmt executes a query that returns multiple rows.
 // It is safe for concurrent access by multiple goroutines.
 func (s *Schema) NewSelectStmt(row interface{}, sql string) *SelectStmt {
-	return newSelectStmt(DefaultSchema, row, sql)
+	return newSelectStmt(Default, row, sql)
 }

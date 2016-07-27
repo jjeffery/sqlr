@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewInsertRowStmt(t *testing.T) {
-	defer func() { DefaultSchema.Dialect = nil }()
+	defer func() { Default.Dialect = nil }()
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -48,10 +48,10 @@ func TestNewInsertRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			DefaultSchema.Dialect = NewDialect(dialect)
+			Default.Dialect = NewDialect(dialect)
 			stmts := []*InsertRowStmt{
 				NewInsertRowStmt(tt.row, tt.sql),
-				DefaultSchema.NewInsertRowStmt(tt.row, tt.sql),
+				Default.NewInsertRowStmt(tt.row, tt.sql),
 			}
 			for _, stmt := range stmts {
 				if stmt.String() != query {
@@ -63,7 +63,7 @@ func TestNewInsertRowStmt(t *testing.T) {
 }
 
 func TestNewUpdateRowStmt(t *testing.T) {
-	defer func() { DefaultSchema.Dialect = nil }()
+	defer func() { Default.Dialect = nil }()
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -97,10 +97,10 @@ func TestNewUpdateRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			DefaultSchema.Dialect = NewDialect(dialect)
+			Default.Dialect = NewDialect(dialect)
 			stmts := []*ExecRowStmt{
 				NewUpdateRowStmt(tt.row, tt.sql),
-				DefaultSchema.NewUpdateRowStmt(tt.row, tt.sql),
+				Default.NewUpdateRowStmt(tt.row, tt.sql),
 			}
 			for _, stmt := range stmts {
 				if stmt.String() != query {
@@ -112,7 +112,7 @@ func TestNewUpdateRowStmt(t *testing.T) {
 }
 
 func TestNewDeleteRowStmt(t *testing.T) {
-	defer func() { DefaultSchema.Dialect = nil }()
+	defer func() { Default.Dialect = nil }()
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -146,10 +146,10 @@ func TestNewDeleteRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			DefaultSchema.Dialect = NewDialect(dialect)
+			Default.Dialect = NewDialect(dialect)
 			stmts := []*ExecRowStmt{
 				NewDeleteRowStmt(tt.row, tt.sql),
-				DefaultSchema.NewDeleteRowStmt(tt.row, tt.sql),
+				Default.NewDeleteRowStmt(tt.row, tt.sql),
 			}
 			for _, stmt := range stmts {
 				if stmt.String() != query {
@@ -161,7 +161,7 @@ func TestNewDeleteRowStmt(t *testing.T) {
 }
 
 func TestNewGetRowStmt(t *testing.T) {
-	defer func() { DefaultSchema.Dialect = nil }()
+	defer func() { Default.Dialect = nil }()
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -195,10 +195,10 @@ func TestNewGetRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			DefaultSchema.Dialect = NewDialect(dialect)
+			Default.Dialect = NewDialect(dialect)
 			stmts := []*GetRowStmt{
 				NewGetRowStmt(tt.row, tt.sql),
-				DefaultSchema.NewGetRowStmt(tt.row, tt.sql),
+				Default.NewGetRowStmt(tt.row, tt.sql),
 			}
 			for _, stmt := range stmts {
 				if stmt.String() != query {
@@ -210,7 +210,7 @@ func TestNewGetRowStmt(t *testing.T) {
 }
 
 func TestNewSelectStmt(t *testing.T) {
-	defer func() { DefaultSchema.Dialect = nil }()
+	defer func() { Default.Dialect = nil }()
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -270,10 +270,10 @@ func TestNewSelectStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			DefaultSchema.Dialect = NewDialect(dialect)
+			Default.Dialect = NewDialect(dialect)
 			stmts := []*SelectStmt{
 				NewSelectStmt(tt.row, tt.sql),
-				DefaultSchema.NewSelectStmt(tt.row, tt.sql),
+				Default.NewSelectStmt(tt.row, tt.sql),
 			}
 			for _, stmt := range stmts {
 				if stmt.String() != query {

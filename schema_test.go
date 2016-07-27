@@ -35,14 +35,14 @@ func TestSchemaDefaults(t *testing.T) {
 	}
 
 	resetDefaults := func() {
-		DefaultSchema = &Schema{}
+		Default = &Schema{}
 	}
 	defer resetDefaults()
 
 	for _, tt := range tests {
 		resetDefaults()
-		DefaultSchema.Convention = tt.defaultConvention
-		DefaultSchema.Dialect = tt.defaultDialect
+		Default.Convention = tt.defaultConvention
+		Default.Dialect = tt.defaultDialect
 		schema := &Schema{
 			Convention: tt.schemaConvention,
 			Dialect:    tt.schemaDialect,

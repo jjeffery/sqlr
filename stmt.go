@@ -27,7 +27,7 @@ type InsertRowStmt struct {
 // The dialect and naming conventions are inferred
 // from DefaultSchema.
 func NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
-	return newInsertRowStmt(DefaultSchema, row, sql)
+	return newInsertRowStmt(Default, row, sql)
 }
 
 func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStmt {
@@ -95,7 +95,7 @@ type ExecRowStmt struct {
 // It is safe for concurrent access by multiple goroutines.
 // The dialect and naming conventions are obtained from DefaultSchema.
 func NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
-	return newUpdateRowStmt(DefaultSchema, row, sql)
+	return newUpdateRowStmt(Default, row, sql)
 }
 
 func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
@@ -110,7 +110,7 @@ func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 // It is safe for concurrent access by multiple goroutines.
 // The dialect and naming conventions are obtained from DefaultSchema.
 func NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
-	return newDeleteRowStmt(DefaultSchema, row, sql)
+	return newDeleteRowStmt(Default, row, sql)
 }
 
 func newDeleteRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
@@ -148,7 +148,7 @@ type GetRowStmt struct {
 // The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
-	return newGetRowStmt(DefaultSchema, row, sql)
+	return newGetRowStmt(Default, row, sql)
 }
 
 func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
@@ -227,7 +227,7 @@ type SelectStmt struct {
 // row and SQL. The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewSelectStmt(row interface{}, sql string) *SelectStmt {
-	return newSelectStmt(DefaultSchema, row, sql)
+	return newSelectStmt(Default, row, sql)
 }
 
 func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
