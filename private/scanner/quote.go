@@ -51,7 +51,7 @@ func IsQuoted(ident string) bool {
 }
 
 // Unquote will unquote an identifier, if it is quoted.
-// If the syntax if the identifier is not valid the result is
+// If the syntax of the identifier is not valid the result is
 // undefined.
 func Unquote(ident string) string {
 	for _, qp := range quotePairs {
