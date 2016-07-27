@@ -2,9 +2,7 @@
 Package sqlstmt aims to make it easy to construct and execute SQL
 statements for common scenarios. Supported scenarios include:
 
- * Insert a single row based on a Go struct
- * Update a single row based on a Go struct
- * Delete a single row based on a Go struct
+ * Insert, update or delete a single row based on the contents of a Go struct
  * Select a single row into a Go struct
  * Select zero, one or more rows int a a slice of Go structs
 
