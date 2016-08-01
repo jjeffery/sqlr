@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/jjeffery/sqlstmt/private/column"
 	"github.com/jjeffery/sqlstmt/private/scanner"
@@ -27,29 +28,34 @@ type InsertRowStmt struct {
 // The dialect and naming conventions are inferred
 // from DefaultSchema.
 func NewInsertRowStmt(row interface{}, sql string) *InsertRowStmt {
-	return newInsertRowStmt(Default, row, sql)
+	return newInsertRowStmt(nil, row, sql)
 }
 
 func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStmt {
 	stmt := &InsertRowStmt{}
-	sql = checkSQL(sql, insertFormat)
-	stmt.err = stmt.prepareExecRow(schema, row, sql)
+	stmt.onceFunc = func() {
+		// Initialize on first run. This way the calling program can define
+		// statements in init() functions without having to be concerned with
+		// the order that schemas/dialects/conventions are defined.
+		sql = checkSQL(sql, insertFormat)
+		stmt.err = stmt.prepareExecRow(schema, row, sql)
 
-	for _, col := range stmt.columns {
-		if col.AutoIncrement {
-			stmt.autoIncrColumn = col
-			break
-		}
-	}
-
-	if stmt.autoIncrColumn != nil {
-		// Some DBs allow the auto-increment column to be specified.
-		// Work out if this statement is doing this.
-		for _, col := range stmt.inputs {
-			if col == stmt.autoIncrColumn {
-				// this statement is setting the auto-increment column explicitly
-				stmt.autoIncrColumn = nil
+		for _, col := range stmt.columns {
+			if col.AutoIncrement {
+				stmt.autoIncrColumn = col
 				break
+			}
+		}
+
+		if stmt.autoIncrColumn != nil {
+			// Some DBs allow the auto-increment column to be specified.
+			// Work out if this statement is doing this.
+			for _, col := range stmt.inputs {
+				if col == stmt.autoIncrColumn {
+					// this statement is setting the auto-increment column explicitly
+					stmt.autoIncrColumn = nil
+					break
+				}
 			}
 		}
 	}
@@ -59,6 +65,8 @@ func newInsertRowStmt(schema *Schema, row interface{}, sql string) *InsertRowStm
 
 // Exec executes the insert statement using the row as arguments.
 func (stmt *InsertRowStmt) Exec(db DB, row interface{}) error {
+	stmt.initOnce()
+
 	// field for setting the auto-increment value
 	var field reflect.Value
 	if stmt.autoIncrColumn != nil {
@@ -95,13 +103,18 @@ type ExecRowStmt struct {
 // It is safe for concurrent access by multiple goroutines.
 // The dialect and naming conventions are obtained from DefaultSchema.
 func NewUpdateRowStmt(row interface{}, sql string) *ExecRowStmt {
-	return newUpdateRowStmt(Default, row, sql)
+	return newUpdateRowStmt(nil, row, sql)
 }
 
 func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
 	stmt := &ExecRowStmt{}
-	sql = checkSQL(sql, updateFormat)
-	stmt.err = stmt.prepareExecRow(schema, row, sql)
+	stmt.onceFunc = func() {
+		// Initialize on first run. This way the calling program can define
+		// statements in init() functions without having to be concerned with
+		// the order that schemas/dialects/conventions are defined.
+		sql = checkSQL(sql, updateFormat)
+		stmt.err = stmt.prepareExecRow(schema, row, sql)
+	}
 	return stmt
 }
 
@@ -110,19 +123,25 @@ func newUpdateRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt 
 // It is safe for concurrent access by multiple goroutines.
 // The dialect and naming conventions are obtained from DefaultSchema.
 func NewDeleteRowStmt(row interface{}, sql string) *ExecRowStmt {
-	return newDeleteRowStmt(Default, row, sql)
+	return newDeleteRowStmt(nil, row, sql)
 }
 
 func newDeleteRowStmt(schema *Schema, row interface{}, sql string) *ExecRowStmt {
 	stmt := &ExecRowStmt{}
-	sql = checkSQL(sql, deleteFormat)
-	stmt.err = stmt.prepareExecRow(schema, row, sql)
+	stmt.onceFunc = func() {
+		// Initialize on first run. This way the calling program can define
+		// statements in init() functions without having to be concerned with
+		// the order that schemas/dialects/conventions are defined.
+		sql = checkSQL(sql, deleteFormat)
+		stmt.err = stmt.prepareExecRow(schema, row, sql)
+	}
 	return stmt
 }
 
 // Exec executes the statement using the row as arguments. Returns the
 // number of rows affected.
 func (stmt *ExecRowStmt) Exec(db DB, row interface{}) (int, error) {
+	stmt.initOnce()
 	result, err := stmt.doExec(db, row)
 	if err != nil {
 		return 0, err
@@ -148,18 +167,21 @@ type GetRowStmt struct {
 // The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewGetRowStmt(row interface{}, sql string) *GetRowStmt {
-	return newGetRowStmt(Default, row, sql)
+	return newGetRowStmt(nil, row, sql)
 }
 
 func newGetRowStmt(schema *Schema, row interface{}, sql string) *GetRowStmt {
 	stmt := &GetRowStmt{}
-	sql = checkSQL(sql, getFormat)
-	stmt.err = stmt.prepareCommon(schema, row, sql)
+	stmt.onceFunc = func() {
+		sql = checkSQL(sql, getFormat)
+		stmt.err = stmt.prepareCommon(schema, row, sql)
+	}
 	return stmt
 }
 
 // Get a single row into dest based on the fields populated in dest.
 func (stmt *GetRowStmt) Get(db DB, dest interface{}) (int, error) {
+	stmt.initOnce()
 	if stmt.err != nil {
 		return 0, stmt.err
 	}
@@ -227,15 +249,17 @@ type SelectStmt struct {
 // row and SQL. The dialect and naming conventions are obtained
 // from DefaultSchema.
 func NewSelectStmt(row interface{}, sql string) *SelectStmt {
-	return newSelectStmt(Default, row, sql)
+	return newSelectStmt(nil, row, sql)
 }
 
 func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 	stmt := &SelectStmt{}
-	sql = checkSQL(sql, selectFormat)
-	stmt.err = stmt.prepareCommon(schema, row, sql)
-	if stmt.err == nil && len(stmt.inputs) > 0 {
-		stmt.err = errors.New("unexpected inputs in query")
+	stmt.onceFunc = func() {
+		sql = checkSQL(sql, selectFormat)
+		stmt.err = stmt.prepareCommon(schema, row, sql)
+		if stmt.err == nil && len(stmt.inputs) > 0 {
+			stmt.err = errors.New("unexpected inputs in query")
+		}
 	}
 	return stmt
 }
@@ -244,6 +268,7 @@ func newSelectStmt(schema *Schema, row interface{}, sql string) *SelectStmt {
 // rows in the slice pointed to by dest. The args are for any
 // placeholder parameters in the query.
 func (stmt *SelectStmt) Select(db DB, dest interface{}, args ...interface{}) error {
+	stmt.initOnce()
 	if stmt.err != nil {
 		return stmt.err
 	}
@@ -317,14 +342,33 @@ type commonStmt struct {
 	inputs     []*column.Info
 	outputs    []*column.Info
 	err        error
+	once       sync.Once
+	onceFunc   func()
 }
 
 // String prints the SQL query associated with the statement.
 func (stmt *commonStmt) String() string {
+	stmt.initOnce()
 	return stmt.query
 }
 
+// initOnce initializes the statement on first run. This way the calling program can
+// define statements in init() functions without having to be concerned with
+// the order that schemas/dialects/conventions are defined.
+func (stmt *commonStmt) initOnce() {
+	stmt.once.Do(func() {
+		stmt.onceFunc()
+		stmt.onceFunc = nil
+	})
+}
+
 func (stmt *commonStmt) prepareCommon(schema *Schema, row interface{}, sql string) error {
+	if schema == nil {
+		schema = Default
+		if schema == nil {
+			schema = &Schema{}
+		}
+	}
 	stmt.rowType = reflect.TypeOf(row)
 	if stmt.rowType.Kind() == reflect.Ptr {
 		stmt.rowType = stmt.rowType.Elem()
