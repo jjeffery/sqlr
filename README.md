@@ -350,7 +350,7 @@ if err != nil {
 }
 
 // specify the dialect in use
-sqlstmt.DefaultSchema.Dialect = sqlstmt.NewDialect("postgres")
+sqlstmt.Default.Dialect = sqlstmt.NewDialect("postgres")
 ```
 
 ### Using multiple dialects
@@ -551,7 +551,7 @@ To set a convention other than the default, set the `Schema.Convention` property
 ```go
 // set the default naming convention so that column names are
 // the same as Go struct field names
-sqlstmt.DefaultSchema.Convention = sqlstmt.ConventionSame
+sqlstmt.Default.Convention = sqlstmt.ConventionSame
 
 // create a new schema with it's own naming convention
 mySchema := &sqlstmt.Schema{
