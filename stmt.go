@@ -296,6 +296,10 @@ func (stmt *SelectStmt) Select(db DB, dest interface{}, args ...interface{}) err
 		return stmt.errorSliceType()
 	}
 
+	if stmt.Logger != nil {
+		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
+		stmt.Logger.Print(msg)
+	}
 	rows, err := db.Query(stmt.query, args...)
 	if err != nil {
 		return err
