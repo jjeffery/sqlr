@@ -34,3 +34,15 @@ type DB interface {
 type Logger interface {
 	Print(v ...interface{})
 }
+
+// SQLLogger is an interface for logging SQL statements executed
+// by the sqlstmt package.
+type SQLLogger interface {
+	// LogSQL is called by the sqlstmt package after it executes an SQL query or statement.
+	//
+	// The query and args variables provide the query and associated arguments supplied to
+	// the database server.  The rowsAffected and err variables provide a summary of the
+	// query results. If the number of rows affected cannot be determined for any reason,
+	// then rowsAffected is set to -1.
+	LogSQL(query string, args []interface{}, rowsAffected int, err error)
+}

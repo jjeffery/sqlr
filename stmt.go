@@ -210,22 +210,27 @@ func (stmt *GetRowStmt) Get(db DB, dest interface{}) (int, error) {
 		return 0, err
 	}
 
-	if stmt.Logger != nil {
-		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
-		stmt.Logger.Print(msg)
-	}
 	rows, err := db.Query(stmt.query, args...)
 	if err != nil {
+		stmt.logError(args, err)
 		return 0, err
 	}
 	defer rows.Close()
 
 	scanValues := make([]interface{}, len(stmt.outputs))
 
+	var rowCount = 0
+	defer func() {
+		stmt.logSuccess(args, rowCount)
+	}()
+
 	if !rows.Next() {
 		// no rows returned
 		return 0, nil
 	}
+
+	// at least one row returned
+	rowCount++
 
 	for i, col := range stmt.outputs {
 		cellValue := col.Index.ValueRW(rowValue)
@@ -236,7 +241,12 @@ func (stmt *GetRowStmt) Get(db DB, dest interface{}) (int, error) {
 		return 0, err
 	}
 
-	return 1, nil
+	// count any additional rows
+	for rows.Next() {
+		rowCount++
+	}
+
+	return rowCount, nil
 }
 
 // SelectStmt executes a query that returns multiple rows.
@@ -296,19 +306,24 @@ func (stmt *SelectStmt) Select(db DB, dest interface{}, args ...interface{}) err
 		return stmt.errorSliceType()
 	}
 
-	if stmt.Logger != nil {
-		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
-		stmt.Logger.Print(msg)
-	}
 	rows, err := db.Query(stmt.query, args...)
 	if err != nil {
+		stmt.logError(args, err)
 		return err
 	}
 	defer rows.Close()
 
+	var rowCount = 0
+	if stmt.Logger != nil {
+		defer func() {
+			stmt.logSuccess(args, rowCount)
+		}()
+	}
+
 	scanValues := make([]interface{}, len(stmt.columns))
 
 	for rows.Next() {
+		rowCount++
 		rowValuePtr := reflect.New(rowType)
 		rowValue := reflect.Indirect(rowValuePtr)
 		for i, col := range stmt.columns {
@@ -336,7 +351,7 @@ func (stmt *SelectStmt) errorSliceType() error {
 
 type commonStmt struct {
 	// Logger is used for diagnostic logging.
-	Logger Logger
+	Logger SQLLogger
 
 	rowType    reflect.Type
 	query      string
@@ -383,10 +398,6 @@ func (stmt *commonStmt) prepareCommon(schema *Schema, row interface{}, sql strin
 	stmt.Logger = schema.Logger
 	if err := stmt.scanSQL(sql); err != nil {
 		return err
-	}
-	if stmt.Logger != nil {
-		msg := fmt.Sprintf("prepared=%q", stmt.query)
-		stmt.Logger.Print(msg)
 	}
 	return nil
 }
@@ -499,11 +510,21 @@ func (stmt commonStmt) doExec(db DB, row interface{}) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	result, err := db.Exec(stmt.query, args...)
 	if stmt.Logger != nil {
-		msg := fmt.Sprintf("query=%q, args=%v\n", stmt.query, args)
-		stmt.Logger.Print(msg)
+		if err != nil {
+			stmt.logError(args, err)
+		} else {
+			n, err := result.RowsAffected()
+			if err != nil {
+				// the query was successful, but we do not know the number of rows affected
+				stmt.logSuccess(args, -1)
+			} else {
+				stmt.logSuccess(args, int(n))
+			}
+		}
 	}
-	return db.Exec(stmt.query, args...)
+	return result, err
 }
 
 func (stmt commonStmt) getArgs(row interface{}) ([]interface{}, error) {
@@ -531,4 +552,16 @@ func (stmt commonStmt) getArgs(row interface{}) ([]interface{}, error) {
 
 func (stmt commonStmt) expectedTypeName() string {
 	return fmt.Sprintf("%s.%s", stmt.rowType.PkgPath(), stmt.rowType.Name())
+}
+
+func (stmt *commonStmt) logError(args []interface{}, err error) {
+	if stmt.Logger != nil {
+		stmt.Logger.LogSQL(stmt.query, args, 0, err)
+	}
+}
+
+func (stmt *commonStmt) logSuccess(args []interface{}, rowsAffected int) {
+	if stmt.Logger != nil {
+		stmt.Logger.LogSQL(stmt.query, args, rowsAffected, nil)
+	}
 }

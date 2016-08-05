@@ -39,7 +39,7 @@ type Schema struct {
 
 	// Logger is used for diagnostic logging. If set then all statements
 	// created for this schema will share this logger.
-	Logger Logger
+	Logger SQLLogger
 }
 
 func (s *Schema) dialect() dialect.Dialect {
