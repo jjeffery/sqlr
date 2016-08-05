@@ -78,9 +78,14 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 		fieldType = fieldType.Elem()
 	}
 
-	// ignore fields that are arrays, channels, functions, interfaces, maps, slices
+	// ignore fields that are arrays, channels, functions, interfaces, maps
 	switch fieldType.Kind() {
-	case reflect.Array, reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Slice:
+	case reflect.Array, reflect.Chan, reflect.Func, reflect.Interface, reflect.Map:
+		return
+	}
+
+	// ignore slices that are not byte slices
+	if fieldType.Kind() == reflect.Slice && fieldType.Elem().Kind() != reflect.Uint8 {
 		return
 	}
 
