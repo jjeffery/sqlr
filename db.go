@@ -19,22 +19,6 @@ type DB interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
-// Logger wraps a single method, Print, which prints a message
-// for diagnostic purposes. Any implementation of this interface must
-// support concurrent access by multiple goroutines.
-//
-// The Logger type in the standard library package "log" implements
-// this interface.
-//
-// Note that according to the Go naming conventions for single-method
-// interfaces, this interface should be called "Printer". The name
-// "Logger" has been chosen because it better reflects the intention
-// of this interface, and it matches the name of the Logger type in
-// the log package.
-type Logger interface {
-	Print(v ...interface{})
-}
-
 // SQLLogger is an interface for logging SQL statements executed
 // by the sqlstmt package.
 type SQLLogger interface {
