@@ -6,36 +6,31 @@ import (
 )
 
 func Example() {
-	fmt.Println("")
-	fmt.Println("Snake examples")
-	fmt.Println("--------------")
-	fmt.Println(Snake.ColumnName("UserID"))
-	fmt.Println(Snake.ColumnName("HomeAddress"))
-	fmt.Println(Snake.ColumnName("StreetName"))
-	fmt.Println(Snake.Join("home_address", "street_name"))
-	fmt.Println(Snake.ColumnName("HTMLElement"))
+	conventions := []Convention{Snake, Same}
 
-	fmt.Println("")
-	fmt.Println("Same examples")
-	fmt.Println("-------------")
-	fmt.Println(Same.ColumnName("UserID"))
-	fmt.Println(Same.ColumnName("HomeAddress"))
-	fmt.Println(Same.ColumnName("StreetName"))
-	fmt.Println(Same.Join("HomeAddress", "StreetName"))
-	fmt.Println(Same.ColumnName("HTMLElement"))
+	for _, convention := range conventions {
+		fmt.Printf("\n%s convention:\n\n", convention.Name())
+		fmt.Println(convention.ColumnName("UserID"))
+		fmt.Println(convention.ColumnName("HomeAddress"))
+		fmt.Println(convention.ColumnName("StreetName"))
+		fmt.Println(convention.Join(
+			convention.ColumnName("HomeAddress"),
+			convention.ColumnName("StreetName")))
+		fmt.Println(convention.ColumnName("HTMLElement"))
+	}
 
 	// Output:
 	//
-	// Snake examples
-	// --------------
+	// snake convention:
+	//
 	// user_id
 	// home_address
 	// street_name
 	// home_address_street_name
 	// html_element
 	//
-	// Same examples
-	// -------------
+	// same convention:
+	//
 	// UserID
 	// HomeAddress
 	// StreetName

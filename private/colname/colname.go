@@ -15,6 +15,7 @@ var Snake Convention
 
 func init() {
 	Snake = Convention{
+		name:       "snake",
 		columnName: toSnakeCase,
 		join:       joinSnake,
 	}
@@ -26,6 +27,7 @@ var Same Convention
 
 func init() {
 	Same = Convention{
+		name:       "same",
 		columnName: columnNameSame,
 		join:       joinSame,
 	}
@@ -34,8 +36,14 @@ func init() {
 // A Convention provides a naming convention for
 // inferring database column names from Go struct field names.
 type Convention struct {
+	name       string
 	columnName func(string) string
 	join       func(string, string) string
+}
+
+// Name returns the name of the convention.
+func (c Convention) Name() string {
+	return c.name
 }
 
 // ColumnName converts a Go struct field name to a database
