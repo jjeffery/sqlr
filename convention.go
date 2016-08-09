@@ -5,8 +5,9 @@ import "github.com/jjeffery/sqlstmt/private/colname"
 // Convention provides naming convention methods for
 // inferring database column names from Go struct field names.
 type Convention interface {
-	// The name of the convention. If two conventions have the
-	// same name, then they should be identical.
+	// The name of the convention. This can be used as
+	// a key for caching, so if If two conventions have
+	// the same name, then they should be identical.
 	Name() string
 
 	// ColumnName returns the name of a database column based

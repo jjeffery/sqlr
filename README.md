@@ -522,6 +522,11 @@ implementation of the `Convention` interface:
 // Convention provides naming convention methods for
 // inferring a database column name from Go struct field names.
 type Convention interface {
+	// The name of the convention. This can be used as
+	// a key for caching, so if If two conventions have
+	// the same name, then they should be identical.
+	Name() string
+	
 	// ColumnName returns the name of a database column based
 	// on the name of a Go struct field.
 	ColumnName(fieldName string) string
