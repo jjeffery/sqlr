@@ -32,3 +32,13 @@ type SQLLogger interface {
 	// then rowsAffected is set to -1.
 	LogSQL(query string, args []interface{}, rowsAffected int, err error)
 }
+
+// The SQLLoggerFunc type is an adapter to allow the use of ordinary
+// functions as SQLLoggers. If f is a function with the appropriate
+// signature, SQLLoggerFunc(f) is an SQLLogger that calls f.
+type SQLLoggerFunc func(query string, args []interface{}, rowsAffected int, err error)
+
+// LogSQL calls f(query, args, rowsAffected, err).
+func (f SQLLoggerFunc) LogSQL(query string, args []interface{}, rowsAffected int, err error) {
+	f(query, args, rowsAffected, err)
+}

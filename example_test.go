@@ -92,11 +92,15 @@ func exitIfError(err error) {
 	}
 }
 
+var debug = true
+
 func init() {
 	log.SetFlags(0)
 
-	// uncomment to log SQL statements
-	//sqlstmt.DefaultSchema.Logger = log.New(os.Stderr, "sqlstmt: ", log.Flags())
+	// logs SQL statements
+	if debug {
+		sqlstmt.Default.Logger = sqlstmt.SQLLoggerFunc(logSQL)
+	}
 }
 
 func setupSchema(db *sql.DB) {
@@ -108,4 +112,12 @@ func setupSchema(db *sql.DB) {
 		)
 	`)
 	exitIfError(err)
+}
+
+func logSQL(query string, args []interface{}, rowsAffected int, err error) {
+	if err != nil {
+		log.Printf("query=%q, args=%v, error=%v", query, args, err)
+	} else {
+		log.Printf("query=%q, args=%v, rowsAffected=%d", query, args, rowsAffected)
+	}
 }
