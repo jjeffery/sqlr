@@ -498,7 +498,7 @@ func (stmt *commonStmt) scanSQL(query string) error {
 			}
 		}
 	}
-	stmt.query = buf.String()
+	stmt.query = strings.TrimSpace(buf.String())
 	return nil
 }
 
