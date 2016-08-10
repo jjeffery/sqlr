@@ -71,6 +71,9 @@ func (d *dialectT) Name() string {
 }
 
 func (d *dialectT) Quote(name string) string {
+	if d.quoteFunc == nil {
+		return name
+	}
 	return d.quoteFunc(name)
 }
 
@@ -114,7 +117,6 @@ func init() {
 		&dialectT{
 			name:            "ql",
 			altnames:        []string{"ql-mem"},
-			quoteFunc:       quoteFunc("", ""),
 			placeholderFunc: placeholderFunc("?%d"),
 		},
 	} {
