@@ -7,7 +7,9 @@ import (
 // Dialect is an interface used to handle differences
 // in SQL dialects.
 type Dialect interface {
-	// Name of the dialect.
+	// Name of the dialect. This name is used as
+	// a key for caching, so if If two dialects have
+	// the same name, then they should be identical.
 	Name() string
 
 	// Quote a table name or column name so that it does
