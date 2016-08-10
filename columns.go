@@ -46,27 +46,27 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 	scan.AddKeywords("alias", "all", "pk")
 	scan.IgnoreWhiteSpace = true
 
-	for {
-		tok, lit := scan.Scan()
-		if tok == scanner.EOF {
-			break
-		}
-		if tok == scanner.ILLEGAL {
-			return cols, fmt.Errorf("illegal char: %q", lit)
-		}
+	for scan.Scan() {
+		tok, lit := scan.Token(), scan.Text()
 
 		// TODO: dodgy job to get going quickly
 		if tok == scanner.KEYWORD {
 			switch strings.ToLower(lit) {
 			case "alias":
-				_, lit2 := scan.Scan()
-				cols2.alias = lit2
+				if scan.Scan() {
+					cols2.alias = scan.Text()
+				} else {
+					return columnsT{}, fmt.Errorf("missing ident after 'alias'")
+				}
 			case "all":
 				cols2.filter = columnFilterAll
 			case "pk":
 				cols2.filter = columnFilterPK
 			}
 		}
+	}
+	if err := scan.Err(); err != nil {
+		return columnsT{}, err
 	}
 
 	return cols2, nil

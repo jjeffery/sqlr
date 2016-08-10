@@ -39,6 +39,8 @@ type Scanner struct {
 	r        *bufio.Reader
 	keywords map[string]bool
 	err      error
+	token    Token
+	text     string
 }
 
 // New returns a new scanner that takes its input from r.
@@ -62,18 +64,33 @@ func (s *Scanner) isKeyword(lit string) bool {
 	return s.keywords[strings.ToLower(lit)]
 }
 
+// Token returns the token from the last scan.
+func (s *Scanner) Token() Token {
+	return s.token
+}
+
+// Text returns the token's text from the last scan.
+func (s *Scanner) Text() string {
+	return s.text
+}
+
+// Err returns the first non-EOF error that was
+// encountered by the Scanner.
+func (s *Scanner) Err() error {
+	return s.err
+}
+
 // Scan the next SQL token.
-func (s *Scanner) Scan() (tok Token, lit string) {
+func (s *Scanner) Scan() bool {
 	ch := s.read()
 	for s.IgnoreWhiteSpace && isWhitespace(ch) {
 		ch = s.read()
 	}
 	if ch == eof {
-		return EOF, ""
+		return s.setToken(EOF, "")
 	}
-
 	if isWhitespace(ch) {
-		s.unread()
+		s.unread(ch)
 		return s.scanWhitespace()
 	}
 	if ch == '-' {
@@ -81,8 +98,8 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 		if ch2 == '-' {
 			return s.scanComment("--")
 		}
-		s.unread()
-		return OP, runeToString(ch)
+		s.unread(ch2)
+		return s.setToken(OP, runeToString(ch))
 	}
 	if ch == '[' {
 		return s.scanDelimitedIdentifier('[', ']')
@@ -104,7 +121,7 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 		if ch2 == '\'' {
 			return s.scanQuote(ch, ch2)
 		}
-		s.unread()
+		s.unread(ch2)
 		return s.scanIdentifier(ch)
 	}
 	if isStartIdent(ch) {
@@ -115,38 +132,41 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 	}
 	if ch == '.' {
 		ch2 := s.read()
-		s.unread()
+		s.unread(ch2)
 		if isDigit(ch2) {
 			return s.scanNumber(ch)
 		}
-		return OP, runeToString(ch)
+		return s.setToken(OP, runeToString(ch))
 	}
 	if ch == '<' {
-		if ch2 := s.read(); ch2 == '>' {
-			return OP, "<>"
-		}
-		s.unread()
-		return OP, runeToString(ch)
-	}
-	if ch == '$' {
 		ch2 := s.read()
-		s.unread()
-		if isDigit(ch2) {
-			return s.scanPlaceholder(ch)
+		if ch2 == '>' {
+			return s.setToken(OP, "<>")
 		}
-		return OP, runeToString(ch)
+		s.unread(ch2)
+		return s.setToken(OP, runeToString(ch))
 	}
-	if ch == '?' {
+	if ch == '$' || ch == '?' {
 		return s.scanPlaceholder(ch)
 	}
 	if strings.ContainsRune(operators, ch) {
-		return OP, runeToString(ch)
+		return s.setToken(OP, runeToString(ch))
 	}
 
-	return ILLEGAL, runeToString(ch)
+	return s.setToken(ILLEGAL, runeToString(ch))
 }
 
-func (s *Scanner) scanWhitespace() (tok Token, lit string) {
+func (s *Scanner) setToken(tok Token, text string) bool {
+	s.token = tok
+	s.text = text
+	if tok == ILLEGAL {
+		s.err = fmt.Errorf("unrecognised input near %q", text)
+		return false
+	}
+	return tok != EOF
+}
+
+func (s *Scanner) scanWhitespace() bool {
 	var buf bytes.Buffer
 	buf.WriteRune(s.read())
 
@@ -154,17 +174,17 @@ func (s *Scanner) scanWhitespace() (tok Token, lit string) {
 		if ch := s.read(); ch == eof {
 			break
 		} else if !isWhitespace(ch) {
-			s.unread()
+			s.unread(ch)
 			break
 		} else {
 			buf.WriteRune(ch)
 		}
 	}
 
-	return WS, buf.String()
+	return s.setToken(WS, buf.String())
 }
 
-func (s *Scanner) scanComment(prefix string) (Token, string) {
+func (s *Scanner) scanComment(prefix string) bool {
 	var buf bytes.Buffer
 	buf.WriteString(prefix)
 	for {
@@ -177,39 +197,39 @@ func (s *Scanner) scanComment(prefix string) (Token, string) {
 			}
 		}
 	}
-	return COMMENT, buf.String()
+	return s.setToken(COMMENT, buf.String())
 }
 
-func (s *Scanner) scanDelimitedIdentifier(startCh rune, endCh rune) (Token, string) {
+func (s *Scanner) scanDelimitedIdentifier(startCh rune, endCh rune) bool {
 	var buf bytes.Buffer
 	buf.WriteRune(startCh)
 	for {
 		ch := s.read()
 		if ch == eof {
-			return ILLEGAL, buf.String()
+			return s.setToken(ILLEGAL, buf.String())
 		}
 		buf.WriteRune(ch)
 		if ch == endCh {
 			// double endCh is an escape
 			ch2 := s.read()
 			if ch2 != endCh {
-				s.unread()
+				s.unread(ch2)
 				break
 			}
 			buf.WriteRune(ch2)
 		}
 	}
-	return IDENT, buf.String()
+	return s.setToken(IDENT, buf.String())
 }
 
-func (s *Scanner) scanIdentifier(startCh rune) (Token, string) {
+func (s *Scanner) scanIdentifier(startCh rune) bool {
 	var buf bytes.Buffer
 	buf.WriteRune(startCh)
 	for {
 		if ch := s.read(); ch == eof {
 			break
 		} else if !isIdent(ch) {
-			s.unread()
+			s.unread(ch)
 			break
 		} else {
 			buf.WriteRune(ch)
@@ -217,13 +237,13 @@ func (s *Scanner) scanIdentifier(startCh rune) (Token, string) {
 	}
 	lit := buf.String()
 	if s.isKeyword(lit) {
-		return KEYWORD, lit
+		return s.setToken(KEYWORD, lit)
 	}
 
-	return IDENT, lit
+	return s.setToken(IDENT, lit)
 }
 
-func (s *Scanner) scanNumber(startCh rune) (Token, string) {
+func (s *Scanner) scanNumber(startCh rune) bool {
 	var buf bytes.Buffer
 
 	// comparison function changes after first period encountered
@@ -246,15 +266,15 @@ func (s *Scanner) scanNumber(startCh rune) (Token, string) {
 		} else if cmp(ch) {
 			add(ch)
 		} else {
-			s.unread()
+			s.unread(ch)
 			break
 		}
 	}
 
-	return LITERAL, buf.String()
+	return s.setToken(LITERAL, buf.String())
 }
 
-func (s *Scanner) scanQuote(startChs ...rune) (Token, string) {
+func (s *Scanner) scanQuote(startChs ...rune) bool {
 	var buf bytes.Buffer
 	var endCh rune
 	for _, ch := range startChs {
@@ -262,25 +282,24 @@ func (s *Scanner) scanQuote(startChs ...rune) (Token, string) {
 		buf.WriteRune(ch)
 	}
 	for {
-
 		ch := s.read()
 		if ch == eof {
-			return ILLEGAL, buf.String()
+			return s.setToken(ILLEGAL, buf.String())
 		}
 		buf.WriteRune(ch)
 		if ch == endCh {
 			if ch2 := s.read(); ch2 == endCh {
 				buf.WriteRune(ch2)
 			} else {
-				s.unread()
+				s.unread(ch2)
 				break
 			}
 		}
 	}
-	return LITERAL, buf.String()
+	return s.setToken(LITERAL, buf.String())
 }
 
-func (s *Scanner) scanPlaceholder(startCh rune) (Token, string) {
+func (s *Scanner) scanPlaceholder(startCh rune) bool {
 	var buf bytes.Buffer
 	buf.WriteRune(startCh)
 	for {
@@ -289,26 +308,30 @@ func (s *Scanner) scanPlaceholder(startCh rune) (Token, string) {
 		} else if isDigit(ch) {
 			buf.WriteRune(ch)
 		} else {
-			s.unread()
+			s.unread(ch)
 			break
 		}
 	}
-	return PLACEHOLDER, buf.String()
+	return s.setToken(PLACEHOLDER, buf.String())
 }
 
 func (s *Scanner) read() rune {
 	ch, _, err := s.r.ReadRune()
 	if err != nil {
-		s.err = err
+		if err != io.EOF {
+			s.err = err
+		}
 		return eof
 	}
 	return ch
 }
 
-func (s *Scanner) unread() {
-	err := s.r.UnreadRune()
-	if err != nil {
-		s.err = err
+func (s *Scanner) unread(ch rune) {
+	if ch != eof {
+		err := s.r.UnreadRune()
+		if err != nil {
+			s.err = err
+		}
 	}
 }
 

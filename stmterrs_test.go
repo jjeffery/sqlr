@@ -78,7 +78,7 @@ func TestGetRowStmtErrors(t *testing.T) {
 		{
 			row:     Row{},
 			sql:     "select {dodgy!} from xx where {}",
-			errText: `cannot expand "dodgy!" in "select columns" clause: illegal char: "!"`,
+			errText: `cannot expand "dodgy!" in "select columns" clause: unrecognised input near "!"`,
 		},
 	}
 

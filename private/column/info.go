@@ -24,11 +24,9 @@ func (info *Info) updateOptsFromTag() {
 	if scan == nil {
 		return
 	}
-	for {
-		tok, lit := scan.Scan()
+	for scan.Scan() {
+		tok, lit := scan.Token(), scan.Text()
 		switch tok {
-		case scanner.EOF, scanner.ILLEGAL:
-			return
 		case scanner.KEYWORD:
 			switch strings.ToLower(lit) {
 			case "pk", "primary_key":
@@ -36,11 +34,11 @@ func (info *Info) updateOptsFromTag() {
 			case "autoincrement", "autoincr":
 				info.AutoIncrement = true
 			case "primary":
-				if _, lit2 := scan.Scan(); strings.ToLower(lit2) == "key" {
+				if scan.Scan(); strings.ToLower(scan.Text()) == "key" {
 					info.PrimaryKey = true
 				}
 			case "auto":
-				if _, lit2 := scan.Scan(); strings.ToLower(lit2) == "increment" {
+				if scan.Scan(); strings.ToLower(scan.Text()) == "increment" {
 					info.AutoIncrement = true
 				}
 			case "identity":
@@ -59,10 +57,10 @@ func columnNameFromTag(tags reflect.StructTag) string {
 	if scan == nil {
 		return ""
 	}
-	for {
-		tok, lit := scan.Scan()
+	for scan.Scan() {
+		tok, lit := scan.Token(), scan.Text()
 		switch tok {
-		case scanner.KEYWORD, scanner.EOF, scanner.ILLEGAL:
+		case scanner.KEYWORD:
 			// exit on first keyword, no column specified
 			return ""
 		case scanner.IDENT:
@@ -81,6 +79,7 @@ func columnNameFromTag(tags reflect.StructTag) string {
 			}
 		}
 	}
+	return ""
 }
 
 // newScanner returns a scanner for reading the contents of the struct tag.

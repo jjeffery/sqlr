@@ -440,11 +440,8 @@ func (stmt *commonStmt) scanSQL(query string) error {
 	var insertColumns *columnsT
 	var clause sqlClause
 	var buf bytes.Buffer
-	for {
-		tok, lit := scan.Scan()
-		if tok == scanner.EOF {
-			break
-		}
+	for scan.Scan() {
+		tok, lit := scan.Token(), scan.Text()
 		switch tok {
 		case scanner.WS:
 			buf.WriteRune(' ')

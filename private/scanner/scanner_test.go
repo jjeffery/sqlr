@@ -11,10 +11,10 @@ func TestScan(t *testing.T) {
 		lit   string
 	}
 	testCases := []struct {
-		sql    string
-		tokens []tokenLit
-
+		sql                    string
+		tokens                 []tokenLit
 		ignoreWhiteSpaceTokens []tokenLit
+		errText                string
 	}{
 		{
 			sql: "select * from [from] t where t.id = 'one'",
@@ -88,6 +88,7 @@ func TestScan(t *testing.T) {
 				{ILLEGAL, "[table_]]name]]"},
 				{EOF, ""},
 			},
+			errText: `unrecognised input near "[table_]]name]]"`,
 		},
 		{ // placeholders
 			sql: "? ?123 $4 $ ?",
@@ -98,7 +99,7 @@ func TestScan(t *testing.T) {
 				{WS, " "},
 				{PLACEHOLDER, "$4"},
 				{WS, " "},
-				{OP, "$"},
+				{PLACEHOLDER, "$"},
 				{WS, " "},
 				{PLACEHOLDER, "?"},
 				{EOF, ""},
@@ -147,6 +148,7 @@ func TestScan(t *testing.T) {
 				{ILLEGAL, "'missing quote"},
 				{EOF, ""},
 			},
+			errText: `unrecognised input near "'missing quote"`,
 		},
 		{ // numbers
 			sql: "123,123.456,.123,5",
@@ -176,6 +178,7 @@ func TestScan(t *testing.T) {
 				{ILLEGAL, "\x03"},
 				{EOF, ""},
 			},
+			errText: `unrecognised input near "\x03"`,
 		},
 		{ // white space
 			sql: " a  b\r\nc\td \v\t\r\n  e\n\n",
@@ -268,14 +271,33 @@ func TestScan(t *testing.T) {
 		},
 	}
 
-	check := func(scanner *Scanner, tokens []tokenLit) {
+	check := func(scan *Scanner, tokens []tokenLit, sql string, errText string) {
 		if len(tokens) == 0 {
 			return
 		}
 		for i, expected := range tokens {
-			tok, lit := scanner.Scan()
+			if !scan.Scan() {
+				if scan.Token() != EOF && scan.Token() != ILLEGAL {
+					t.Errorf("%d: premature end of input: tok=%v, lit=%q, sql=%q",
+						i, scan.Token(), scan.Text(), sql)
+				}
+				continue
+			}
+			tok, lit := scan.Token(), scan.Text()
 			if tok != expected.token || lit != expected.lit {
-				t.Errorf("%d: expected (%v,%s), got (%v,%s)", i, expected.token, expected.lit, tok, lit)
+				t.Errorf("%d: %q, expected (%v,%s), got (%v,%s)",
+					i, sql, expected.token, expected.lit, tok, lit)
+			}
+		}
+		if errText == "" {
+			if scan.Err() != nil {
+				t.Errorf("expected no error, actual=%v", scan.Err())
+			}
+		} else {
+			if scan.Err() == nil {
+				t.Errorf("expected error %q, actual=nil", errText)
+			} else if scan.Err().Error() != errText {
+				t.Errorf("expected error %q, actual=%v", errText, scan.Err())
 			}
 		}
 	}
@@ -283,10 +305,10 @@ func TestScan(t *testing.T) {
 	for _, tc := range testCases {
 		scanner := New(strings.NewReader(tc.sql))
 		scanner.AddKeywords("select", "from")
-		check(scanner, tc.tokens)
+		check(scanner, tc.tokens, tc.sql, tc.errText)
 		scanner = New(strings.NewReader(tc.sql))
 		scanner.AddKeywords("select", "from")
 		scanner.IgnoreWhiteSpace = true
-		check(scanner, tc.ignoreWhiteSpaceTokens)
+		check(scanner, tc.ignoreWhiteSpaceTokens, tc.sql, tc.errText)
 	}
 }

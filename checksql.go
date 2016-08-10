@@ -3,6 +3,7 @@ package sqlstmt
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // statement formats when only a table name is given
@@ -20,6 +21,7 @@ var whiteSpaceRE = regexp.MustCompile(`\s`)
 // name (ie has not whitespace), then it returns SQL formatted with the
 // table name.
 func checkSQL(sql string, format string) string {
+	sql = strings.TrimSpace(sql)
 	if !whiteSpaceRE.MatchString(sql) {
 		sql = fmt.Sprintf(format, sql)
 	}
