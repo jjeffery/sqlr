@@ -48,7 +48,7 @@ func TestNewInsertRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			Default.Dialect = NewDialect(dialect)
+			Default.Dialect = DialectFor(dialect)
 			stmts := []*InsertRowStmt{
 				NewInsertRowStmt(tt.row, tt.sql),
 				Default.NewInsertRowStmt(tt.row, tt.sql),
@@ -97,7 +97,7 @@ func TestNewUpdateRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			Default.Dialect = NewDialect(dialect)
+			Default.Dialect = DialectFor(dialect)
 			stmts := []*ExecRowStmt{
 				NewUpdateRowStmt(tt.row, tt.sql),
 				Default.NewUpdateRowStmt(tt.row, tt.sql),
@@ -146,7 +146,7 @@ func TestNewDeleteRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			Default.Dialect = NewDialect(dialect)
+			Default.Dialect = DialectFor(dialect)
 			stmts := []*ExecRowStmt{
 				NewDeleteRowStmt(tt.row, tt.sql),
 				Default.NewDeleteRowStmt(tt.row, tt.sql),
@@ -195,7 +195,7 @@ func TestNewGetRowStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			Default.Dialect = NewDialect(dialect)
+			Default.Dialect = DialectFor(dialect)
 			stmts := []*GetRowStmt{
 				NewGetRowStmt(tt.row, tt.sql),
 				Default.NewGetRowStmt(tt.row, tt.sql),
@@ -270,7 +270,7 @@ func TestNewSelectStmt(t *testing.T) {
 
 	for _, tt := range tests {
 		for dialect, query := range tt.queries {
-			Default.Dialect = NewDialect(dialect)
+			Default.Dialect = DialectFor(dialect)
 			stmts := []*SelectStmt{
 				NewSelectStmt(tt.row, tt.sql),
 				Default.NewSelectStmt(tt.row, tt.sql),

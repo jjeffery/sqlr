@@ -66,7 +66,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		d := New(tt.driverName)
+		d := For(tt.driverName)
 		compareString(t, tt.expectedName, d.Name())
 		compareString(t, tt.expectedQuoted, d.Quote("xxx"))
 		compareString(t, tt.expectedPlaceholder, d.Placeholder(2))
@@ -87,7 +87,7 @@ func (d *testDriver) Open(name string) (driver.Conn, error) {
 
 func TestInferFromDriver(t *testing.T) {
 	sql.Register("mysql", &testDriver{})
-	dialect := New("")
+	dialect := For("")
 
 	if dialect.Name() != "mysql" {
 		t.Errorf("expected=%q, actual=%q", "mysql", dialect.Name())

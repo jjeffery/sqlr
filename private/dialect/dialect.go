@@ -27,52 +27,54 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// New creates a dialect based on the name. Supported dialects include:
+// For returns a dialect for the specified database driver.
+// If name is blank, then the dialect returned is for the first
+// driver returned by sql.Drivers(). If the driver name is
+// unknown, the default dialect is returned.
 //
+// Supported dialects include:
+//
+//  name      alternative names
+//  ----      -----------------
 //  mssql
 //  mysql
-//  postgres (pq, postgresql)
-//  sqlite3 (sqlite)
-func New(name string) Dialect {
+//  postgres  pq, postgresql
+//  sqlite3   sqlite
+//  ql        ql-mem
+func For(name string) Dialect {
 	if name == "" {
 		drivers := sql.Drivers()
 		if len(drivers) > 0 {
 			name = drivers[0]
 		}
 	}
-	//println("dialect name =", name)
-	switch strings.ToLower(name) {
-	case "pq", "postgres", "postgresql":
-		return dialectPG
-	case "mysql":
-		return dialectMySQL
-	case "mssql":
-		return dialectMSSQL
-	case "sqlite3", "sqlite":
-		return dialectSQLite
-	case "ql", "ql-mem":
-		return dialectQL
-	default:
-		return dialectDefault
+	name = strings.TrimSpace(strings.ToLower(name))
+
+	d := dialects[name]
+	if d == nil {
+		d = defaultDialect
 	}
+
+	return d
 }
 
 // dialectT implements the Dialect interface.
 type dialectT struct {
 	name            string
+	altnames        []string
 	quoteFunc       func(name string) string
 	placeholderFunc func(n int) string
 }
 
-func (d dialectT) Name() string {
+func (d *dialectT) Name() string {
 	return d.name
 }
 
-func (d dialectT) Quote(name string) string {
+func (d *dialectT) Quote(name string) string {
 	return d.quoteFunc(name)
 }
 
-func (d dialectT) Placeholder(n int) string {
+func (d *dialectT) Placeholder(n int) string {
 	if d.placeholderFunc == nil {
 		return "?"
 	}
@@ -81,23 +83,47 @@ func (d dialectT) Placeholder(n int) string {
 
 // SQL Dialects for supported database servers.
 var (
-	dialectDefault = dialectT{name: "default", quoteFunc: quoteFunc(`"`, `"`)}
-	dialectMySQL   = dialectT{name: "mysql", quoteFunc: quoteFunc("`", "`")}
-	dialectSQLite  = dialectT{name: "sqlite", quoteFunc: quoteFunc("`", "`")}
-	dialectMSSQL   = dialectT{name: "mssql", quoteFunc: quoteFunc("[", "]")}
-	dialectPG      = dialectT{
-		name:            "postgres",
-		quoteFunc:       quoteFunc(`"`, `"`),
-		placeholderFunc: placeholderFunc("$%d"),
-	}
-
-	// github.com/cznic/ql: does not allow quoted identifiers
-	dialectQL = dialectT{
-		name:            "ql",
-		quoteFunc:       quoteFunc("", ""),
-		placeholderFunc: placeholderFunc("?%d"),
-	}
+	dialects       map[string]*dialectT
+	defaultDialect *dialectT
 )
+
+func init() {
+	dialects = make(map[string]*dialectT)
+	defaultDialect = &dialectT{name: "default", quoteFunc: quoteFunc(`"`, `"`)}
+
+	for _, d := range []*dialectT{
+		&dialectT{
+			name:      "mysql",
+			quoteFunc: quoteFunc("`", "`"),
+		},
+		&dialectT{
+			name:      "sqlite",
+			altnames:  []string{"sqlite3"},
+			quoteFunc: quoteFunc("`", "`"),
+		},
+		&dialectT{
+			name:      "mssql",
+			quoteFunc: quoteFunc("[", "]"),
+		},
+		&dialectT{
+			name:            "postgres",
+			altnames:        []string{"pq", "postgresql"},
+			quoteFunc:       quoteFunc(`"`, `"`),
+			placeholderFunc: placeholderFunc("$%d"),
+		},
+		&dialectT{
+			name:            "ql",
+			altnames:        []string{"ql-mem"},
+			quoteFunc:       quoteFunc("", ""),
+			placeholderFunc: placeholderFunc("?%d"),
+		},
+	} {
+		dialects[d.name] = d
+		for _, altname := range d.altnames {
+			dialects[altname] = d
+		}
+	}
+}
 
 func quoteFunc(begin string, end string) func(name string) string {
 	return func(name string) string {

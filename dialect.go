@@ -25,12 +25,22 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// NewDialect creates a dialect based on the name. Supported dialects include:
+// DialectFor returns the dialect for the specified database driver.
+// If name is blank, then the dialect returned is for the first
+// driver returned by sql.Drivers(). If only one SQL driver has
+// been loaded by the calling program then this will return the
+// correct dialect. If the driver name is unknown, the default
+// dialect is returned.
 //
+// Supported dialects include:
+//
+//  name      alternative names
+//  ----      -----------------
 //  mssql
 //  mysql
-//  postgres (pq, postgresql)
-//  sqlite3 (sqlite)
-func NewDialect(name string) Dialect {
-	return dialect.New(name)
+//  postgres  pq, postgresql
+//  sqlite3   sqlite
+//  ql        ql-mem
+func DialectFor(name string) Dialect {
+	return dialect.For(name)
 }

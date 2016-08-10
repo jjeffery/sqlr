@@ -5,8 +5,8 @@ import (
 )
 
 func TestSchemaDefaults(t *testing.T) {
-	dialect1 := NewDialect("postgres")
-	dialect2 := NewDialect("ql")
+	dialect1 := DialectFor("postgres")
+	dialect2 := DialectFor("ql")
 	convention1 := ConventionSame
 	convention2 := ConventionSnake
 

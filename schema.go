@@ -49,7 +49,7 @@ func (s *Schema) dialect() dialect.Dialect {
 	if Default.Dialect != nil {
 		return Default.Dialect
 	}
-	return dialect.New("")
+	return dialect.For("")
 }
 
 func (s *Schema) convention() Convention {

@@ -23,7 +23,7 @@ func TestDialog(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		dialog := NewDialect(tt.name)
+		dialog := DialectFor(tt.name)
 		quoted := dialog.Quote("quoted")
 		placeholder := dialog.Placeholder(1)
 		if quoted != tt.quoted {
