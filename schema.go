@@ -58,23 +58,17 @@ func (s Schema) Delete(db DB, row interface{}, sql string, args ...interface{}) 
 	return s.execCommon(db, row, checkSQL(sql, deleteFormat), args)
 }
 
-func (s Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
-	rowType, err := inferRowType(row, "row")
-	if err != nil {
-		return 0, err
-	}
-	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
-	if err != nil {
-		return 0, err
-	}
-	return stmt.Exec(db, row, args...)
-}
-
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
 func (s Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
-	return nil, errNotImplemented
+	rowType, err := inferRowType(row, "row")
+	if err != nil {
+		return nil, err
+	}
+	// does not reference the cache because the calling program is
+	// taking responsibility for keeping track of this stmt
+	return newStmt(s.dialect(), s.convention(), rowType, sql)
 }
 
 // Select executes a SELECT query and stores the result in rows.
@@ -122,4 +116,16 @@ func (s Schema) convention() Convention {
 		return Default.Convention
 	}
 	return colname.Snake
+}
+
+func (s Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
+	rowType, err := inferRowType(row, "row")
+	if err != nil {
+		return 0, err
+	}
+	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
+	if err != nil {
+		return 0, err
+	}
+	return stmt.Exec(db, row, args...)
 }

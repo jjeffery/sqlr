@@ -1,13 +1,5 @@
 package sqlrow
 
-import (
-	"errors"
-)
-
-var (
-	errNotImplemented = errors.New("not implemented")
-)
-
 // Insert inserts a row. If the row has an auto-increment column
 // defined, then the generated value is retrieved and inserted into the
 // row. (If the database driver provides the necessary support).
