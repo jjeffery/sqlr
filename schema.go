@@ -86,6 +86,7 @@ func (s Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
 // Select returns the number of rows returned by the SELECT
 // query.
 func (s Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
+	sql = checkSQL(sql, selectFormat)
 	rowType, err := inferRowType(rows, "rows")
 	if err != nil {
 		return 0, err

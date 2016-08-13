@@ -11,6 +11,7 @@ const (
 	insertFormat = "insert into %s({}) values({})"
 	updateFormat = "update %s set {} where {}"
 	deleteFormat = "delete from %s where {}"
+	selectFormat = "select{} from %s where {}"
 )
 
 var whiteSpaceRE = regexp.MustCompile(`\s`)

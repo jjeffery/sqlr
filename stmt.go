@@ -18,8 +18,9 @@ type Stmt struct {
 	query          string
 	dialect        Dialect
 	convention     Convention
+	argCount       int
 	columns        []*column.Info
-	inputs         []*column.Info
+	inputs         []inputT
 	outputs        []*column.Info
 	autoIncrColumn *column.Info
 }
@@ -68,25 +69,12 @@ func newStmt(dialect Dialect, convention Convention, rowType reflect.Type, sql s
 			// Some DBs allow the auto-increment column to be specified.
 			// Work out if this statement is doing this.
 			for _, col := range stmt.inputs {
-				if col == stmt.autoIncrColumn {
+				if col.col == stmt.autoIncrColumn {
 					// this statement is setting the auto-increment column explicitly
 					stmt.autoIncrColumn = nil
 					break
 				}
 			}
-		}
-	}
-
-	if stmt.queryType == querySelect {
-		if len(stmt.inputs) > 0 {
-			return nil, errors.New("unexpected inputs in select query")
-		}
-	} else {
-		// TODO: this is more complicated than this, in PostgreSQL
-		// any insert or update statement can return rows via the
-		// RETURNING clause.
-		if len(stmt.outputs) > 0 {
-			return nil, errors.New("unexpected query columns in exec statement")
 		}
 	}
 
@@ -266,7 +254,7 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 func (stmt *Stmt) addColumns(cols columnsT) {
 	if cols.clause.isInput() {
 		for _, col := range cols.filtered() {
-			stmt.inputs = append(stmt.inputs, col)
+			stmt.inputs = append(stmt.inputs, inputT{col: col})
 		}
 	} else if cols.clause.isOutput() {
 		for _, col := range cols.filtered() {
@@ -294,6 +282,8 @@ func (stmt *Stmt) scanSQL(query string) error {
 			buf.WriteString(lit)
 		case scanner.PLACEHOLDER:
 			buf.WriteString(stmt.dialect.Placeholder(counter.Next()))
+			stmt.inputs = append(stmt.inputs, inputT{argIndex: stmt.argCount})
+			stmt.argCount++
 		case scanner.IDENT:
 			if lit[0] == '{' {
 				if !clause.acceptsColumns() {
@@ -346,7 +336,14 @@ func (stmt *Stmt) scanSQL(query string) error {
 	return nil
 }
 
+// getArgs returns an array of args to send to the SQL query, based
+// on the contents of the row and the args passed in (renamed here to argv).
+// When getting args for a SELECT query, row will be nil and the argv array
+// has to supply everything.
 func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, error) {
+	if len(argv) != stmt.argCount {
+		return nil, fmt.Errorf("expected arg count=%d, actual=%d", stmt.argCount, len(argv))
+	}
 	var args []interface{}
 
 	rowVal := reflect.ValueOf(row)
@@ -354,12 +351,17 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 		rowVal = rowVal.Elem()
 	}
 	if rowVal.Type() != stmt.rowType {
+		// should never happen, calling functions have already checked
 		expectedType := stmt.expectedTypeName()
 		return nil, fmt.Errorf("expected type %s or *(%s)", expectedType, expectedType)
 	}
 
 	for _, input := range stmt.inputs {
-		args = append(args, input.Index.ValueRO(rowVal).Interface())
+		if input.col != nil {
+			args = append(args, input.col.Index.ValueRO(rowVal).Interface())
+		} else {
+			args = append(args, argv[input.argIndex])
+		}
 	}
 
 	return args, nil
@@ -375,4 +377,17 @@ type counterT int
 func (c *counterT) Next() int {
 	*c++
 	return int(*c)
+}
+
+// inputT describes an input to an SQL query.
+//
+// If col is non-nil, then it refers to the column/field
+// used as the input for the corresponding placeholder in the
+// SQL query.
+//
+// If col is nil, then argIndex is the index into the args
+// array for the associated arg that will be used for the placeholder.
+type inputT struct {
+	col      *column.Info
+	argIndex int // used only if col == nil
 }
