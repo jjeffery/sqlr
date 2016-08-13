@@ -1,10 +1,10 @@
 /*
-Package sqlrow to make it easy to construct and execute SQL
+Package sqlrow makes it easy to construct and execute SQL
 queries for common, row-based scenarios. Supported scenarios include:
 
  (a) Insert, update or delete a single row based on the contents of a Go struct;
- (b) Select zero, one or more rows int a a slice of Go structs; and
- (c) Select a single row into a Go struct.
+ (b) Select a single row into a Go struct; and
+ (b) Select zero, one or more rows int a a slice of Go structs.
 
 This package is intended for programmers who are comfortable with
 writing SQL, but would like assistance with the sometimes tedious
@@ -65,15 +65,17 @@ for convenience, providing just the table name has the same result:
 
 It is possible to construct more complex UPDATE statements. The following
 example can be useful for rows that make use of optimistic locking:
- sqlrow.Update(db, row, `update users set {} where {} and version = ?', row.version)
+ sqlrow.Update(db, row, `update users set {} where {} and version = ?', oldVersion)
 
 SQL DELETE
 
 DELETE queries are similar to UPDATE queries:
 
+ sqlrow.Delete(db, row, `delete from users where {}`)
+and
  sqlrow.Delete(db, row, `users`)
 
-is translated as (for MySQL, SQLite):
+are both translated as (for MySQL, SQLite):
  delete from users where `id`=?
 
 SQL SELECT
