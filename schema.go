@@ -42,19 +42,32 @@ type Schema struct {
 // defined, then the generated value is retrieved and inserted into the
 // row. (If the database driver provides the necessary support).
 func (s Schema) Insert(db DB, row interface{}, sql string) error {
-	return errNotImplemented
+	_, err := s.execCommon(db, row, checkSQL(sql, insertFormat), nil)
+	return err
 }
 
 // Update updates a row. Returns the number of rows affected,
 // which should be zero or one.
 func (s Schema) Update(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
-	return 0, errNotImplemented
+	return s.execCommon(db, row, checkSQL(sql, updateFormat), args)
 }
 
 // Delete deletes a row. Returns the number of rows affected,
 // which should be zero or one.
 func (s Schema) Delete(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
-	return 0, errNotImplemented
+	return s.execCommon(db, row, checkSQL(sql, deleteFormat), args)
+}
+
+func (s Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
+	rowType, err := inferRowType(row, "row")
+	if err != nil {
+		return 0, err
+	}
+	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
+	if err != nil {
+		return 0, err
+	}
+	return stmt.Exec(db, row, args...)
 }
 
 // Prepare creates a prepared statement for later queries or executions.
@@ -79,7 +92,16 @@ func (s Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
 // Select returns the number of rows returned by the SELECT
 // query.
 func (s Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
-	return 0, errNotImplemented
+	rowType, err := inferRowType(rows, "rows")
+	if err != nil {
+		return 0, err
+	}
+	//sql = checkSQL(sql, selectFormat)
+	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
+	if err != nil {
+		return 0, err
+	}
+	return stmt.Select(db, rows, args...)
 }
 
 func (s Schema) dialect() Dialect {

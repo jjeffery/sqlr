@@ -15,7 +15,8 @@ type sqlClause int
 // All of the different clauses of an SQL statement where columns
 // and table names can be found.
 const (
-	clauseSelectColumns sqlClause = iota
+	clauseNone sqlClause = iota
+	clauseSelectColumns
 	clauseSelectFrom
 	clauseSelectWhere
 	clauseSelectOrderBy
@@ -28,8 +29,25 @@ const (
 	clauseDeleteWhere
 )
 
+// queryType deduces the type of query based on the SQL clause.
+func (c sqlClause) queryType() queryType {
+	switch c {
+	case clauseSelectColumns, clauseSelectFrom, clauseSelectWhere, clauseSelectOrderBy:
+		return querySelect
+	case clauseInsertColumns, clauseInsertValues:
+		return queryInsert
+	case clauseUpdateTable, clauseUpdateSet, clauseUpdateWhere:
+		return queryUpdate
+	case clauseDeleteFrom, clauseDeleteWhere:
+		return queryDelete
+	}
+	return queryUnknown
+}
+
 func (c sqlClause) String() string {
 	switch c {
+	case clauseNone:
+		return "(no clause)"
 	case clauseSelectColumns:
 		return "select columns"
 	case clauseSelectFrom:
@@ -146,3 +164,13 @@ func (c sqlClause) nextClause(keyword string) sqlClause {
 
 	return c
 }
+
+type queryType int
+
+const (
+	queryUnknown queryType = iota
+	queryInsert
+	queryUpdate
+	queryDelete
+	querySelect
+)

@@ -41,7 +41,7 @@ func Example() {
 	// get user with ID of 3 and then delete it
 	{
 		var u UserRow
-		_, err = sqlrow.Select(tx, &u, `users`, 3)
+		_, err = sqlrow.Select(tx, &u, `select {} from users where id=?`, 3)
 		exitIfError(err)
 
 		_, err = sqlrow.Delete(tx, u, `users`)
@@ -51,7 +51,7 @@ func Example() {
 	// update family name for user with ID of 2
 	{
 		var u UserRow
-		_, err = sqlrow.Select(tx, &u, `users`, 2)
+		_, err = sqlrow.Select(tx, &u, `select {} from users where id=?`, 2)
 		exitIfError(err)
 
 		u.FamilyName = "Doe"
