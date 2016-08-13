@@ -80,7 +80,7 @@ SQL SELECT
 
 SQL SELECT queries can be constructed easily
 
- var rows[]UserRow
+ var rows []UserRow
  sql.Select(db, &rows, `select {} from users where given_name=?`, "Smith")
 
 is translated as (for MySQL, SQLite):
