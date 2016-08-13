@@ -1,4 +1,4 @@
-package sqlstmt
+package sqlrow
 
 import (
 	"testing"

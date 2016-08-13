@@ -1,6 +1,6 @@
-package sqlstmt
+package sqlrow
 
-import "github.com/jjeffery/sqlstmt/private/colname"
+import "github.com/jjeffery/sqlrow/private/colname"
 
 // Convention provides naming convention methods for
 // inferring database column names from Go struct field names.

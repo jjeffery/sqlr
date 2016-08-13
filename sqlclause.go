@@ -1,10 +1,10 @@
-package sqlstmt
+package sqlrow
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/jjeffery/sqlstmt/private/column"
+	"github.com/jjeffery/sqlrow/private/column"
 )
 
 // sqlClause represents a specific SQL clause. Column lists

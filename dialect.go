@@ -1,7 +1,7 @@
-package sqlstmt
+package sqlrow
 
 import (
-	"github.com/jjeffery/sqlstmt/private/dialect"
+	"github.com/jjeffery/sqlrow/private/dialect"
 )
 
 // Dialect is an interface used to handle differences

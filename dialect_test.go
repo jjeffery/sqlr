@@ -1,10 +1,10 @@
-package sqlstmt
+package sqlrow
 
 import (
 	"testing"
 )
 
-func TestDialog(t *testing.T) {
+func TestDialect(t *testing.T) {
 	tests := []struct {
 		name        string
 		quoted      string

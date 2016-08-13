@@ -1,4 +1,4 @@
-package sqlstmt
+package sqlrow
 
 import (
 	"fmt"
@@ -11,8 +11,6 @@ const (
 	insertFormat = "insert into %s({}) values({})"
 	updateFormat = "update %s set {} where {}"
 	deleteFormat = "delete from %s where {}"
-	getFormat    = "select {} from %s where {}"
-	selectFormat = "select {} from %s order by {} limit ? offset ?"
 )
 
 var whiteSpaceRE = regexp.MustCompile(`\s`)

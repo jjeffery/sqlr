@@ -1,12 +1,12 @@
-package sqlstmt
+package sqlrow
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/jjeffery/sqlstmt/private/column"
-	"github.com/jjeffery/sqlstmt/private/scanner"
+	"github.com/jjeffery/sqlrow/private/column"
+	"github.com/jjeffery/sqlrow/private/scanner"
 )
 
 // columnsT represents a set of columns associated with
