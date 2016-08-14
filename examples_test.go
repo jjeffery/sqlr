@@ -27,7 +27,12 @@ func ExamplePrepare() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
+
 	_, err = stmt.Exec(db, row)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleSchema_Prepare() {
@@ -55,7 +60,12 @@ func ExampleSchema_Prepare() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
+
 	_, err = stmt.Exec(db, row)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleStmt_Exec_insert() {
@@ -76,7 +86,12 @@ func ExampleStmt_Exec_insert() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
+
 	_, err = stmt.Exec(db, row)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleStmt_Exec_update() {
@@ -98,7 +113,12 @@ func ExampleStmt_Exec_update() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
+
 	_, err = stmt.Exec(db, row)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleStmt_Exec_delete() {
@@ -120,7 +140,12 @@ func ExampleStmt_Exec_delete() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
+
 	_, err = stmt.Exec(db, row)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleStmt_Select_oneRow() {
