@@ -57,11 +57,11 @@ func TestPathEqual(t *testing.T) {
 	for _, tt := range tests {
 		equal := tt.path.Equal(tt.other)
 		if equal != tt.equal {
-			t.Errorf("expected=%q, actual=%q", tt.equal, equal)
+			t.Errorf("expected=%v, actual=%v", tt.equal, equal)
 		}
 		equal = tt.other.Equal(tt.path)
 		if equal != tt.equal {
-			t.Errorf("expected=%q, actual=%q", tt.equal, equal)
+			t.Errorf("expected=%v, actual=%v", tt.equal, equal)
 		}
 	}
 }
