@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjeffery/sqlstmt/private/column"
+	"github.com/jjeffery/sqlrow/private/column"
 )
 
 func TestNewList(t *testing.T) {
