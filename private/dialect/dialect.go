@@ -95,26 +95,26 @@ func init() {
 	defaultDialect = &dialectT{name: "default", quoteFunc: quoteFunc(`"`, `"`)}
 
 	for _, d := range []*dialectT{
-		&dialectT{
+		{
 			name:      "mysql",
 			quoteFunc: quoteFunc("`", "`"),
 		},
-		&dialectT{
+		{
 			name:      "sqlite",
 			altnames:  []string{"sqlite3"},
 			quoteFunc: quoteFunc("`", "`"),
 		},
-		&dialectT{
+		{
 			name:      "mssql",
 			quoteFunc: quoteFunc("[", "]"),
 		},
-		&dialectT{
+		{
 			name:            "postgres",
 			altnames:        []string{"pq", "postgresql"},
 			quoteFunc:       quoteFunc(`"`, `"`),
 			placeholderFunc: placeholderFunc("$%d"),
 		},
-		&dialectT{
+		{
 			name:            "ql",
 			altnames:        []string{"ql-mem"},
 			placeholderFunc: placeholderFunc("?%d"),
