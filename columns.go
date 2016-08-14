@@ -100,6 +100,10 @@ func (cols columnsT) String() string {
 		case clauseInsertValues:
 			buf.WriteString(cols.dialect.Placeholder(cols.counter()))
 		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere, clauseSelectWhere:
+			if cols.alias != "" {
+				buf.WriteString(cols.alias)
+				buf.WriteRune('.')
+			}
 			buf.WriteString(cols.columnName(col))
 			buf.WriteRune('=')
 			buf.WriteString(cols.dialect.Placeholder(cols.counter()))

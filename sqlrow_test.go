@@ -38,6 +38,10 @@ func TestInvalidStmts(t *testing.T) {
 			want: `cannot expand "{}" in "update table" clause`,
 		},
 		{
+			fn:   func() (int, error) { return Update(db, &row, "update rows set {} where {} and number=?") },
+			want: `expected arg count=1, actual=0`,
+		},
+		{
 			fn:   func() (int, error) { return Delete(db, &row, "rows") },
 			want: `no such table: rows`,
 		},
@@ -46,8 +50,12 @@ func TestInvalidStmts(t *testing.T) {
 			want: `cannot expand "alias" in "select columns" clause: missing ident after 'alias'`,
 		},
 		{
-			fn:   func() (int, error) { return Update(db, &row, "update rows set {} where {} and number=?") },
-			want: `expected arg count=1, actual=0`,
+			fn:   func() (int, error) { return Select(db, &row, "select {'col1} from rows") },
+			want: `cannot expand "'col1" in "select columns" clause: unrecognised input near "'col1"`,
+		},
+		{
+			fn:   func() (int, error) { return Select(db, &notRow, "select {} from rows") },
+			want: `expected arg for "rows" to refer to a struct type`,
 		},
 	}
 
@@ -61,5 +69,17 @@ func TestInvalidStmts(t *testing.T) {
 		}
 		t.Errorf("%d: want %s, got nil", i, tt.want)
 	}
+}
 
+func TestInvalidPrepare(t *testing.T) {
+	var notRow []int
+	_, err := Prepare(notRow, "select {} from rows")
+	want := `expected arg for "row" to refer to a struct type`
+	if err != nil {
+		if want != err.Error() {
+			t.Errorf("want %s, got %v", want, err)
+		}
+	} else {
+		t.Errorf("want %s, got nil", want)
+	}
 }
