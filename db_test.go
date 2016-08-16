@@ -47,4 +47,25 @@ func TestDB1(t *testing.T) {
 			t.Errorf("expected %d, got %d", want, n)
 		}
 	}
+
+	{
+		var row Row
+		n, err := Select(db, &row, "select {} from test_table order by {}")
+		if err != nil {
+			t.Fatal("sqlrow.Select:", err)
+		}
+		if want := 3; n != want {
+			t.Errorf("expected %d, got %d", want, n)
+		}
+		if want := "AAAA"; row.String != want {
+			t.Errorf("want %q, got %q", want, row.String)
+		}
+		n, err = Update(db, &row, "update test_table set {} where {} and int_column = ?", 0)
+		if err != nil {
+			t.Fatal("sqlrow.Update:", err)
+		}
+		if want := 1; n != want {
+			t.Errorf("expected %d, got %d", want, n)
+		}
+	}
 }
