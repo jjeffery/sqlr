@@ -4,7 +4,7 @@ queries for common, row-based scenarios. Supported scenarios include:
 
  (a) Insert, update or delete a single row based on the contents of a Go struct;
  (b) Select a single row into a Go struct; and
- (b) Select zero, one or more rows int a a slice of Go structs.
+ (c) Select zero, one or more rows into a slice of Go structs.
 
 This package is intended for programmers who are comfortable with
 writing SQL, but would like assistance with the sometimes tedious

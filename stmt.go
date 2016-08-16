@@ -148,6 +148,9 @@ func (stmt *Stmt) Exec(db DB, row interface{}, args ...interface{}) (int, error)
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
 func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, error) {
+	if rows == nil {
+		return 0, errors.New("nil pointer")
+	}
 	destValue := reflect.ValueOf(rows)
 
 	errorPtrType := func() error {
@@ -160,7 +163,7 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		return 0, errorPtrType()
 	}
 	if destValue.IsNil() {
-		return 0, errors.New("nil pointer passed")
+		return 0, errors.New("nil pointer")
 	}
 
 	destValue = reflect.Indirect(destValue)
