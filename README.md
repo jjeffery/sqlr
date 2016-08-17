@@ -56,7 +56,7 @@ If the calling program has a need to execute queries independently
 of this package, it can use `database/sql` directly, or make use of 
 any other third party package.
 
-The philosophy behind the design if the `sqlrow` API is:
+The philosophy behind the design of the `sqlrow` API is:
 
 * Simple, single-row CRUD operations should be easy to construct
 * Slightly more complex operations should be possible with only a little more effort
@@ -95,7 +95,7 @@ A corresponding Go struct for representing a row in the `users` table is:
 
 ```go
 type User struct {
-	ID           int `sql:primary key autoincrement`
+	ID           int `sql:"primary key autoincrement"`
 	GivenName    string
 	FamilyName   string
 	EmailAddress string
