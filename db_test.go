@@ -3,10 +3,10 @@ package sqlrow
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -149,24 +149,26 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	db, err := sql.Open("sqlite3", "test.db")
+	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
 	}
-	defer func() {
-		db.Close()
-		os.Remove("test.db")
-	}()
+	defer db.Close()
+
+	Default.Dialect = DialectFor("postgres")
+	defer func() { Default.Dialect = nil }()
 
 	_, err = db.Exec(`
+		drop table if exists t1;
 		create table t1 (
 			id integer primary key,
 			name text
-		)
+		);
 	`)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer db.Exec(`drop table if exists t1`)
 
 	type Row1 struct {
 		ID   int `sql:"primary key"`
