@@ -73,6 +73,17 @@ func TestDB1(t *testing.T) {
 			t.Errorf("expected %d, got %d", want, n)
 		}
 	}
+
+	{
+		expected := 3
+		actual := len(stmtCache.stmts)
+		if actual != expected {
+			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
+		}
+		for _, stmt := range stmtCache.stmts {
+			t.Log(stmt)
+		}
+	}
 }
 
 func TestJsonMarshaling(t *testing.T) {
@@ -204,5 +215,16 @@ func TestRace(t *testing.T) {
 	}
 
 	wg.Wait()
+
+	{
+		expected := 2
+		actual := len(stmtCache.stmts)
+		if actual != expected {
+			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
+		}
+		for _, stmt := range stmtCache.stmts {
+			t.Logf("cached stmt=%v", stmt)
+		}
+	}
 
 }
