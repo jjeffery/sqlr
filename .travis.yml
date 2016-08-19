@@ -4,11 +4,22 @@ go:
   - 1.6
   - 1.5
 
+services:
+  - postgresql
+
+before_script:
+  - psql -c "create database sqlrow_test;" -U postgres
+  - psql -c "create user sqlrow_test with password 'sqlrow_test';" -U postgres
+  - psql -c "grant all privileges on database sqlrow_test to sqlrow_test;" -U postgres
+
 install:
   - go get github.com/mattn/go-sqlite3
+  - go get github.com/lib/pq
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
 
 script:
+  - go test ./...
+  - go test -race
   - go test -v -covermode=count -coverprofile=coverage.out
   - $(go env GOPATH | awk 'BEGIN{FS=":"} {print $1}')/bin/goveralls -coverprofile=coverage.out -service=travis-ci
