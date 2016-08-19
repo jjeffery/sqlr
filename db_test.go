@@ -3,6 +3,8 @@ package sqlrow
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"sync"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -144,4 +146,61 @@ func TestJsonMarshaling(t *testing.T) {
 			t.Fatalf("expected %v, got %v", expected, actual)
 		}
 	}
+}
+
+func TestRace(t *testing.T) {
+	db, err := sql.Open("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer func() {
+		db.Close()
+		os.Remove("test.db")
+	}()
+
+	_, err = db.Exec(`
+		create table t1 (
+			id integer primary key,
+			name text
+		)
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type Row1 struct {
+		ID   int `sql:"primary key"`
+		Name string
+	}
+
+	var wg sync.WaitGroup
+
+	const loops = 10
+
+	for i := 0; i < loops; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < loops; j++ {
+				id := i*loops + j
+				row := Row1{
+					ID:   id,
+					Name: fmt.Sprintf("Row #%d", id),
+				}
+				if err := Insert(db, row, "t1"); err != nil {
+					t.Errorf("cannot insert row %d: %v", id, err)
+					return
+				}
+
+				var rows []Row1
+				if _, err := Select(db, &rows, "select {} from t1 order by id desc limit ?", id); err != nil {
+					t.Errorf("%d: cannot query rows: %v", id, err)
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
 }
