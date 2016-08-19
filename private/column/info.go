@@ -17,6 +17,15 @@ type Info struct {
 	PrimaryKey    bool
 	AutoIncrement bool
 	Version       bool
+	JSON          bool
+}
+
+func newInfo(field reflect.StructField) *Info {
+	info := &Info{
+		Field: field,
+	}
+	info.updateOptsFromTag()
+	return info
 }
 
 func (info *Info) updateOptsFromTag() {
@@ -45,6 +54,8 @@ func (info *Info) updateOptsFromTag() {
 				info.AutoIncrement = true
 			case "version":
 				info.Version = true
+			case "json", "jsonb":
+				info.JSON = true
 			}
 		}
 	}
@@ -85,7 +96,7 @@ func columnNameFromTag(tags reflect.StructTag) string {
 // newScanner returns a scanner for reading the contents of the struct tag.
 // Returns nil if there is no appropriate struct tag to read.
 func newScanner(tag reflect.StructTag) *scanner.Scanner {
-	for _, key := range []string{"sqlstmt", "sql"} {
+	for _, key := range []string{"sqlrow", "sql"} {
 		str := strings.TrimSpace(tag.Get(key))
 		if str != "" {
 			scan := scanner.New(strings.NewReader(str))
@@ -98,7 +109,9 @@ func newScanner(tag reflect.StructTag) *scanner.Scanner {
 				"autoincr",
 				"auto",
 				"identity",
-				"version")
+				"version",
+				"json",
+				"jsonb")
 			return scan
 		}
 	}

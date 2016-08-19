@@ -78,15 +78,30 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 		fieldType = fieldType.Elem()
 	}
 
-	// ignore fields that are arrays, channels, functions, interfaces, maps
+	// ignore fields that are channels or functions, as these cannot be
+	// marshalled as JSON
 	switch fieldType.Kind() {
-	case reflect.Array, reflect.Chan, reflect.Func, reflect.Interface, reflect.Map:
+	case reflect.Chan, reflect.Func:
 		return
 	}
 
-	// ignore slices that are not byte slices
-	if fieldType.Kind() == reflect.Slice && fieldType.Elem().Kind() != reflect.Uint8 {
-		return
+	// Construct the info and parse the tag. This is done now because
+	// it is necessary to know if the field will be serialized as JSON
+	// in order to decide whether to include the field or not.
+	info := newInfo(field)
+
+	// Ignore certain types unless they are marked as JSON serialized.
+	if !info.JSON {
+		// ignore fields that are arrays, interfaces, maps
+		switch fieldType.Kind() {
+		case reflect.Array, reflect.Interface, reflect.Map:
+			return
+		}
+
+		// ignore slices that are not byte slices
+		if fieldType.Kind() == reflect.Slice && fieldType.Elem().Kind() != reflect.Uint8 {
+			return
+		}
 	}
 
 	// update the state's field index to point to this field
@@ -108,21 +123,18 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 	// * it is time.Time (special case)
 	// * it implements sql.Scan (unlikely)
 	// * its pointer type implements sql.Scan (more likely)
+	// * it is marked as serialize to JSON
 	if fieldType.Kind() == reflect.Struct &&
 		fieldType != timeType &&
 		!fieldType.Implements(sqlScanType) &&
-		!reflect.PtrTo(fieldType).Implements(sqlScanType) {
+		!reflect.PtrTo(fieldType).Implements(sqlScanType) &&
+		!info.JSON {
 		list.addFields(fieldType, state)
 		return
 	}
 
-	info := &Info{
-		Field: field,
-		Index: state.index,
-		Path:  state.path,
-	}
-
-	info.updateOptsFromTag()
+	info.Index = state.index
+	info.Path = state.path
 
 	*list = append(*list, info)
 }

@@ -2,6 +2,7 @@ package sqlrow
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -12,6 +13,8 @@ func TestDB1(t *testing.T) {
 	if err != nil {
 		t.Fatal("sql.Open:", err)
 	}
+	defer db.Close()
+
 	_, err = db.Exec(`
 		create table test_table(
 			id integer primary key autoincrement,
@@ -66,6 +69,79 @@ func TestDB1(t *testing.T) {
 		}
 		if want := 1; n != want {
 			t.Errorf("expected %d, got %d", want, n)
+		}
+	}
+}
+
+func TestJsonMarshaling(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`
+		create table test_table(
+			id integer primary key autoincrement,
+			name text,
+			keyvals text
+		)
+	`)
+	type KV struct {
+		Key   string
+		Value interface{}
+	}
+	type Row struct {
+		ID      int `sql:"primary key autoincrement"`
+		Name    string
+		Keyvals []KV `sql:"json"`
+	}
+
+	row := Row{
+		Name: "first row",
+		Keyvals: []KV{
+			{"k1", "v1"},
+			{"k2", 2},
+		},
+	}
+
+	err = Insert(db, &row, "test_table")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	{
+		var row2 Row
+		n, err := Select(db, &row2, "test_table", 1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if n != 1 {
+			t.Fatalf("expected one row, got %d", n)
+		}
+
+		expected := fmt.Sprintf("%+v", row)
+		actual := fmt.Sprintf("%+v", row2)
+		if expected != actual {
+			t.Fatalf("expected %v, got %v", expected, actual)
+		}
+	}
+
+	{
+		var rows []Row
+		n, err := Select(db, &rows, "test_table", 1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if n != 1 {
+			t.Fatalf("expected one row, got %d", n)
+		}
+
+		row2 := rows[0]
+		expected := fmt.Sprintf("%+v", row)
+		actual := fmt.Sprintf("%+v", row2)
+		if expected != actual {
+			t.Fatalf("expected %v, got %v", expected, actual)
 		}
 	}
 }

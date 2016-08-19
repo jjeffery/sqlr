@@ -2,6 +2,7 @@ package sqlrow
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -202,13 +203,25 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		rowCount++
 		rowValuePtr := reflect.New(rowType)
 		rowValue := reflect.Indirect(rowValuePtr)
-		for i, col := range stmt.columns {
-			cellValue := col.Index.ValueRW(rowValue)
-			scanValues[i] = cellValue.Addr().Interface()
+		var jsonCells []*jsonCell
+		for i, col := range stmt.outputs {
+			cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
+			if col.JSON {
+				jc := newJSONCell(col.Field.Name, cellValue)
+				jsonCells = append(jsonCells, jc)
+				scanValues[i] = jc.ScanValue()
+			} else {
+				scanValues[i] = cellValue
+			}
 		}
 		err = sqlRows.Scan(scanValues...)
 		if err != nil {
 			return 0, err
+		}
+		for _, jc := range jsonCells {
+			if err := jc.Unmarshal(); err != nil {
+				return rowCount, err
+			}
 		}
 		if isPtr {
 			sliceValue.Set(reflect.Append(sliceValue, rowValuePtr))
@@ -228,6 +241,7 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	defer rows.Close()
 
 	scanValues := make([]interface{}, len(stmt.outputs))
+	var jsonCells []*jsonCell
 
 	if !rows.Next() {
 		// no rows returned
@@ -238,12 +252,23 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	rowCount := 1
 
 	for i, col := range stmt.outputs {
-		cellValue := col.Index.ValueRW(rowValue)
-		scanValues[i] = cellValue.Addr().Interface()
+		cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
+		if col.JSON {
+			jc := newJSONCell(col.Field.Name, cellValue)
+			jsonCells = append(jsonCells, jc)
+			scanValues[i] = jc.ScanValue()
+		} else {
+			scanValues[i] = cellValue
+		}
 	}
 	err = rows.Scan(scanValues...)
 	if err != nil {
 		return 0, err
+	}
+	for _, jc := range jsonCells {
+		if err := jc.Unmarshal(); err != nil {
+			return rowCount, err
+		}
 	}
 
 	// count any additional rows
@@ -361,7 +386,23 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 
 	for _, input := range stmt.inputs {
 		if input.col != nil {
-			args = append(args, input.col.Index.ValueRO(rowVal).Interface())
+			if input.col.JSON {
+				// marshal field contents into JSON and pass as a byte array
+				valueRO := input.col.Index.ValueRO(rowVal).Interface()
+				if valueRO == nil {
+					args = append(args, nil)
+				} else {
+					data, err := json.Marshal(valueRO)
+					if err != nil {
+						// TODO(jpj): if errors.Wrap makes it into the stdlib, use it here
+						err = fmt.Errorf("cannot marshal field %q: %v", input.col.Field.Name, err)
+						return nil, err
+					}
+					args = append(args, data)
+				}
+			} else {
+				args = append(args, input.col.Index.ValueRO(rowVal).Interface())
+			}
 		} else {
 			args = append(args, argv[input.argIndex])
 		}
@@ -393,4 +434,30 @@ func (c *counterT) Next() int {
 type inputT struct {
 	col      *column.Info
 	argIndex int // used only if col == nil
+}
+
+// jsonCell is used to unmarshal JSON cells into their destination type
+type jsonCell struct {
+	colname   string
+	cellValue interface{}
+	data      []byte
+}
+
+func newJSONCell(colname string, v interface{}) *jsonCell {
+	return &jsonCell{
+		colname:   colname,
+		cellValue: v,
+	}
+}
+
+func (jc *jsonCell) ScanValue() interface{} {
+	return &jc.data
+}
+
+func (jc *jsonCell) Unmarshal() error {
+	if err := json.Unmarshal(jc.data, jc.cellValue); err != nil {
+		// TODO(jpj): if Wrap makes it into the stdlib, use it here
+		return fmt.Errorf("cannot unmarshal JSON field %q: %v", jc.colname, err)
+	}
+	return nil
 }
