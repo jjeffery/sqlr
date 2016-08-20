@@ -11,6 +11,9 @@ import (
 )
 
 func TestDB1(t *testing.T) {
+	// clear the stmt cache so we can check at the end of the test
+	clearStmtCache()
+
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
@@ -80,8 +83,8 @@ func TestDB1(t *testing.T) {
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
-		for _, stmt := range stmtCache.stmts {
-			t.Log(stmt)
+		for k, stmt := range stmtCache.stmts {
+			t.Logf("%s=%v", k, stmt)
 		}
 	}
 }
@@ -160,6 +163,9 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
+	// clear the stmt cache so we can check at the end of the test
+	clearStmtCache()
+
 	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
@@ -222,9 +228,8 @@ func TestRace(t *testing.T) {
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
-		for _, stmt := range stmtCache.stmts {
-			t.Logf("cached stmt=%v", stmt)
+		for k, stmt := range stmtCache.stmts {
+			t.Logf("%s=%v", k, stmt)
 		}
 	}
-
 }

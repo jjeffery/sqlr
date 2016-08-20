@@ -242,8 +242,6 @@ func TestInsertRowStmtErrors(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		t.Logf("test %d:", i)
-		_ = "breakpoint"
 		stmt, err := Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
