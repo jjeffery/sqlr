@@ -1,7 +1,6 @@
 package column
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -60,7 +59,6 @@ func (ix Index) ValueRW(v reflect.Value) reflect.Value {
 		// Create empty value for nil pointers, maps and slices.
 		if v.Kind() == reflect.Ptr && v.IsNil() {
 			a := reflect.New(v.Type().Elem())
-			fmt.Printf("new a: %v\n", a.Type())
 			v.Set(a)
 		} else if v.Kind() == reflect.Map && v.IsNil() {
 			v.Set(reflect.MakeMap(v.Type()))
