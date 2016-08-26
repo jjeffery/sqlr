@@ -455,6 +455,10 @@ func (jc *jsonCell) ScanValue() interface{} {
 }
 
 func (jc *jsonCell) Unmarshal() error {
+	if len(jc.data) == 0 {
+		jc.cellValue = nil
+		return nil
+	}
 	if err := json.Unmarshal(jc.data, jc.cellValue); err != nil {
 		// TODO(jpj): if Wrap makes it into the stdlib, use it here
 		return fmt.Errorf("cannot unmarshal JSON field %q: %v", jc.colname, err)
