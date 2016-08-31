@@ -456,7 +456,12 @@ func (jc *jsonCell) ScanValue() interface{} {
 
 func (jc *jsonCell) Unmarshal() error {
 	if len(jc.data) == 0 {
-		jc.cellValue = nil
+		// No JSON data to unmarshal, so set to the zero value
+		// for this type. We know that jc.cellValue is a pointer,
+		// so it is safe to call Elem() and set the value.
+		valptr := reflect.ValueOf(jc.cellValue)
+		val := valptr.Elem()
+		val.Set(reflect.Zero(val.Type()))
 		return nil
 	}
 	if err := json.Unmarshal(jc.data, jc.cellValue); err != nil {
