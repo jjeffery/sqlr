@@ -221,12 +221,6 @@ provides a shorthand alternative to explicitly listing all columns and
 parameter placeholders.
 
 ```go
-familyNameQuery := sqlrow.NewSelectStmt(User{}, `
-	select {}
-	from users
-	where family_name = ?
-`)
-
 // declare a slice of users for receiving the result of the query
 var users []User
 
