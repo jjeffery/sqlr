@@ -6,7 +6,7 @@ import (
 )
 
 func Example() {
-	conventions := []Convention{Snake, Same}
+	conventions := []Convention{Snake, Same, Lower}
 
 	for _, convention := range conventions {
 		fmt.Printf("\n%s convention:\n\n", convention.Name())
@@ -36,6 +36,14 @@ func Example() {
 	// StreetName
 	// HomeAddressStreetName
 	// HTMLElement
+	//
+	// lower convention:
+	//
+	// userid
+	// homeaddress
+	// streetname
+	// homeaddressstreetname
+	// htmlelement
 }
 
 func TestSnakeJoin(t *testing.T) {

@@ -28,7 +28,13 @@ var ConventionSnake Convention
 // is identical to the Go struct field name.
 var ConventionSame Convention
 
+// ConventionLower is a naming convention where the column name
+// is the Go struct field name converted to lower case. This naming
+// convention is useful for some PostgreSQL databases.
+var ConventionLower Convention
+
 func init() {
 	ConventionSnake = colname.Snake
 	ConventionSame = colname.Same
+	ConventionLower = colname.Lower
 }

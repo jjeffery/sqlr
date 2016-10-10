@@ -33,6 +33,19 @@ func init() {
 	}
 }
 
+// Lower is an alternative convention, where the database column name
+// is the lower case of the field name. This convention is useful with
+// PostgreSQL.
+var Lower Convention
+
+func init() {
+	Lower = Convention{
+		name:       "lower",
+		columnName: columnNameLower,
+		join:       joinSame,
+	}
+}
+
 // A Convention provides a naming convention for
 // inferring database column names from Go struct field names.
 type Convention struct {
@@ -92,4 +105,8 @@ func columnNameSame(fieldName string) string {
 
 func joinSame(prefix, name string) string {
 	return prefix + name
+}
+
+func columnNameLower(fieldName string) string {
+	return strings.ToLower(fieldName)
 }
