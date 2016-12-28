@@ -255,14 +255,6 @@ For queries that involve multiple tables, it is always a good idea to
 use table aliases:
 
 ```go
-searchTermQuery := sqlrow.NewSelectStmt(User{}, `
-	select {alias u}
-	from users u
-	inner join user_search_terms t
-	  on t.user_id = u.id
-	where u.term like ?
-`)
-
 // declare a slice of users for receiving the result of the query
 var users []User
 
@@ -273,7 +265,7 @@ _, err = sqlrow.Select(db, &users, `
 		from users u
 	   	inner join user_search_terms t
 			on t.user_id = u.id
-		where u.term like ?`, "Cit%")
+		where u.term like ?`, `Cit%`)
 if err != nil {
 	log.Fatal(err)
 }
