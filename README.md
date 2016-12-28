@@ -222,7 +222,7 @@ parameter placeholders.
 
 ```go
 // declare a slice of users for receiving the result of the query
-var users []User
+var users []*User
 
 // perform the query, specifying an argument for each of the
 // placeholders in the SQL query
