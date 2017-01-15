@@ -113,20 +113,7 @@ func (cols columnsT) String() string {
 }
 
 func (cols columnsT) columnName(info *column.Info) string {
-	var path = info.Path
-	var columnName string
-
-	for _, field := range path {
-		name := field.ColumnName
-		if name == "" {
-			name = cols.convention.ColumnName(field.FieldName)
-		}
-		if columnName == "" {
-			columnName = name
-		} else {
-			columnName = cols.convention.Join(columnName, name)
-		}
-	}
+	columnName := columnNameForConvention(info, cols.convention)
 	return cols.dialect.Quote(columnName)
 }
 
@@ -154,4 +141,24 @@ func columnFilterInsertable(col *column.Info) bool {
 
 func columnFilterUpdateable(col *column.Info) bool {
 	return !col.PrimaryKey && !col.AutoIncrement
+}
+
+// columnNameForConvention returns the column name for the column when
+// using the specified convention.
+func columnNameForConvention(info *column.Info, convention Convention) string {
+	var path = info.Path
+	var columnName string
+
+	for _, field := range path {
+		name := field.ColumnName
+		if name == "" {
+			name = convention.ColumnName(field.FieldName)
+		}
+		if columnName == "" {
+			columnName = name
+		} else {
+			columnName = convention.Join(columnName, name)
+		}
+	}
+	return columnName
 }

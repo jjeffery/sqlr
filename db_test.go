@@ -57,6 +57,17 @@ func TestDB1(t *testing.T) {
 	}
 
 	{
+		var rows []Row
+		n, err := Select(db, &rows, "select id, int_column, string_column from test_table order by {}")
+		if err != nil {
+			t.Fatal("sqlrow.Select:", err)
+		}
+		if want := 3; n != want {
+			t.Errorf("expected %d, got %d", want, n)
+		}
+	}
+
+	{
 		var row Row
 		n, err := Select(db, &row, "select {} from test_table order by {}")
 		if err != nil {
@@ -78,7 +89,7 @@ func TestDB1(t *testing.T) {
 	}
 
 	{
-		expected := 3
+		expected := 4
 		actual := len(stmtCache.stmts)
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)

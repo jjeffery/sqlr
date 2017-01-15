@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
+
+	"database/sql"
 
 	"github.com/jjeffery/sqlrow/private/column"
 	"github.com/jjeffery/sqlrow/private/scanner"
@@ -22,9 +25,13 @@ type Stmt struct {
 	argCount       int
 	columns        []*column.Info
 	inputs         []inputT
-	outputs        []*column.Info
+	outputs        []*column.Info // use outputsMutex to access
+	outputsMutex   sync.RWMutex   // for accesing outputs
 	autoIncrColumn *column.Info
 }
+
+// TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
+// based on these types.
 
 func inferRowType(row interface{}, argName string) (reflect.Type, error) {
 	rowType := reflect.TypeOf(row)
@@ -195,6 +202,10 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		return 0, err
 	}
 	defer sqlRows.Close()
+	outputs, err := stmt.getOutputs(sqlRows)
+	if err != nil {
+		return 0, err
+	}
 
 	var rowCount = 0
 	scanValues := make([]interface{}, len(stmt.columns))
@@ -204,7 +215,7 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		rowValuePtr := reflect.New(rowType)
 		rowValue := reflect.Indirect(rowValuePtr)
 		var jsonCells []*jsonCell
-		for i, col := range stmt.outputs {
+		for i, col := range outputs {
 			cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
 			if col.JSON {
 				jc := newJSONCell(col.Field.Name, cellValue)
@@ -239,8 +250,12 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 		return 0, err
 	}
 	defer rows.Close()
+	outputs, err := stmt.getOutputs(rows)
+	if err != nil {
+		return 0, err
+	}
 
-	scanValues := make([]interface{}, len(stmt.outputs))
+	scanValues := make([]interface{}, len(outputs))
 	var jsonCells []*jsonCell
 
 	if !rows.Next() {
@@ -251,7 +266,7 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	// at least one row returned
 	rowCount := 1
 
-	for i, col := range stmt.outputs {
+	for i, col := range outputs {
 		cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
 		if col.JSON {
 			jc := newJSONCell(col.Field.Name, cellValue)
@@ -279,16 +294,75 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	return rowCount, nil
 }
 
+func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
+	stmt.outputsMutex.RLock()
+	outputs := stmt.outputs
+	stmt.outputsMutex.RUnlock()
+	if outputs != nil {
+		// already worked out
+		return outputs, nil
+	}
+	stmt.outputsMutex.Lock()
+	defer stmt.outputsMutex.Unlock()
+	// test again once write lock acquired
+	if stmt.outputs != nil {
+		return stmt.outputs, nil
+	}
+
+	columnMap := make(map[string]*column.Info)
+	for _, col := range stmt.columns {
+		columnName := columnNameForConvention(col, stmt.convention)
+		columnMap[columnName] = col
+	}
+
+	columnNames, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	outputs = make([]*column.Info, len(columnNames))
+	var unknownColumnNames []string
+	for i, columnName := range columnNames {
+		col := columnMap[columnName]
+		if col == nil {
+			unknownColumnNames = append(unknownColumnNames, columnName)
+			continue
+		}
+		outputs[i] = col
+		delete(columnMap, columnName)
+	}
+
+	if len(unknownColumnNames) == 1 {
+		return nil, fmt.Errorf("unknown column name: %s", unknownColumnNames[0])
+	}
+	if len(unknownColumnNames) > 0 {
+		return nil, fmt.Errorf("unknown column names: %s", strings.Join(unknownColumnNames, ","))
+	}
+	if len(columnMap) > 0 {
+		missingColumnNames := make([]string, 0, len(columnMap))
+		for columnName := range columnMap {
+			missingColumnNames = append(missingColumnNames, columnName)
+		}
+		if len(missingColumnNames) == 1 {
+			return nil, fmt.Errorf("missing column name: %s", missingColumnNames[0])
+		}
+		return nil, fmt.Errorf("missing column names: %s", strings.Join(missingColumnNames, ","))
+	}
+
+	stmt.outputs = outputs
+	return stmt.outputs, nil
+}
+
 func (stmt *Stmt) addColumns(cols columnsT) {
 	if cols.clause.isInput() {
 		for _, col := range cols.filtered() {
 			stmt.inputs = append(stmt.inputs, inputT{col: col})
 		}
-	} else if cols.clause.isOutput() {
-		for _, col := range cols.filtered() {
-			stmt.outputs = append(stmt.outputs, col)
-		}
 	}
+
+	// Note that we don't record output columns anymore prior to running the query.
+	// This way it does not matter if columns are specified explicitly or
+	// if they are expanded out using the {} mechanism.
 }
 
 func (stmt *Stmt) scanSQL(query string) error {
@@ -309,6 +383,8 @@ func (stmt *Stmt) scanSQL(query string) error {
 		case scanner.LITERAL, scanner.OP:
 			buf.WriteString(lit)
 		case scanner.PLACEHOLDER:
+			// TODO(SELECT): should parse the placeholder in case it is positional
+			// instead of just allocating it a number assuming it is not positional
 			buf.WriteString(stmt.dialect.Placeholder(counter.Next()))
 			stmt.inputs = append(stmt.inputs, inputT{argIndex: stmt.argCount})
 			stmt.argCount++
