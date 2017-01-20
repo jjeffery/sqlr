@@ -17,16 +17,18 @@ import (
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
 type Stmt struct {
-	rowType        reflect.Type
-	queryType      queryType
-	query          string
-	dialect        Dialect
-	convention     Convention
-	argCount       int
-	columns        []*column.Info
-	inputs         []inputT
-	outputs        []*column.Info // use outputsMutex to access
-	outputsMutex   sync.RWMutex   // for accesing outputs
+	rowType    reflect.Type
+	queryType  queryType
+	query      string
+	dialect    Dialect
+	convention Convention
+	argCount   int
+	columns    []*column.Info
+	inputs     []inputT
+	output     struct {
+		mutex   sync.RWMutex
+		columns []*column.Info
+	}
 	autoIncrColumn *column.Info
 }
 
@@ -295,18 +297,18 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 }
 
 func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
-	stmt.outputsMutex.RLock()
-	outputs := stmt.outputs
-	stmt.outputsMutex.RUnlock()
+	stmt.output.mutex.RLock()
+	outputs := stmt.output.columns
+	stmt.output.mutex.RUnlock()
 	if outputs != nil {
 		// already worked out
 		return outputs, nil
 	}
-	stmt.outputsMutex.Lock()
-	defer stmt.outputsMutex.Unlock()
+	stmt.output.mutex.Lock()
+	defer stmt.output.mutex.Unlock()
 	// test again once write lock acquired
-	if stmt.outputs != nil {
-		return stmt.outputs, nil
+	if stmt.output.columns != nil {
+		return stmt.output.columns, nil
 	}
 
 	columnMap := make(map[string]*column.Info)
@@ -333,10 +335,10 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 	}
 
 	if len(unknownColumnNames) == 1 {
-		return nil, fmt.Errorf("unknown column name: %s", unknownColumnNames[0])
+		return nil, fmt.Errorf("unknown column name=%q", unknownColumnNames[0])
 	}
 	if len(unknownColumnNames) > 0 {
-		return nil, fmt.Errorf("unknown column names: %s", strings.Join(unknownColumnNames, ","))
+		return nil, fmt.Errorf("unknown columns names=%q", strings.Join(unknownColumnNames, ","))
 	}
 	if len(columnMap) > 0 {
 		missingColumnNames := make([]string, 0, len(columnMap))
@@ -344,13 +346,13 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 			missingColumnNames = append(missingColumnNames, columnName)
 		}
 		if len(missingColumnNames) == 1 {
-			return nil, fmt.Errorf("missing column name: %s", missingColumnNames[0])
+			return nil, fmt.Errorf("missing column name=%q", missingColumnNames[0])
 		}
-		return nil, fmt.Errorf("missing column names: %s", strings.Join(missingColumnNames, ","))
+		return nil, fmt.Errorf("missing columns names=%s", strings.Join(missingColumnNames, ","))
 	}
 
-	stmt.outputs = outputs
-	return stmt.outputs, nil
+	stmt.output.columns = outputs
+	return stmt.output.columns, nil
 }
 
 func (stmt *Stmt) addColumns(cols columnsT) {
