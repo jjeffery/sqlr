@@ -61,9 +61,27 @@ func TestFlatten(t *testing.T) {
 		},
 		{
 			sql:      "select * from tbl where id in ($2) and name=$1",
-			args:     []interface{}{"claire", []int{1, 2, 3}},
+			args:     []interface{}{[]byte("claire"), []int{1, 2, 3}},
 			wantSQL:  "select * from tbl where id in ($2,$3,$4) and name=$1",
-			wantArgs: []interface{}{"claire", 1, 2, 3},
+			wantArgs: []interface{}{[]byte("claire"), 1, 2, 3},
+		},
+		{
+			sql:      "select * from tbl where id in ($2) and name in ($1)",
+			args:     []interface{}{[]string{"zoe", "michaela", "nick", "claire"}, []int{1, 2, 3}},
+			wantSQL:  "select * from tbl where id in ($5,$6,$7) and name in ($1,$2,$3,$4)",
+			wantArgs: []interface{}{"zoe", "michaela", "nick", "claire", 1, 2, 3},
+		},
+		{
+			sql:      "select * from tbl where age > $1 and id in ($3) and name in ($2)",
+			args:     []interface{}{16, []string{"zoe", "michaela", "nick", "claire"}, []int{1, 2, 3}},
+			wantSQL:  "select * from tbl where age > $1 and id in ($6,$7,$8) and name in ($2,$3,$4,$5)",
+			wantArgs: []interface{}{16, "zoe", "michaela", "nick", "claire", 1, 2, 3},
+		},
+		{
+			sql:      "select * from tbl where age > ? and id in (?) and name in (?)",
+			args:     []interface{}{16, []string{"zoe", "michaela", "nick", "claire"}, []int{1, 2, 3}},
+			wantSQL:  "select * from tbl where age > ? and id in (?,?,?,?) and name in (?,?,?)",
+			wantArgs: []interface{}{16, "zoe", "michaela", "nick", "claire", 1, 2, 3},
 		},
 	}
 

@@ -199,9 +199,16 @@ func newArgInfos(args []interface{}) []*argInfoT {
 			index: i,
 			arg:   arg,
 		}
-		if rv := reflect.ValueOf(arg); rv.Kind() == reflect.Slice {
-			argInfo.slice = rv
-			argInfo.len = rv.Len()
+		switch arg.(type) {
+		case []byte, string,
+			int, uint, int8, byte, int16, uint16, int32, uint32, int64, uint64,
+			float32, float64, driver.Valuer:
+			break
+		default:
+			if rv := reflect.ValueOf(arg); rv.Kind() == reflect.Slice {
+				argInfo.slice = rv
+				argInfo.len = rv.Len()
+			}
 		}
 		argInfos = append(argInfos, argInfo)
 	}
