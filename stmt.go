@@ -12,6 +12,7 @@ import (
 
 	"github.com/jjeffery/sqlrow/private/column"
 	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlrow/private/wherein"
 )
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
@@ -120,7 +121,11 @@ func (stmt *Stmt) Exec(db DB, row interface{}, args ...interface{}) (int, error)
 	if err != nil {
 		return 0, err
 	}
-	result, err := db.Exec(stmt.query, args...)
+	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
+	if err != nil {
+		return 0, err
+	}
+	result, err := db.Exec(expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
@@ -198,7 +203,11 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		return 0, errorPtrType()
 	}
 
-	sqlRows, err := db.Query(stmt.query, args...)
+	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
+	if err != nil {
+		return 0, err
+	}
+	sqlRows, err := db.Query(expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
@@ -246,7 +255,11 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 }
 
 func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
-	rows, err := db.Query(stmt.query, args...)
+	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
+	if err != nil {
+		return 0, err
+	}
+	rows, err := db.Query(expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}

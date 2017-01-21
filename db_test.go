@@ -89,7 +89,22 @@ func TestDB1(t *testing.T) {
 	}
 
 	{
-		expected := 4
+		var rows []Row
+		n, err := Select(db, &rows, "select {} from test_table where string_column in (?)", []string{
+			"AAAA",
+			"BBBB",
+			"CCCC",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := n, 3; got != want {
+			t.Errorf("got = %d, want = %d", got, want)
+		}
+	}
+
+	{
+		expected := 5
 		actual := len(stmtCache.stmts)
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
