@@ -2,14 +2,13 @@ package sqlrow
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync"
-
-	"database/sql"
 
 	"github.com/jjeffery/sqlrow/private/column"
 	"github.com/jjeffery/sqlrow/private/scanner"
