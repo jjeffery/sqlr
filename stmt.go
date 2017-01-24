@@ -335,22 +335,48 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 	}
 
 	outputs = make([]*column.Info, len(columnNames))
-	var unknownColumnNames []string
+	var columnNotFound = false
 	for i, columnName := range columnNames {
 		col := columnMap[columnName]
 		if col == nil {
-			unknownColumnNames = append(unknownColumnNames, columnName)
+			columnNotFound = true
 			continue
 		}
 		outputs[i] = col
 		delete(columnMap, columnName)
 	}
 
-	if len(unknownColumnNames) == 1 {
-		return nil, fmt.Errorf("unknown column name=%q", unknownColumnNames[0])
-	}
-	if len(unknownColumnNames) > 0 {
-		return nil, fmt.Errorf("unknown columns names=%q", strings.Join(unknownColumnNames, ","))
+	if columnNotFound {
+		// One or more column names not found. The first loop
+		// was case sensitive. Try again case-insensitive.
+		// Build a map of lower-case column names for the remaining,
+		// unmatched columns and then try again.
+		var unknownColumnNames []string
+		lowerColumnMap := make(map[string]*column.Info)
+		for k, v := range columnMap {
+			lowerColumnMap[strings.ToLower(k)] = v
+		}
+		for i, columnName := range columnNames {
+			if outputs[i] != nil {
+				continue
+			}
+			columnNameLower := strings.ToLower(columnName)
+			col := lowerColumnMap[columnNameLower]
+			if col == nil {
+				unknownColumnNames = append(unknownColumnNames, columnName)
+				continue
+			}
+			outputs[i] = col
+			delete(lowerColumnMap, columnNameLower)
+			delete(columnMap, columnNameForConvention(col, stmt.convention))
+		}
+
+		if len(unknownColumnNames) == 1 {
+			return nil, fmt.Errorf("unknown column name=%q", unknownColumnNames[0])
+		}
+		if len(unknownColumnNames) > 0 {
+			return nil, fmt.Errorf("unknown columns names=%q", strings.Join(unknownColumnNames, ","))
+		}
 	}
 	if len(columnMap) > 0 {
 		missingColumnNames := make([]string, 0, len(columnMap))
