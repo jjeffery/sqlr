@@ -1,5 +1,6 @@
 language: go
 go:
+  - 1.8
   - 1.7
   - 1.6
   - 1.5
@@ -13,13 +14,15 @@ before_script:
   - psql -c "grant all privileges on database sqlrow_test to sqlrow_test;" -U postgres
 
 install:
-  - go get github.com/mattn/go-sqlite3
+  - go get github.com/jjeffery/errors
   - go get github.com/lib/pq
+  - go get github.com/mattn/go-sqlite3
+  - go get github.com/spf13/pflag
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
 
 script:
-  - go test ./...
+  - go test . ./private/...
   - go test -race
   - go test -v -covermode=count -coverprofile=coverage.out
-  - $(go env GOPATH | awk 'BEGIN{FS=":"} {print $1}')/bin/goveralls -coverprofile=coverage.out -service=travis-ci
+  - $GOPATH/bin/goveralls -coverprofile=coverage.out -service=travis-ci
