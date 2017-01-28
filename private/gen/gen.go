@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"unicode"
@@ -14,6 +15,17 @@ import (
 	"github.com/jjeffery/sqlrow/private/colname"
 	"github.com/jjeffery/sqlrow/private/column"
 )
+
+// DefaultOutput returns the default filename for generated output
+// given the filename of the input file.
+func DefaultOutput(filename string) string {
+	if filename == "" {
+		return ""
+	}
+	output := strings.TrimSuffix(filename, filepath.Ext(filename))
+	output = output + "_sqlrow.go"
+	return output
+}
 
 // Model contains all of the information required by the template
 // to generate code.
@@ -181,21 +193,45 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		)
 	}
 
+	rowType, err := newRowType(file, ir, rowTypeField.Type)
+	if err != nil {
+		return nil, err
+	}
+
 	if tableName == "" {
-		tableName = colname.Snake.ColumnName(typeSpec.Name.Name)
+		tableName = colname.Snake.ColumnName(rowType.Name)
 		tableName = toPlural(tableName)
 	}
 
 	if singular == "" {
-		singular = typeSpec.Name.Name
+		singular = rowType.Name
 	}
 
 	if plural == "" {
 		plural = toPlural(singular)
 	}
 
+	var requirePrimaryKey func(method string) error
+	if rowType.IDArgs == "" {
+		requirePrimaryKey = func(method string) error {
+			return errors.New("method required primary key specified").With(
+				"method", method,
+				"type", rowType.Name,
+			)
+		}
+	} else {
+		requirePrimaryKey = func(method string) error {
+			return nil
+		}
+	}
 	if methods == "" {
-		methods = "get,select,selectOne,insert,update,delete,upsert"
+		if rowType.IDArgs == "" {
+			// without knowing the primary key we can only do select and selectOne
+			methods = "select,selectOne"
+		} else {
+			// if not specified, do all
+			methods = "get,select,selectOne,insert,update,delete,upsert"
+		}
 	}
 
 	// at this point we have a struct that describes a query type
@@ -211,29 +247,39 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		lmethod := strings.ToLower(strings.TrimSpace(method))
 		switch lmethod {
 		case "get":
+			if err := requirePrimaryKey(method); err != nil {
+				return nil, err
+			}
 			queryType.Method.Get = true
 		case "select":
 			queryType.Method.Select = true
 		case "selectone":
 			queryType.Method.SelectOne = true
 		case "insert":
+			if err := requirePrimaryKey(method); err != nil {
+				return nil, err
+			}
 			queryType.Method.Insert = true
 		case "update":
+			if err := requirePrimaryKey(method); err != nil {
+				return nil, err
+			}
 			queryType.Method.Update = true
 		case "upsert":
+			if err := requirePrimaryKey(method); err != nil {
+				return nil, err
+			}
 			queryType.Method.Upsert = true
 		case "delete":
+			if err := requirePrimaryKey(method); err != nil {
+				return nil, err
+			}
 			queryType.Method.Delete = true
 		default:
 			return nil, errors.New("unknown method").With(
 				"method", method,
 			)
 		}
-	}
-
-	rowType, err := newRowType(file, ir, rowTypeField.Type)
-	if err != nil {
-		return nil, err
 	}
 
 	queryType.RowType = rowType

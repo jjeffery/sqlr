@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/jjeffery/sqlrow/private/gen"
@@ -22,7 +21,7 @@ func main() {
 	log.SetFlags(0)
 	command.filename = os.Getenv("GOFILE")
 	pflag.StringVarP(&command.filename, "file", "f", command.filename, "source file")
-	pflag.StringVarP(&command.output, "output", "o", defaultOutput(command.filename), "output")
+	pflag.StringVarP(&command.output, "output", "o", gen.DefaultOutput(command.filename), "output")
 	pflag.Parse()
 	if len(pflag.Args()) > 0 {
 		log.Fatalln("unrecognized args:", strings.Join(pflag.Args(), " "))
@@ -63,13 +62,4 @@ func main() {
 	if _, err := output.Write(formatted); err != nil {
 		log.Fatalln(err)
 	}
-}
-
-func defaultOutput(filename string) string {
-	if filename == "" {
-		return ""
-	}
-	output := strings.TrimSuffix(filename, filepath.Ext(filename))
-	output = output + "_sqlrow.go"
-	return output
 }
