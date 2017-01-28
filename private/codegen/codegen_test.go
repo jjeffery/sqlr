@@ -1,8 +1,7 @@
-package gen
+package codegen
 
 import (
 	"bytes"
-	"fmt"
 	"go/format"
 	"io/ioutil"
 	"os"
@@ -39,7 +38,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("%d: %v", i, err)
 			continue
 		}
-		model.CommandLine = fmt.Sprintf("gen_test.go test case %d", i)
+		model.CommandLine = "sqlrowgen"
 		output := DefaultOutput(filename)
 
 		var buf bytes.Buffer

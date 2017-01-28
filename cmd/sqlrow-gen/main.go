@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/gen"
+	"github.com/jjeffery/sqlrow/private/codegen"
 	"github.com/spf13/pflag"
 )
 
@@ -21,7 +21,7 @@ func main() {
 	log.SetFlags(0)
 	command.filename = os.Getenv("GOFILE")
 	pflag.StringVarP(&command.filename, "file", "f", command.filename, "source file")
-	pflag.StringVarP(&command.output, "output", "o", gen.DefaultOutput(command.filename), "output")
+	pflag.StringVarP(&command.output, "output", "o", codegen.DefaultOutput(command.filename), "output")
 	pflag.Parse()
 	if len(pflag.Args()) > 0 {
 		log.Fatalln("unrecognized args:", strings.Join(pflag.Args(), " "))
@@ -30,14 +30,14 @@ func main() {
 		log.Fatal("no file specified (-f or $GOFILE)")
 	}
 
-	model, err := gen.Parse(command.filename)
+	model, err := codegen.Parse(command.filename)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	model.CommandLine = strings.Join(os.Args, " ")
 
 	var buf bytes.Buffer
-	if err := gen.DefaultTemplate.Execute(&buf, model); err != nil {
+	if err := codegen.DefaultTemplate.Execute(&buf, model); err != nil {
 		log.Fatalln("cannot execute template:", err)
 	}
 
