@@ -12,7 +12,7 @@ import (
 	"unicode"
 
 	"github.com/jjeffery/errors"
-	"github.com/jjeffery/sqlrow/private/colname"
+	"github.com/jjeffery/sqlrow/private/naming"
 	"github.com/jjeffery/sqlrow/private/column"
 )
 
@@ -199,7 +199,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	}
 
 	if tableName == "" {
-		tableName = colname.Snake.ColumnName(rowType.Name)
+		tableName = naming.Snake.ColumnName(rowType.Name)
 		tableName = toPlural(tableName)
 	}
 

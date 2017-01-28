@@ -1,8 +1,8 @@
 package sqlrow
 
 import (
-	"github.com/jjeffery/sqlrow/private/colname"
 	"github.com/jjeffery/sqlrow/private/dialect"
+	"github.com/jjeffery/sqlrow/private/naming"
 )
 
 // Default is the default schema, which can be modified as required.
@@ -116,7 +116,7 @@ func (s Schema) convention() Convention {
 	if Default.Convention != nil {
 		return Default.Convention
 	}
-	return colname.Snake
+	return naming.Snake
 }
 
 func (s Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {

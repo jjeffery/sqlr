@@ -1,4 +1,4 @@
-package colname
+package naming
 
 import (
 	"fmt"

@@ -1,6 +1,6 @@
 package sqlrow
 
-import "github.com/jjeffery/sqlrow/private/colname"
+import "github.com/jjeffery/sqlrow/private/naming"
 
 // Convention provides naming convention methods for
 // inferring database column names from Go struct field names.
@@ -34,7 +34,7 @@ var ConventionSame Convention
 var ConventionLower Convention
 
 func init() {
-	ConventionSnake = colname.Snake
-	ConventionSame = colname.Same
-	ConventionLower = colname.Lower
+	ConventionSnake = naming.Snake
+	ConventionSame = naming.Same
+	ConventionLower = naming.Lower
 }

@@ -1,6 +1,6 @@
-// Package colname is concerned with inferring database table
-// column names from the names of the associated Go struct fields.
-package colname
+// Package naming is concerned with naming database tables
+// and column names.
+package naming
 
 import (
 	"bytes"
