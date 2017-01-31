@@ -12,8 +12,8 @@ import (
 	"unicode"
 
 	"github.com/jjeffery/errors"
-	"github.com/jjeffery/sqlrow/private/naming"
 	"github.com/jjeffery/sqlrow/private/column"
+	"github.com/jjeffery/sqlrow/private/naming"
 )
 
 // DefaultOutput returns the default filename for generated output
@@ -59,6 +59,7 @@ type QueryType struct {
 	Plural          string // Describes multiple instances in error msg
 	DBField         string // Name of the field of type sqlrow.DB (probably db)
 	SchemaField     string // Name of the schema field of type sqlrow.Schema (probably schema)
+	ReceiverIdent   string // Name of the receiver identifier
 	RowType         *RowType
 	Method          struct {
 		Get       bool
@@ -242,6 +243,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		Plural:          plural,
 		DBField:         dbField.Names[0].Name,
 		SchemaField:     schemaField.Names[0].Name,
+		ReceiverIdent:   "q",
 	}
 	for _, method := range strings.Split(methods, ",") {
 		lmethod := strings.ToLower(strings.TrimSpace(method))

@@ -19,7 +19,7 @@ func (q Row2Query) Select(query string, args ...interface{}) ([]*Row2, error) {
 	return rows, nil
 }
 
-// Select a Row2 from an SQL query. Returns nil if the query returns no rows.
+// SelectOne selects a Row2 from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
 func (q Row2Query) SelectOne(query string, args ...interface{}) (*Row2, error) {

@@ -34,7 +34,7 @@ func (q Row0Query) Select(query string, args ...interface{}) ([]*Row0, error) {
 	return rows, nil
 }
 
-// Select a document from an SQL query. Returns nil if the query returns no rows.
+// SelectOne selects a document from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
 func (q Row0Query) SelectOne(query string, args ...interface{}) (*Row0, error) {

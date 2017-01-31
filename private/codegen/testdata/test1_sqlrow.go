@@ -34,7 +34,7 @@ func (q DocumentQuery) Select(query string, args ...interface{}) ([]*Document, e
 	return rows, nil
 }
 
-// Select a Document from an SQL query. Returns nil if the query returns no rows.
+// SelectOne selects a Document from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
 func (q DocumentQuery) SelectOne(query string, args ...interface{}) (*Document, error) {
