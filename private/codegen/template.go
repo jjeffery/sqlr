@@ -43,7 +43,7 @@ func (q {{.TypeName}}) Select(query string, args ...interface{}) ([]*{{.RowType.
 }
 {{end -}}
 {{- if .Method.SelectOne}}
-// Select a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
+// SelectOne selects a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
 func (q {{.TypeName}}) SelectOne(query string, args ...interface{}) (*{{.RowType.Name}}, error) {
