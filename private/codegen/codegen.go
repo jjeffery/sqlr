@@ -146,7 +146,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	}
 
 	for _, field := range structType.Fields.List {
-		fieldTypeName := localIR.exprString(field.Type)
+		fieldTypeName := localIR.exprString(stripTypeExpr(field.Type))
 		if field.Tag != nil {
 			tag := reflect.StructTag(stripQuotes(field.Tag.Value))
 			if v := tag.Get("methods"); v != "" {
@@ -306,7 +306,7 @@ func toPlural(s string) string {
 	return s + "s"
 }
 
-func stripRowTypeExpr(expr ast.Expr) ast.Expr {
+func stripTypeExpr(expr ast.Expr) ast.Expr {
 	for {
 		switch v := expr.(type) {
 		case *ast.Ident:
@@ -324,7 +324,7 @@ func stripRowTypeExpr(expr ast.Expr) ast.Expr {
 }
 
 func newRowType(file *ast.File, ir *importResolver, typeExpr ast.Expr) (*RowType, error) {
-	typeExpr = stripRowTypeExpr(typeExpr)
+	typeExpr = stripTypeExpr(typeExpr)
 	if typeExpr == nil {
 		return nil, errors.New("unexpected type for rowType")
 	}

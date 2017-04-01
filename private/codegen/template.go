@@ -13,7 +13,7 @@ import ({{range .Imports}}
 )
 {{range .QueryTypes -}}
 {{- if .Method.Get}}
-// {{.Method.Get}} a {{.Singular}} by its primary key. Returns nil if not found.
+// {{.Method.Get}} retrieves a {{.Singular}} by its primary key. Returns nil if not found.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Get}}({{.RowType.IDParams}}) (*{{.RowType.Name}}, error) {
 	var row {{.RowType.Name}}
 	n, err := {{.ReceiverIdent}}.schema.Select({{.ReceiverIdent}}.db, &row, {{.QuotedTableName}}, {{.RowType.IDArgs}})
