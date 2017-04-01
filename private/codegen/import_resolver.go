@@ -3,13 +3,26 @@ package codegen
 import (
 	"fmt"
 	"go/ast"
-	"path"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
+
+	"github.com/jjeffery/errors"
 )
 
+type packageInfo struct {
+	importSpec  *ast.ImportSpec
+	packagePath string
+	pkg         *ast.Package
+}
+
 type importResolver struct {
-	imports []*ast.ImportSpec
-	used    map[string]*Import
+	packages map[string]*packageInfo
+	imports  []*ast.ImportSpec
+	used     map[string]*Import
 }
 
 func (r *importResolver) Resolve(name string) *Import {
@@ -17,61 +30,48 @@ func (r *importResolver) Resolve(name string) *Import {
 		return imp
 	}
 
-	// strips the quotes from the import path and returns the base name
-	pathBase := func(p string) string {
-		return path.Base(strings.TrimPrefix(strings.TrimSuffix(p, `"`), `"`))
-	}
-	// strips the quotes from the import path and returns the base name without any extension
-	// (good for import paths like "gopkg.in/xyz/abc.v1")
-	pathBaseWithoutExtension := func(p string) string {
-		p = pathBase(p)
-		return strings.TrimSuffix(p, path.Ext(p))
+	if pkgInfo, ok := r.packages[name]; ok {
+		imp := &Import{
+			Path: pkgInfo.importSpec.Path.Value,
+		}
+		if pkgInfo.importSpec.Name != nil {
+			imp.Name = pkgInfo.importSpec.Name.Name
+		}
+
+		r.used[name] = imp
+		return imp
 	}
 
-	tests := []func(*ast.ImportSpec) bool{
-		// import has matching explicit name
-		func(is *ast.ImportSpec) bool {
-			return is.Name != nil && is.Name.Name == name
-		},
-		// import has matching import base name
-		func(is *ast.ImportSpec) bool {
-			if is.Name != nil {
-				return false
-			}
-			return pathBase(is.Path.Value) == name
-		},
-		// import has matching import base name without extension
-		func(is *ast.ImportSpec) bool {
-			if is.Name != nil {
-				return false
-			}
-			return pathBaseWithoutExtension(is.Path.Value) == name
-		},
-		// import base name contains the string somewhere
-		func(is *ast.ImportSpec) bool {
-			if is.Name != nil {
-				return false
-			}
-			return strings.Contains(pathBase(is.Path.Value), name)
-		},
-	}
-	// Search for an import whose name matches.
-	for _, test := range tests {
-		for _, importSpec := range r.imports {
-			if test(importSpec) {
-				imp := &Import{
-					Path: importSpec.Path.Value,
-				}
-				if importSpec.Name != nil {
-					imp.Name = importSpec.Name.Name
-				}
+	return nil
+}
 
-				r.used[name] = imp
-				return imp
+func (r *importResolver) ParsePackage(name string) (*ast.Package, error) {
+	pkgInfo := r.packages[name]
+	if pkgInfo == nil {
+		return nil, errors.New("unknown package").With(
+			"selector", name,
+		)
+	}
+	if pkgInfo.pkg == nil {
+		fset := token.NewFileSet()
+		pkgs, err := parser.ParseDir(fset, pkgInfo.packagePath, filter, 0)
+		if err != nil {
+			return nil, err
+		}
+		for name, pkg := range pkgs {
+			if name == "main" || strings.HasSuffix(name, "_test") {
+				continue
 			}
+			pkgInfo.pkg = pkg
+			break
 		}
 	}
-	return nil
+	if pkgInfo.pkg == nil {
+		return nil, errors.New("cannot parse package").With(
+			"selector", name,
+		)
+	}
+	return pkgInfo.pkg, nil
 }
 
 func (r *importResolver) exprString(t ast.Expr) string {
@@ -148,16 +148,53 @@ func (r *importResolver) Imports() []*Import {
 	return imports
 }
 
+// parse the package enough to find out its name
+func filter(fileInfo os.FileInfo) bool {
+	if strings.HasSuffix(fileInfo.Name(), "_test.go") {
+		return false
+	}
+	return true
+}
+
 func newImportResolver(imports []*ast.ImportSpec) (*importResolver, error) {
+	resolver := &importResolver{
+		packages: make(map[string]*packageInfo),
+		imports:  imports,
+		used:     make(map[string]*Import),
+	}
+
 	for _, importSpec := range imports {
 		if importSpec.Name != nil && importSpec.Name.Name == "." {
 			return nil, fmt.Errorf("dot imports are not supported: . %v", importSpec.Path.Value)
 		}
+		packagePath, err := findPackageDirectory(importSpec.Path.Value)
+		if err != nil {
+			return nil, err
+		}
+		fset := token.NewFileSet()
+		pkgs, err := parser.ParseDir(fset, packagePath, filter, parser.PackageClauseOnly)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot parse package").With(
+				"package", importSpec.Path.Value,
+			)
+		}
+		// there should only be one item in the slice
+		for name := range pkgs {
+			if name == "main" {
+				continue
+			}
+			pkgInfo := &packageInfo{
+				importSpec:  importSpec,
+				packagePath: packagePath,
+			}
+			if importSpec.Name != nil {
+				resolver.packages[importSpec.Name.Name] = pkgInfo
+			} else {
+				resolver.packages[name] = pkgInfo
+			}
+		}
 	}
-	return &importResolver{
-		imports: imports,
-		used:    make(map[string]*Import),
-	}, nil
+	return resolver, nil
 }
 
 func notExpecting(nodeType string) {
@@ -168,4 +205,56 @@ func notExpecting(nodeType string) {
 func notImplemented(nodeType string) {
 	msg := fmt.Sprintf("handling of node type not implemented: %s", nodeType)
 	panic(msg)
+}
+
+// findPackageDirectory finds the directory on the GOPATH that
+// corresponds with the directory specification.
+// BUG(jpj): I have to think that there is a std library function for
+// doing this.
+func findPackageDirectory(importPath string) (string, error) {
+	// strip leading and trailing '"'
+	importPath = strings.TrimPrefix(strings.TrimSuffix(importPath, `"`), `"`)
+
+	// directories for searching for the import path
+	goDirs := []string{runtime.GOROOT()}
+	{
+		gopath := os.Getenv("GOPATH")
+		if gopath == "" {
+			var home string
+			if runtime.GOOS == "windows" {
+				home = os.Getenv("USERPROFILE")
+			} else {
+				home = os.Getenv("HOME")
+			}
+			if home != "" {
+				gopath = filepath.Join(home, "go")
+			}
+		}
+		if gopath != "" {
+			goDirs = append(goDirs, filepath.SplitList(gopath)...)
+		}
+	}
+	for _, goDir := range goDirs {
+		importDir := filepath.Join(goDir, "src", filepath.FromSlash(importPath))
+		fileInfo, err := os.Stat(importDir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				// error other than does not exist
+				return "", errors.Wrap(err, "cannot stat").With(
+					"path", importDir,
+				)
+			}
+			// file/directory does not exist
+			fileInfo = nil
+		}
+		if fileInfo != nil && fileInfo.IsDir() {
+			// found the directory
+			return importDir, nil
+		}
+	}
+	return "", &os.PathError{
+		Op:   "findPackageDirectory",
+		Path: importPath,
+		Err:  os.ErrNotExist,
+	}
 }

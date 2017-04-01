@@ -205,7 +205,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	}
 
 	if singular == "" {
-		singular = rowType.Name
+		singular = stripPackageName(rowType.Name)
 	}
 
 	if plural == "" {
@@ -288,6 +288,14 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	return queryType, nil
 }
 
+func stripPackageName(s string) string {
+	if !strings.Contains(s, ".") {
+		return s
+	}
+	slice := strings.Split(s, ".")
+	return slice[len(slice)-1]
+}
+
 func toPlural(s string) string {
 	return s + "s"
 }
@@ -314,17 +322,30 @@ func newRowType(file *ast.File, ir *importResolver, typeExpr ast.Expr) (*RowType
 	if typeExpr == nil {
 		return nil, errors.New("unexpected type for rowType")
 	}
-	if _, ok := typeExpr.(*ast.SelectorExpr); ok {
-		return nil, errors.New("doesn't handle row types in other packages yet, row type needs to be in the same package and file")
-	}
-	rowTypeIdent, ok := typeExpr.(*ast.Ident)
-	if !ok {
-		// should not get here, checked earlier
-		return nil, errors.New("unexpected row type")
-	}
 
-	rowTypeName := rowTypeIdent.Name
-	structType := findStructType(file, rowTypeName)
+	var structType *ast.StructType
+	var rowTypeName string
+	{
+		if selectorExpr, ok := typeExpr.(*ast.SelectorExpr); ok {
+			rowTypeName = ir.exprString(selectorExpr)
+			selectorName := ir.exprString(selectorExpr.X)
+			pkg, err := ir.ParsePackage(selectorName)
+			if err != nil {
+				return nil, err
+			}
+			typeName := ir.exprString(selectorExpr.Sel)
+			structType = findStructTypeInPkg(pkg, typeName)
+		} else {
+			rowTypeIdent, ok := typeExpr.(*ast.Ident)
+			if !ok {
+				// should not get here, checked earlier
+				return nil, errors.New("unexpected row type")
+			}
+
+			rowTypeName = rowTypeIdent.Name
+			structType = findStructType(file, rowTypeName)
+		}
+	}
 	if structType == nil {
 		return nil, errors.New("cannot find row type").With(
 			"name", rowTypeName,
@@ -372,6 +393,15 @@ func newRowType(file *ast.File, ir *importResolver, typeExpr ast.Expr) (*RowType
 	}
 
 	return rowType, nil
+}
+
+func findStructTypeInPkg(pkg *ast.Package, name string) *ast.StructType {
+	for _, file := range pkg.Files {
+		if t := findStructType(file, name); t != nil {
+			return t
+		}
+	}
+	return nil
 }
 
 func findStructType(file *ast.File, name string) *ast.StructType {
