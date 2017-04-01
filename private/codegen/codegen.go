@@ -62,13 +62,13 @@ type QueryType struct {
 	ReceiverIdent   string // Name of the receiver identifier
 	RowType         *RowType
 	Method          struct {
-		Get       bool
-		Select    bool
-		SelectOne bool
-		Insert    bool
-		Update    bool
-		Delete    bool
-		Upsert    bool
+		Get       string
+		Select    string
+		SelectOne string
+		Insert    string
+		Update    string
+		Delete    string
+		Upsert    string
 	}
 }
 
@@ -246,37 +246,43 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		ReceiverIdent:   "q",
 	}
 	for _, method := range strings.Split(methods, ",") {
-		lmethod := strings.ToLower(strings.TrimSpace(method))
+		method = strings.TrimSpace(method)
+		lmethod := strings.ToLower(method)
 		switch lmethod {
-		case "get":
+		case "get", "getrow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err
 			}
-			queryType.Method.Get = true
-		case "select":
-			queryType.Method.Select = true
-		case "selectone":
-			queryType.Method.SelectOne = true
-		case "insert":
+			queryType.Method.Get = method
+		case "select", "selectrows":
+			if method == "select" {
+				// need to rename to avoid Go keyword
+				queryType.Method.Select = "selectRows"
+			} else {
+				queryType.Method.Select = method
+			}
+		case "selectone", "selectrow":
+			queryType.Method.SelectOne = method
+		case "insert", "insertrow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err
 			}
-			queryType.Method.Insert = true
-		case "update":
+			queryType.Method.Insert = method
+		case "update", "updaterow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err
 			}
-			queryType.Method.Update = true
-		case "upsert":
+			queryType.Method.Update = method
+		case "upsert", "upsertrow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err
 			}
-			queryType.Method.Upsert = true
-		case "delete":
+			queryType.Method.Upsert = method
+		case "delete", "deleterow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err
 			}
-			queryType.Method.Delete = true
+			queryType.Method.Delete = method
 		default:
 			return nil, errors.New("unknown method").With(
 				"method", method,

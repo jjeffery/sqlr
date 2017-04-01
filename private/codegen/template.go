@@ -13,8 +13,8 @@ import ({{range .Imports}}
 )
 {{range .QueryTypes -}}
 {{- if .Method.Get}}
-// Get a {{.Singular}} by its primary key. Returns nil if not found.
-func ({{.ReceiverIdent}} {{.TypeName}}) Get({{.RowType.IDParams}}) (*{{.RowType.Name}}, error) {
+// {{.Method.Get}} a {{.Singular}} by its primary key. Returns nil if not found.
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Get}}({{.RowType.IDParams}}) (*{{.RowType.Name}}, error) {
 	var row {{.RowType.Name}}
 	n, err := {{.ReceiverIdent}}.schema.Select({{.ReceiverIdent}}.db, &row, {{.QuotedTableName}}, {{.RowType.IDArgs}})
 	if err != nil {
@@ -29,8 +29,8 @@ func ({{.ReceiverIdent}} {{.TypeName}}) Get({{.RowType.IDParams}}) (*{{.RowType.
 }
 {{end -}}
 {{- if .Method.Select}}
-// Select a list of {{.Plural}} from an SQL query.
-func ({{.ReceiverIdent}} {{.TypeName}}) Select(query string, args ...interface{}) ([]*{{.RowType.Name}}, error) {
+// {{.Method.Select}} returns a list of {{.Plural}} from an SQL query.
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Select}}(query string, args ...interface{}) ([]*{{.RowType.Name}}, error) {
 	var rows []*{{.RowType.Name}}
 	_, err := {{.ReceiverIdent}}.schema.Select({{.ReceiverIdent}}.db, &rows, query, args...)
 	if err != nil {
@@ -43,10 +43,10 @@ func ({{.ReceiverIdent}} {{.TypeName}}) Select(query string, args ...interface{}
 }
 {{end -}}
 {{- if .Method.SelectOne}}
-// SelectOne selects a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
+// {{.Method.SelectOne}} selects a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func ({{.ReceiverIdent}} {{.TypeName}}) SelectOne(query string, args ...interface{}) (*{{.RowType.Name}}, error) {
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.SelectOne}}(query string, args ...interface{}) (*{{.RowType.Name}}, error) {
 	var row {{.RowType.Name}}
 	n, err := {{.ReceiverIdent}}.schema.Select({{.ReceiverIdent}}.db, &row, query, args...)
 	if err != nil {
@@ -62,8 +62,8 @@ func ({{.ReceiverIdent}} {{.TypeName}}) SelectOne(query string, args ...interfac
 }
 {{end -}}
 {{- if .Method.Insert}}
-// Insert a {{.Singular}} row.
-func ({{.ReceiverIdent}} {{.TypeName}}) Insert(row *{{.RowType.Name}}) error {
+// {{.Method.Insert}} inserts a {{.Singular}} row.
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Insert}}(row *{{.RowType.Name}}) error {
 	err := {{.ReceiverIdent}}.schema.Insert({{.ReceiverIdent}}.db, row, {{.QuotedTableName}})
 	if err != nil {
 		return errors.Wrap(err, "cannot insert {{.Singular}}").With(
@@ -74,9 +74,9 @@ func ({{.ReceiverIdent}} {{.TypeName}}) Insert(row *{{.RowType.Name}}) error {
 }
 {{end -}}
 {{- if .Method.Update}}
-// Update an existing {{.Singular}} row. Returns the number of rows updated,
+// {{.Method.Update}} updates an existing {{.Singular}} row. Returns the number of rows updated,
 // which should be zero or one.
-func ({{.ReceiverIdent}} {{.TypeName}}) Update(row *{{.RowType.Name}}) (int, error) {
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Update}}(row *{{.RowType.Name}}) (int, error) {
 	n, err := {{.ReceiverIdent}}.schema.Update({{.ReceiverIdent}}.db, row, {{.QuotedTableName}})
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot update {{.Singular}}").With(
@@ -87,8 +87,8 @@ func ({{.ReceiverIdent}} {{.TypeName}}) Update(row *{{.RowType.Name}}) (int, err
 }
 {{end -}}
 {{- if .Method.Upsert}}
-// Attempt to update a {{.Singular}} row, and if it does not exist then insert it.
-func ({{.ReceiverIdent}} {{.TypeName}}) Upsert(row *{{.RowType.Name}}) error {
+// {{.Method.Upsert}} attempts to update a {{.Singular}} row, and if it does not exist then insert it.
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Upsert}}(row *{{.RowType.Name}}) error {
 	n, err := {{.ReceiverIdent}}.schema.Update({{.ReceiverIdent}}.db, row, {{.QuotedTableName}})
     if err != nil {
 		return errors.Wrap(err, "cannot update {{.Singular}} for upsert").With(
@@ -108,9 +108,9 @@ func ({{.ReceiverIdent}} {{.TypeName}}) Upsert(row *{{.RowType.Name}}) error {
 }
 {{end -}}
 {{- if .Method.Delete}}
-// Delete a {{.Singular}} row. Returns the number of rows deleted, which should
+// {{.Method.Delete}} deletes a {{.Singular}} row. Returns the number of rows deleted, which should
 // be zero or one.
-func ({{.ReceiverIdent}} {{.TypeName}}) Delete(row *{{.RowType.Name}}) (int, error) {
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Delete}}(row *{{.RowType.Name}}) (int, error) {
 	n, err := {{.ReceiverIdent}}.schema.Delete({{.ReceiverIdent}}.db, row, {{.QuotedTableName}})
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot delete {{.Singular}}").With(
