@@ -7,8 +7,8 @@ import (
 	"github.com/jjeffery/sqlrow/private/codegen/testdata/rowtype"
 )
 
-// Select a list of Row3s from an SQL query.
-func (q Row3Query) Select(query string, args ...interface{}) ([]*rowtype.Row3, error) {
+// selectRows returns a list of Row3s from an SQL query.
+func (q *Row3Query) selectRows(query string, args ...interface{}) ([]*rowtype.Row3, error) {
 	var rows []*rowtype.Row3
 	_, err := q.schema.Select(q.db, &rows, query, args...)
 	if err != nil {
@@ -20,10 +20,10 @@ func (q Row3Query) Select(query string, args ...interface{}) ([]*rowtype.Row3, e
 	return rows, nil
 }
 
-// SelectOne selects a Row3 from an SQL query. Returns nil if the query returns no rows.
+// selectOne selects a Row3 from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q Row3Query) SelectOne(query string, args ...interface{}) (*rowtype.Row3, error) {
+func (q *Row3Query) selectOne(query string, args ...interface{}) (*rowtype.Row3, error) {
 	var row rowtype.Row3
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {

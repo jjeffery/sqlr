@@ -6,8 +6,8 @@ import (
 	"github.com/jjeffery/errors"
 )
 
-// Get a document by its primary key. Returns nil if not found.
-func (q Row0Query) Get(id string) (*Row0, error) {
+// Get retrieves a document by its primary key. Returns nil if not found.
+func (q *Row0Query) Get(id string) (*Row0, error) {
 	var row Row0
 	n, err := q.schema.Select(q.db, &row, "xyz.rows", id)
 	if err != nil {
@@ -21,8 +21,8 @@ func (q Row0Query) Get(id string) (*Row0, error) {
 	return &row, nil
 }
 
-// Select a list of documents from an SQL query.
-func (q Row0Query) Select(query string, args ...interface{}) ([]*Row0, error) {
+// Select returns a list of documents from an SQL query.
+func (q *Row0Query) Select(query string, args ...interface{}) ([]*Row0, error) {
 	var rows []*Row0
 	_, err := q.schema.Select(q.db, &rows, query, args...)
 	if err != nil {
@@ -37,7 +37,7 @@ func (q Row0Query) Select(query string, args ...interface{}) ([]*Row0, error) {
 // SelectOne selects a document from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q Row0Query) SelectOne(query string, args ...interface{}) (*Row0, error) {
+func (q *Row0Query) SelectOne(query string, args ...interface{}) (*Row0, error) {
 	var row Row0
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {
@@ -52,8 +52,8 @@ func (q Row0Query) SelectOne(query string, args ...interface{}) (*Row0, error) {
 	return &row, nil
 }
 
-// Insert a document row.
-func (q Row0Query) Insert(row *Row0) error {
+// Insert inserts a document row.
+func (q *Row0Query) Insert(row *Row0) error {
 	err := q.schema.Insert(q.db, row, "xyz.rows")
 	if err != nil {
 		return errors.Wrap(err, "cannot insert document").With(
@@ -63,9 +63,9 @@ func (q Row0Query) Insert(row *Row0) error {
 	return nil
 }
 
-// Update an existing document row. Returns the number of rows updated,
+// Update updates an existing document row. Returns the number of rows updated,
 // which should be zero or one.
-func (q Row0Query) Update(row *Row0) (int, error) {
+func (q *Row0Query) Update(row *Row0) (int, error) {
 	n, err := q.schema.Update(q.db, row, "xyz.rows")
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot update document").With(
@@ -75,8 +75,8 @@ func (q Row0Query) Update(row *Row0) (int, error) {
 	return n, nil
 }
 
-// Attempt to update a document row, and if it does not exist then insert it.
-func (q Row0Query) Upsert(row *Row0) error {
+// Upsert attempts to update a document row, and if it does not exist then insert it.
+func (q *Row0Query) Upsert(row *Row0) error {
 	n, err := q.schema.Update(q.db, row, "xyz.rows")
 	if err != nil {
 		return errors.Wrap(err, "cannot update document for upsert").With(
@@ -95,9 +95,9 @@ func (q Row0Query) Upsert(row *Row0) error {
 	return nil
 }
 
-// Delete a document row. Returns the number of rows deleted, which should
+// Delete deletes a document row. Returns the number of rows deleted, which should
 // be zero or one.
-func (q Row0Query) Delete(row *Row0) (int, error) {
+func (q *Row0Query) Delete(row *Row0) (int, error) {
 	n, err := q.schema.Delete(q.db, row, "xyz.rows")
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot delete document").With(

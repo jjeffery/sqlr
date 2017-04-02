@@ -6,8 +6,8 @@ import (
 	"github.com/jjeffery/errors"
 )
 
-// Select a list of Row2s from an SQL query.
-func (q Row2Query) Select(query string, args ...interface{}) ([]*Row2, error) {
+// selectRows returns a list of Row2s from an SQL query.
+func (q *Row2Query) selectRows(query string, args ...interface{}) ([]*Row2, error) {
 	var rows []*Row2
 	_, err := q.schema.Select(q.db, &rows, query, args...)
 	if err != nil {
@@ -19,10 +19,10 @@ func (q Row2Query) Select(query string, args ...interface{}) ([]*Row2, error) {
 	return rows, nil
 }
 
-// SelectOne selects a Row2 from an SQL query. Returns nil if the query returns no rows.
+// selectOne selects a Row2 from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q Row2Query) SelectOne(query string, args ...interface{}) (*Row2, error) {
+func (q *Row2Query) selectOne(query string, args ...interface{}) (*Row2, error) {
 	var row Row2
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {

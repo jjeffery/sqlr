@@ -125,6 +125,14 @@ func Parse(filename string) (*Model, error) {
 	return model, nil
 }
 
+var dbTypeNames = map[string]bool{
+	"sqlrow.DB": true,
+	"sql.DB":    true,
+	"sql.Tx":    true,
+	"sqlx.DB":   true,
+	"sqlx.Tx":   true,
+}
+
 func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, structType *ast.StructType) (*QueryType, error) {
 	var rowTypeField *ast.Field
 	var dbField *ast.Field
@@ -133,9 +141,10 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	var tableName string
 	var singular string
 	var plural string
+	var receiverIdent string
 
-	const rowTypeFieldName = "rowType"
 	const dbTypeName = "sqlrow.DB"
+	const rowTypeFieldName = "rowType"
 	const schemaTypeName = "sqlrow.Schema"
 
 	// Use a local import resolver for resolving field type names that will not
@@ -161,8 +170,11 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 			if v := tag.Get("plural"); v != "" {
 				plural = v
 			}
+			if v := tag.Get("receiver"); v != "" {
+				receiverIdent = v
+			}
 		}
-		if fieldTypeName == dbTypeName {
+		if dbTypeNames[fieldTypeName] {
 			dbField = field
 			continue
 		}
@@ -235,6 +247,10 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		}
 	}
 
+	if receiverIdent == "" {
+		receiverIdent = inferReceiverIdent(file, typeSpec)
+	}
+
 	// at this point we have a struct that describes a query type
 	queryType := &QueryType{
 		TypeName:        typeSpec.Name.Name,
@@ -243,7 +259,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 		Plural:          plural,
 		DBField:         dbField.Names[0].Name,
 		SchemaField:     schemaField.Names[0].Name,
-		ReceiverIdent:   "q",
+		ReceiverIdent:   receiverIdent,
 	}
 	for _, method := range strings.Split(methods, ",") {
 		method = strings.TrimSpace(method)
@@ -445,4 +461,33 @@ func lowerCaseField(s string) string {
 		buf.WriteRune(ch)
 	}
 	return buf.String()
+}
+
+func inferReceiverIdent(file *ast.File, typeSpec *ast.TypeSpec) string {
+	const defaultReceiverIdent = "q"
+	localIR, err := newImportResolver(file.Imports)
+	if err != nil {
+		// should not happen
+		return defaultReceiverIdent
+	}
+	for _, decl := range file.Decls {
+		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+			if funcDecl.Recv == nil {
+				continue
+			}
+			if len(funcDecl.Recv.List) == 0 {
+				continue
+			}
+			field := funcDecl.Recv.List[0]
+			if len(field.Names) == 0 {
+				continue
+			}
+			typeName := localIR.exprString(stripTypeExpr(field.Type))
+			if typeName == typeSpec.Name.Name {
+				// found a method for the specified type: use its receiver ident
+				return field.Names[0].Name
+			}
+		}
+	}
+	return defaultReceiverIdent
 }
