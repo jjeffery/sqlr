@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -260,7 +261,7 @@ func TestRace(t *testing.T) {
 	}
 }
 
-func _TestNullable(t *testing.T) {
+func TestNullable(t *testing.T) {
 	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
@@ -272,7 +273,7 @@ func _TestNullable(t *testing.T) {
 	}
 	if _, err = db.Exec(`
 		create table nullable_types(
-			id integer not null,
+			id integer not null primary key,
 			i integer null,
 			i8 integer null,
 			i16 integer null,
@@ -287,7 +288,8 @@ func _TestNullable(t *testing.T) {
 			f32 double precision null,
 			f64 double precision null,
 			b boolean null,
-			s text null
+			s text null,
+			t timestamp with time zone null
 		);
 	`); err != nil {
 		t.Fatal(err)
@@ -299,22 +301,22 @@ func _TestNullable(t *testing.T) {
 	}
 
 	type Row struct {
-		Id   int     `sql:"primary key"`
-		I    int     `sql:"omitempty"`
-		I8   int8    `sql:"null"`
-		I16  int16   `sql:"null"`
-		I32  int32   `sql:"null"`
-		I64  int64   `sql:"null"`
-		U    uint    `sql:"null"`
-		UPtr uintptr `sql:"null"`
-		U8   uint8   `sql:"null"`
-		U16  uint16  `sql:"null"`
-		U32  uint32  `sql:"null"`
-		U64  uint64  `sql:"null"`
-		F32  float32 `sql:"null"`
-		F64  float64 `sql:"null"`
-		B    bool    `sql:"null"`
-		S    string  `sql:"null"`
+		Id  int       `sql:"primary key"`
+		I   int       `sql:"omitempty"`
+		I8  int8      `sql:"emptynull"`
+		I16 int16     `sql:"null"`
+		I32 int32     `sql:"null"`
+		I64 int64     `sql:"null"`
+		U   uint      `sql:"null"`
+		U8  uint8     `sql:"null"`
+		U16 uint16    `sql:"null"`
+		U32 uint32    `sql:"null"`
+		U64 uint64    `sql:"null"`
+		F32 float32   `sql:"null"`
+		F64 float64   `sql:"null"`
+		B   bool      `sql:"null"`
+		S   string    `sql:"null"`
+		T   time.Time `sql:"null"`
 	}
 
 	if _, err := db.Exec(`insert into nullable_types(id) values(1)`); err != nil {
@@ -348,9 +350,6 @@ func _TestNullable(t *testing.T) {
 	if got, want := row.U, uint(0); got != want {
 		t.Fatalf("want=%v, got=%v", want, got)
 	}
-	if got, want := row.UPtr, uintptr(0); got != want {
-		t.Fatalf("want=%v, got=%v", want, got)
-	}
 	if got, want := row.U8, uint8(0); got != want {
 		t.Fatalf("want=%v, got=%v", want, got)
 	}
@@ -377,10 +376,13 @@ func _TestNullable(t *testing.T) {
 	if got, want := row.S, ""; got != want {
 		t.Fatalf("want=%v, got=%v", want, got)
 	}
+	if got, want := row.T, (time.Time{}); !got.Equal(want) {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
 
 	row2 := row
 	row2.Id = 2
-	if err := schema.Insert(db, row, "nullable_types"); err != nil {
+	if err := schema.Insert(db, row2, "nullable_types"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -392,13 +394,13 @@ func _TestNullable(t *testing.T) {
 		and i32 is null
 		and i64 is null
 		and u is null
-		and uptr is null
 		and u8 is null
 		and u16 is null
 		and u32 is null
 		and u64 is null
 		and b is null
 		and s is null
+		and t is null
 	`
 	var rows []Row
 	n, err = schema.Select(db, &rows, sql)

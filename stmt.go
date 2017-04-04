@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jjeffery/sqlrow/private/column"
 	"github.com/jjeffery/sqlrow/private/scanner"
@@ -525,8 +526,9 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 				}
 			} else if input.col.EmptyNull {
 				// TODO: store zero value with the column
+				zero := reflect.Zero(colVal.Type()).Interface()
 				ival := colVal.Interface()
-				if ival == reflect.Zero(colVal.Type()) {
+				if ival == zero {
 					args = append(args, nil)
 				} else {
 					args = append(args, ival)
@@ -602,6 +604,11 @@ func (jc *jsonCell) Unmarshal() error {
 	return nil
 }
 
+var (
+	timeType = reflect.TypeOf(time.Time{})
+	timeZero = reflect.Zero(reflect.TypeOf(time.Time{}))
+)
+
 // newNullCell returns a scannable value for fields that are configured
 // so that a null value means to store an empty value. These fields should
 // have a backing field type of int, uint, bool, float or string.
@@ -609,7 +616,7 @@ func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) i
 	switch cellValue.Kind() {
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
 		return &nullIntCell{colname: colname, cellValue: cellValue}
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Uint:
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		return &nullUintCell{colname: colname, cellValue: cellValue}
 	case reflect.Float32, reflect.Float64:
 		return &nullFloatCell{colname: colname, cellValue: cellValue}
@@ -617,6 +624,11 @@ func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) i
 		return &nullBoolCell{colname: colname, cellValue: cellValue}
 	case reflect.String:
 		return &nullStringCell{colname: colname, cellValue: cellValue}
+	case reflect.Struct:
+		if cellValue.Type() == timeType {
+			return &nullTimeCell{colname: colname, cellValue: cellValue}
+		}
+		return cellPtr
 	default:
 		// other valid types include pointer and slice, which
 		// can handle a null value without resorting to reflection
@@ -732,4 +744,23 @@ func (nc *nullStringCell) Scan(v interface{}) error {
 		nc.cellValue.SetString("")
 	}
 	return nil
+}
+
+type nullTimeCell struct {
+	colname   string
+	cellValue reflect.Value
+}
+
+func (nc *nullTimeCell) Scan(v interface{}) error {
+	if v == nil {
+		nc.cellValue.Set(timeZero)
+		return nil
+	}
+	switch v.(type) {
+	case time.Time:
+		nc.cellValue.Set(reflect.ValueOf(v))
+		return nil
+	}
+
+	return fmt.Errorf("cannot scan column %q: type %q is not compatible with time.Time", nc.colname, reflect.TypeOf(v))
 }
