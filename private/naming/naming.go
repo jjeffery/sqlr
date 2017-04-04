@@ -1,5 +1,5 @@
 // Package naming is concerned with naming database tables
-// and column names.
+// and columns.
 package naming
 
 import (
