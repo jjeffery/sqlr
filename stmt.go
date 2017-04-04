@@ -226,13 +226,16 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		rowValue := reflect.Indirect(rowValuePtr)
 		var jsonCells []*jsonCell
 		for i, col := range outputs {
-			cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
+			cellValue := col.Index.ValueRW(rowValue)
+			cellPtr := cellValue.Addr().Interface()
 			if col.JSON {
-				jc := newJSONCell(col.Field.Name, cellValue)
+				jc := newJSONCell(col.Field.Name, cellPtr)
 				jsonCells = append(jsonCells, jc)
 				scanValues[i] = jc.ScanValue()
+			} else if col.EmptyNull {
+				scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
 			} else {
-				scanValues[i] = cellValue
+				scanValues[i] = cellPtr
 			}
 		}
 		err = sqlRows.Scan(scanValues...)
@@ -281,13 +284,16 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	rowCount := 1
 
 	for i, col := range outputs {
-		cellValue := col.Index.ValueRW(rowValue).Addr().Interface()
+		cellValue := col.Index.ValueRW(rowValue)
+		cellPtr := cellValue.Addr().Interface()
 		if col.JSON {
-			jc := newJSONCell(col.Field.Name, cellValue)
+			jc := newJSONCell(col.Field.Name, cellPtr)
 			jsonCells = append(jsonCells, jc)
 			scanValues[i] = jc.ScanValue()
+		} else if col.EmptyNull {
+			scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
 		} else {
-			scanValues[i] = cellValue
+			scanValues[i] = cellPtr
 		}
 	}
 	err = rows.Scan(scanValues...)
@@ -502,9 +508,10 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 
 	for _, input := range stmt.inputs {
 		if input.col != nil {
+			colVal := input.col.Index.ValueRO(rowVal)
 			if input.col.JSON {
 				// marshal field contents into JSON and pass as a byte array
-				valueRO := input.col.Index.ValueRO(rowVal).Interface()
+				valueRO := colVal.Interface()
 				if valueRO == nil {
 					args = append(args, nil)
 				} else {
@@ -516,8 +523,16 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 					}
 					args = append(args, data)
 				}
+			} else if input.col.EmptyNull {
+				// TODO: store zero value with the column
+				ival := colVal.Interface()
+				if ival == reflect.Zero(colVal.Type()) {
+					args = append(args, nil)
+				} else {
+					args = append(args, ival)
+				}
 			} else {
-				args = append(args, input.col.Index.ValueRO(rowVal).Interface())
+				args = append(args, colVal.Interface())
 			}
 		} else {
 			args = append(args, argv[input.argIndex])
@@ -583,6 +598,138 @@ func (jc *jsonCell) Unmarshal() error {
 	if err := json.Unmarshal(jc.data, jc.cellValue); err != nil {
 		// TODO(jpj): if Wrap makes it into the stdlib, use it here
 		return fmt.Errorf("cannot unmarshal JSON field %q: %v", jc.colname, err)
+	}
+	return nil
+}
+
+// newNullCell returns a scannable value for fields that are configured
+// so that a null value means to store an empty value. These fields should
+// have a backing field type of int, uint, bool, float or string.
+func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) interface{} {
+	switch cellValue.Kind() {
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+		return &nullIntCell{colname: colname, cellValue: cellValue}
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Uint:
+		return &nullUintCell{colname: colname, cellValue: cellValue}
+	case reflect.Float32, reflect.Float64:
+		return &nullFloatCell{colname: colname, cellValue: cellValue}
+	case reflect.Bool:
+		return &nullBoolCell{colname: colname, cellValue: cellValue}
+	case reflect.String:
+		return &nullStringCell{colname: colname, cellValue: cellValue}
+	default:
+		// other valid types include pointer and slice, which
+		// can handle a null value without resorting to reflection
+		return cellPtr
+	}
+}
+
+type nullIntCell struct {
+	colname   string
+	cellValue reflect.Value
+	bits      int
+}
+
+func (nc *nullIntCell) Scan(v interface{}) (err error) {
+	defer func() {
+		// handle panic if SetFloat overflows
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
+		}
+	}()
+	var nullable sql.NullInt64
+	if err = nullable.Scan(v); err != nil {
+		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
+	}
+	if nullable.Valid {
+		nc.cellValue.SetInt(nullable.Int64)
+	} else {
+		nc.cellValue.SetInt(0)
+	}
+	return nil
+}
+
+type nullUintCell struct {
+	colname   string
+	cellValue reflect.Value
+}
+
+func (nc *nullUintCell) Scan(v interface{}) (err error) {
+	defer func() {
+		// handle panic if SetFloat overflows
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
+		}
+	}()
+	var nullable sql.NullInt64
+	if err = nullable.Scan(v); err != nil {
+		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
+	}
+	if nullable.Valid {
+		nc.cellValue.SetUint(uint64(nullable.Int64))
+	} else {
+		nc.cellValue.SetUint(0)
+	}
+	return nil
+}
+
+type nullFloatCell struct {
+	colname   string
+	cellValue reflect.Value
+	bits      int
+}
+
+func (nc *nullFloatCell) Scan(v interface{}) (err error) {
+	defer func() {
+		// handle panic if SetFloat overflows
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
+		}
+	}()
+	var nullable sql.NullFloat64
+	if err := nullable.Scan(v); err != nil {
+		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
+	}
+	if nullable.Valid {
+		nc.cellValue.SetFloat(nullable.Float64)
+	} else {
+		nc.cellValue.SetFloat(0.0)
+	}
+	return nil
+}
+
+type nullBoolCell struct {
+	colname   string
+	cellValue reflect.Value
+}
+
+func (nc *nullBoolCell) Scan(v interface{}) error {
+	var nullable sql.NullBool
+	if err := nullable.Scan(v); err != nil {
+		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
+	}
+	if nullable.Valid {
+		nc.cellValue.SetBool(nullable.Bool)
+	} else {
+		nc.cellValue.SetBool(false)
+	}
+	return nil
+}
+
+type nullStringCell struct {
+	colname   string
+	cellValue reflect.Value
+}
+
+func (nc *nullStringCell) Scan(v interface{}) error {
+	var nullable sql.NullString
+	if err := nullable.Scan(v); err != nil {
+		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
+	}
+	if nullable.Valid {
+		nc.cellValue.SetString(nullable.String)
+	} else {
+		nc.cellValue.SetString("")
 	}
 	return nil
 }

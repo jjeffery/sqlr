@@ -208,6 +208,24 @@ func TestNewList(t *testing.T) {
 				},
 			},
 		},
+		{
+			row: struct {
+				ID        int    `sql:"primary key"`
+				Optional1 string `sql:"null"`
+			}{},
+			infos: []*column.Info{
+				{
+					Path:       column.NewPath("ID", ""),
+					Index:      column.NewIndex(0),
+					PrimaryKey: true,
+				},
+				{
+					Path:      column.NewPath("Optional1", ""),
+					Index:     column.NewIndex(1),
+					EmptyNull: true,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -239,6 +257,7 @@ func compareInfo(t *testing.T, info1, info2 *column.Info) {
 		!info1.Index.Equal(info2.Index) ||
 		info1.PrimaryKey != info2.PrimaryKey ||
 		info1.AutoIncrement != info2.AutoIncrement ||
+		info1.EmptyNull != info2.EmptyNull ||
 		info1.Version != info2.Version {
 		t.Errorf("expected: %#v\nactual: %#v\n", *info1, *info2)
 		t.FailNow()

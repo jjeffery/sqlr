@@ -18,6 +18,7 @@ type Info struct {
 	AutoIncrement bool
 	Version       bool
 	JSON          bool
+	EmptyNull     bool
 }
 
 func newInfo(field reflect.StructField) *Info {
@@ -56,6 +57,8 @@ func (info *Info) updateOptsFromTag() {
 				info.Version = true
 			case "json", "jsonb":
 				info.JSON = true
+			case "null", "omitempty", "emptynull":
+				info.EmptyNull = true
 			}
 		}
 	}
@@ -113,7 +116,10 @@ func newScanner(tag reflect.StructTag) *scanner.Scanner {
 				"json",
 				"jsonb",
 				"natural",
-				"natural_key")
+				"natural_key",
+				"null",
+				"omitempty",
+				"emptynull")
 			return scan
 		}
 	}

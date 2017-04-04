@@ -259,3 +259,153 @@ func TestRace(t *testing.T) {
 		}
 	}
 }
+
+func _TestNullable(t *testing.T) {
+	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec(`drop table if exists nullable_types;`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`
+		create table nullable_types(
+			id integer not null,
+			i integer null,
+			i8 integer null,
+			i16 integer null,
+			i32 integer null,
+			i64 integer null,
+			u integer null,
+			uptr integer null,
+			u8 integer null,
+			u16 integer null,
+			u32 integer null,
+			u64 integer null,
+			f32 double precision null,
+			f64 double precision null,
+			b boolean null,
+			s text null
+		);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	schema := &Schema{
+		Dialect:    DialectFor("postgres"),
+		Convention: ConventionSnake,
+	}
+
+	type Row struct {
+		Id   int     `sql:"primary key"`
+		I    int     `sql:"omitempty"`
+		I8   int8    `sql:"null"`
+		I16  int16   `sql:"null"`
+		I32  int32   `sql:"null"`
+		I64  int64   `sql:"null"`
+		U    uint    `sql:"null"`
+		UPtr uintptr `sql:"null"`
+		U8   uint8   `sql:"null"`
+		U16  uint16  `sql:"null"`
+		U32  uint32  `sql:"null"`
+		U64  uint64  `sql:"null"`
+		F32  float32 `sql:"null"`
+		F64  float64 `sql:"null"`
+		B    bool    `sql:"null"`
+		S    string  `sql:"null"`
+	}
+
+	if _, err := db.Exec(`insert into nullable_types(id) values(1)`); err != nil {
+		t.Fatal(err)
+	}
+
+	var row Row
+	n, err := schema.Select(db, &row, "select {} from nullable_types where id = $1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := n, 1; want != got {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.I, 0; got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.I8, int8(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.I16, int16(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.I32, int32(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.I64, int64(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+
+	if got, want := row.U, uint(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.UPtr, uintptr(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.U8, uint8(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.U16, uint16(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.U32, uint32(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.U64, uint64(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+
+	if got, want := row.F32, float32(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.F64, float64(0); got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+
+	if got, want := row.B, false; got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+	if got, want := row.S, ""; got != want {
+		t.Fatalf("want=%v, got=%v", want, got)
+	}
+
+	row2 := row
+	row2.Id = 2
+	if err := schema.Insert(db, row, "nullable_types"); err != nil {
+		t.Fatal(err)
+	}
+
+	const sql = `
+		select {} from nullable_types
+		where i is null
+		and i8 is null
+		and i16 is null
+		and i32 is null
+		and i64 is null
+		and u is null
+		and uptr is null
+		and u8 is null
+		and u16 is null
+		and u32 is null
+		and u64 is null
+		and b is null
+		and s is null
+	`
+	var rows []Row
+	n, err = schema.Select(db, &rows, sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := n, 2; got != want {
+		t.Errorf("want=%v, got=%v", want, got)
+	}
+}
