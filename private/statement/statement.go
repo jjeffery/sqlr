@@ -38,14 +38,10 @@ func Prepare(row interface{}, sql string) (*Stmt, error) {
 		return nil, err
 	}
 
-	// TODO: lookup cache
-
-	stmt, err := newStmt(rowType, sql)
+	stmt, err := getStmtFromCache(rowType, sql, newStmt)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: add to cache
 
 	return stmt, nil
 }
