@@ -41,27 +41,27 @@ type Schema struct {
 // Insert inserts a row. If the row has an auto-increment column
 // defined, then the generated value is retrieved and inserted into the
 // row. (If the database driver provides the necessary support).
-func (s Schema) Insert(db DB, row interface{}, sql string) error {
+func (s *Schema) Insert(db DB, row interface{}, sql string) error {
 	_, err := s.execCommon(db, row, checkSQL(sql, insertFormat), nil)
 	return err
 }
 
 // Update updates a row. Returns the number of rows affected,
 // which should be zero or one.
-func (s Schema) Update(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
+func (s *Schema) Update(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
 	return s.execCommon(db, row, checkSQL(sql, updateFormat), args)
 }
 
 // Delete deletes a row. Returns the number of rows affected,
 // which should be zero or one.
-func (s Schema) Delete(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
+func (s *Schema) Delete(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
 	return s.execCommon(db, row, checkSQL(sql, deleteFormat), args)
 }
 
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
-func (s Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
+func (s *Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
 	rowType, err := inferRowType(row, "row")
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (s Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
 //
 // Select returns the number of rows returned by the SELECT
 // query.
-func (s Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
+func (s *Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
 	sql = checkSQL(sql, selectFormat)
 	rowType, err := inferRowType(rows, "rows")
 	if err != nil {
@@ -99,7 +99,7 @@ func (s Schema) Select(db DB, rows interface{}, sql string, args ...interface{})
 	return stmt.Select(db, rows, args...)
 }
 
-func (s Schema) dialect() Dialect {
+func (s *Schema) dialect() Dialect {
 	if s.Dialect != nil {
 		return s.Dialect
 	}
@@ -109,7 +109,7 @@ func (s Schema) dialect() Dialect {
 	return dialect.For("default")
 }
 
-func (s Schema) convention() Convention {
+func (s *Schema) convention() Convention {
 	if s.Convention != nil {
 		return s.Convention
 	}
@@ -119,7 +119,7 @@ func (s Schema) convention() Convention {
 	return naming.Snake
 }
 
-func (s Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
+func (s *Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
 	rowType, err := inferRowType(row, "row")
 	if err != nil {
 		return 0, err
