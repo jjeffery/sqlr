@@ -10,9 +10,9 @@ import (
 
 func TestNewList(t *testing.T) {
 	type Common struct {
-		ID        int64     `sql:",pk"`
-		Version   int64     `sql:",version"`
-		UpdatedAt time.Time `sql:"updated_at"`
+		ID        int64 `sql:",pk"`
+		Version   int64 `sql:",version"`
+		UpdatedAt time.Time
 	}
 	tests := []struct {
 		row   interface{}
@@ -41,12 +41,12 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:       column.NewPath("ID", ""),
-					Index:      column.NewIndex(0),
-					PrimaryKey: true,
+					Path:  column.NewPath("ID", `sql:",primary key"`),
+					Index: column.NewIndex(0),
+					Tag:   column.TagInfo{PrimaryKey: true},
 				},
 				{
-					Path:  column.NewPath("Name", "primary"),
+					Path:  column.NewPath("Name", `sql:"'primary' key"`),
 					Index: column.NewIndex(1),
 				},
 			},
@@ -58,13 +58,15 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:          column.NewPath("ID", ""),
-					Index:         column.NewIndex(0),
-					PrimaryKey:    true,
-					AutoIncrement: true,
+					Path:  column.NewPath("ID", `sql:",primary key identity"`),
+					Index: column.NewIndex(0),
+					Tag: column.TagInfo{
+						PrimaryKey:    true,
+						AutoIncrement: true,
+					},
 				},
 				{
-					Path:  column.NewPath("Name", ""),
+					Path:  column.NewPath("Name", `sql:""`),
 					Index: column.NewIndex(1),
 				},
 			},
@@ -76,13 +78,15 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:          column.NewPath("ID", ""),
-					Index:         column.NewIndex(0),
-					PrimaryKey:    true,
-					AutoIncrement: true,
+					Path:  column.NewPath("ID", `sql:"primary key auto increment"`),
+					Index: column.NewIndex(0),
+					Tag: column.TagInfo{
+						PrimaryKey:    true,
+						AutoIncrement: true,
+					},
 				},
 				{
-					Path:  column.NewPath("Name", "primary"),
+					Path:  column.NewPath("Name", `sql:"[primary] key"`),
 					Index: column.NewIndex(1),
 				},
 			},
@@ -99,10 +103,12 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:          column.NewPath("ID", ""),
-					Index:         column.NewIndex(0),
-					PrimaryKey:    true,
-					AutoIncrement: true,
+					Path:  column.NewPath("ID", `sql:",pk autoincr"`),
+					Index: column.NewIndex(0),
+					Tag: column.TagInfo{
+						PrimaryKey:    true,
+						AutoIncrement: true,
+					},
 				},
 				{
 					Path:  column.NewPath("Name", ""),
@@ -138,10 +144,12 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:          column.NewPath("ID", ""),
-					Index:         column.NewIndex(0),
-					PrimaryKey:    true,
-					AutoIncrement: true,
+					Path:  column.NewPath("ID", `sql:",pk autoincr"`),
+					Index: column.NewIndex(0),
+					Tag: column.TagInfo{
+						PrimaryKey:    true,
+						AutoIncrement: true,
+					},
 				},
 				{
 					Path: column.NewPath("Address", "").
@@ -172,17 +180,17 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:       column.NewPath("ID", ""),
-					Index:      column.NewIndex(0, 0),
-					PrimaryKey: true,
+					Path:  column.NewPath("ID", `sql:",pk"`),
+					Index: column.NewIndex(0, 0),
+					Tag:   column.TagInfo{PrimaryKey: true},
 				},
 				{
-					Path:    column.NewPath("Version", ""),
-					Index:   column.NewIndex(0, 1),
-					Version: true,
+					Path:  column.NewPath("Version", `sql:",version"`),
+					Index: column.NewIndex(0, 1),
+					Tag:   column.TagInfo{Version: true},
 				},
 				{
-					Path:  column.NewPath("UpdatedAt", "updated_at"),
+					Path:  column.NewPath("UpdatedAt", ``),
 					Index: column.NewIndex(0, 2),
 				},
 				{
@@ -215,22 +223,26 @@ func TestNewList(t *testing.T) {
 			}{},
 			infos: []*column.Info{
 				{
-					Path:       column.NewPath("ID", ""),
-					Index:      column.NewIndex(0),
-					PrimaryKey: true,
+					Path:  column.NewPath("ID", `sql:"primary key"`),
+					Index: column.NewIndex(0),
+					Tag: column.TagInfo{
+						PrimaryKey: true,
+					},
 				},
 				{
-					Path:      column.NewPath("Optional1", ""),
-					Index:     column.NewIndex(1),
-					EmptyNull: true,
+					Path:  column.NewPath("Optional1", `sql:"null"`),
+					Index: column.NewIndex(1),
+					Tag: column.TagInfo{
+						EmptyNull: true,
+					},
 				},
 			},
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		infos := column.ListForType(reflect.TypeOf(tt.row))
-		compareInfos(t, tt.infos, infos)
+		compareInfos(t, i, tt.infos, infos)
 	}
 
 	// test that lists cache
@@ -241,25 +253,25 @@ func TestNewList(t *testing.T) {
 	}
 }
 
-func compareInfos(t *testing.T, expected, actual []*column.Info) {
+func compareInfos(t *testing.T, testCase int, expected, actual []*column.Info) {
 	if len(expected) != len(actual) {
-		t.Errorf("expected len=%d, actual len=%d", len(expected), len(actual))
+		t.Errorf("%d: expected len=%d, actual len=%d", testCase, len(expected), len(actual))
 		t.FailNow()
 	}
 	for i, expect := range expected {
 		act := actual[i]
-		compareInfo(t, expect, act)
+		compareInfo(t, testCase, i, expect, act)
 	}
 }
 
-func compareInfo(t *testing.T, info1, info2 *column.Info) {
+func compareInfo(t *testing.T, testCase int, index int, info1, info2 *column.Info) {
 	if !info1.Path.Equal(info2.Path) ||
 		!info1.Index.Equal(info2.Index) ||
-		info1.PrimaryKey != info2.PrimaryKey ||
-		info1.AutoIncrement != info2.AutoIncrement ||
-		info1.EmptyNull != info2.EmptyNull ||
-		info1.Version != info2.Version {
-		t.Errorf("expected: %#v\nactual: %#v\n", *info1, *info2)
+		info1.Tag.PrimaryKey != info2.Tag.PrimaryKey ||
+		info1.Tag.AutoIncrement != info2.Tag.AutoIncrement ||
+		info1.Tag.EmptyNull != info2.Tag.EmptyNull ||
+		info1.Tag.Version != info2.Tag.Version {
+		t.Errorf("%d/%d: expected: %#v\nactual: %#v\n", testCase, index, *info1, *info2)
 		t.FailNow()
 	}
 

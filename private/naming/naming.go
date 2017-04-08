@@ -15,9 +15,9 @@ var Snake Convention
 
 func init() {
 	Snake = Convention{
-		name:       "snake",
-		columnName: toSnakeCase,
-		join:       joinSnake,
+		key:     "snake",
+		convert: toSnakeCase,
+		join:    joinSnake,
 	}
 }
 
@@ -27,9 +27,9 @@ var Same Convention
 
 func init() {
 	Same = Convention{
-		name:       "same",
-		columnName: columnNameSame,
-		join:       joinSame,
+		key:     "same",
+		convert: convertToSame,
+		join:    joinSame,
 	}
 }
 
@@ -40,48 +40,40 @@ var Lower Convention
 
 func init() {
 	Lower = Convention{
-		name:       "lower",
-		columnName: columnNameLower,
-		join:       joinSame,
+		key:     "lower",
+		convert: convertToLower,
+		join:    joinSame,
 	}
 }
 
 // A Convention provides a naming convention for
 // inferring database column names from Go struct field names.
 type Convention struct {
-	name       string
-	columnName func(string) string
-	join       func(string, string) string
+	key     string
+	convert func(string) string
+	join    func([]string) string
 }
 
-// Name returns the name of the convention.
-func (c Convention) Name() string {
-	return c.name
+// Key returns the key that describes the convention.
+// This key is used to locate the struct tag key value.
+func (c Convention) Key() string {
+	return c.key
 }
 
-// ColumnName converts a Go struct field name to a database
-// column name.
-func (c Convention) ColumnName(fieldName string) string {
-	return c.columnName(fieldName)
+// Convert converts a Go struct field name according to the naming convention.
+func (c Convention) Convert(fieldName string) string {
+	return c.convert(fieldName)
 }
 
 // Join the prefix string to the name to form a column name.
 // Used for inferring the database column name for fields
 // within embedded structs.
-func (c Convention) Join(prefix, name string) string {
-	return c.join(prefix, name)
+func (c Convention) Join(names []string) string {
+	return c.join(names)
 }
 
-func joinSnake(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	if name == "" {
-		return prefix
-	}
-	return strings.TrimSuffix(prefix, "_") +
-		"_" +
-		strings.TrimPrefix(name, "_")
+func joinSnake(names []string) string {
+	return strings.Join(names, "_")
 }
 
 func toSnakeCase(name string) string {
@@ -99,14 +91,14 @@ func toSnakeCase(name string) string {
 	return buf.String()
 }
 
-func columnNameSame(fieldName string) string {
+func convertToSame(fieldName string) string {
 	return fieldName
 }
 
-func joinSame(prefix, name string) string {
-	return prefix + name
+func joinSame(names []string) string {
+	return strings.Join(names, "")
 }
 
-func columnNameLower(fieldName string) string {
+func convertToLower(fieldName string) string {
 	return strings.ToLower(fieldName)
 }

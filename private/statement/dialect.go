@@ -1,6 +1,10 @@
 package statement
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/jjeffery/sqlrow/private/column"
+)
 
 // Dialect is an interface used to handle differences in SQL dialects.
 type Dialect interface {
@@ -8,10 +12,9 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// ColumnNamer provides column names based on the structure field name.
-// Multiple field names indicate one or more embedded structures.
+// ColumnNamer provides the column name for a column.
 type ColumnNamer interface {
-	ColumnName(fields ...string) string
+	ColumnName(*column.Info) string
 }
 
 type Execer interface {

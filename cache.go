@@ -35,7 +35,7 @@ func getStmtFromCache(dialect Dialect, convention Convention, rowType reflect.Ty
 	var err error
 	key := stmtKey{
 		dialectName:    dialect.Name(),
-		conventionName: convention.Name(),
+		conventionName: convention.Key(),
 		rowType:        rowType,
 		sql:            sql,
 	}

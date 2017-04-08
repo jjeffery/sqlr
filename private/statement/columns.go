@@ -123,31 +123,19 @@ func columnFilterAll(col *column.Info) bool {
 }
 
 func columnFilterPK(col *column.Info) bool {
-	return col.PrimaryKey
+	return col.Tag.PrimaryKey
 }
 
 func columnFilterInsertable(col *column.Info) bool {
-	return !col.AutoIncrement
+	return !col.Tag.AutoIncrement
 }
 
 func columnFilterUpdateable(col *column.Info) bool {
-	return !col.PrimaryKey && !col.AutoIncrement
+	return !col.Tag.PrimaryKey && !col.Tag.AutoIncrement
 }
 
 func columnNameFromInfo(info *column.Info, columnNamer ColumnNamer) string {
-	var path = info.Path
-	names := make([]string, len(path))
-
-	for i, field := range path {
-		name := field.ColumnName
-		if name == "" {
-			name = field.FieldName
-		}
-		names[i] = name
-	}
-
-	columnName := columnNamer.ColumnName(names...)
-	return columnName
+	return columnNamer.ColumnName(info)
 }
 
 func quotedColumnName(info *column.Info, dialect Dialect, columnNamer ColumnNamer) string {

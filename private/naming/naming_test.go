@@ -9,14 +9,15 @@ func Example() {
 	conventions := []Convention{Snake, Same, Lower}
 
 	for _, convention := range conventions {
-		fmt.Printf("\n%s convention:\n\n", convention.Name())
-		fmt.Println(convention.ColumnName("UserID"))
-		fmt.Println(convention.ColumnName("HomeAddress"))
-		fmt.Println(convention.ColumnName("StreetName"))
-		fmt.Println(convention.Join(
-			convention.ColumnName("HomeAddress"),
-			convention.ColumnName("StreetName")))
-		fmt.Println(convention.ColumnName("HTMLElement"))
+		fmt.Printf("\n%s convention:\n\n", convention.Key())
+		fmt.Println(convention.Convert("UserID"))
+		fmt.Println(convention.Convert("HomeAddress"))
+		fmt.Println(convention.Convert("StreetName"))
+		fmt.Println(convention.Join([]string{
+			convention.Convert("HomeAddress"),
+			convention.Convert("StreetName"),
+		}))
+		fmt.Println(convention.Convert("HTMLElement"))
 	}
 
 	// Output:
@@ -48,27 +49,21 @@ func Example() {
 
 func TestSnakeJoin(t *testing.T) {
 	tests := []struct {
-		prefix, name, expected string
+		names    []string
+		expected string
 	}{
 		{
-			prefix:   "",
-			name:     "name",
+			names:    []string{"name"},
 			expected: "name",
 		},
 		{
-			prefix:   "prefix",
-			name:     "",
-			expected: "prefix",
-		},
-		{
-			prefix:   "prefix",
-			name:     "name",
-			expected: "prefix_name",
+			names:    []string{"name1", "name2"},
+			expected: "name1_name2",
 		},
 	}
 
 	for _, tt := range tests {
-		actual := Snake.Join(tt.prefix, tt.name)
+		actual := Snake.Join(tt.names)
 		if actual != tt.expected {
 			t.Errorf("expected=%q, actual=%q", tt.expected, actual)
 		}

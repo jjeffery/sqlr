@@ -3,6 +3,7 @@ package column
 import (
 	"database/sql"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,10 +63,13 @@ func (list *columnList) addFields(rowType reflect.Type, state stateT) {
 }
 
 func (list *columnList) addField(field reflect.StructField, i int, state stateT) {
-	columnName := columnNameFromTag(field.Tag)
-	if columnName == "-" {
-		// ignore field marked as not a column
-		return
+	// Search for a key in the struct tag that starts with "-", which indicates
+	// that the field should not be mapped to a column. Eg `sql:"-"`
+	for _, key := range structTagKeys {
+		if value := field.Tag.Get(key); strings.HasPrefix(value, "-") {
+			// ignore field marked as not a column
+			return
+		}
 	}
 
 	if len(field.PkgPath) != 0 && !field.Anonymous {
@@ -91,7 +95,7 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 	info := newInfo(field)
 
 	// Ignore certain types unless they are marked as JSON serialized.
-	if !info.JSON {
+	if !info.Tag.JSON {
 		// ignore fields that are arrays, interfaces, maps
 		switch fieldType.Kind() {
 		case reflect.Array, reflect.Interface, reflect.Map:
@@ -116,7 +120,7 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 	// The field is not anonymous, and is not ignored, so it
 	// is either a field assocated with a column, or a struct
 	// with embedded fields.
-	state.path = state.path.Append(field.Name, columnName)
+	state.path = state.path.Append(field.Name, field.Tag)
 
 	// An embedded structure will not be mapped recursively if it meets
 	// any of the following criteria:
@@ -128,7 +132,7 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 		fieldType != timeType &&
 		!fieldType.Implements(sqlScanType) &&
 		!reflect.PtrTo(fieldType).Implements(sqlScanType) &&
-		!info.JSON {
+		!info.Tag.JSON {
 		list.addFields(fieldType, state)
 		return
 	}

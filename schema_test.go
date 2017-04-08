@@ -47,7 +47,7 @@ func TestSchemaDefaults(t *testing.T) {
 			Convention: tt.schemaConvention,
 			Dialect:    tt.schemaDialect,
 		}
-		if schema.convention().ColumnName("XyzAbc") != tt.expectedConvention.ColumnName("XyzAbc") {
+		if schema.convention().Convert("XyzAbc") != tt.expectedConvention.Convert("XyzAbc") {
 			t.Errorf("unexpected convention: %v, %v", schema.convention(), tt.expectedConvention)
 		}
 		if schema.dialect().Name() != tt.expectedDialect.Name() {

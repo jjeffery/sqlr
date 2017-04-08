@@ -132,33 +132,19 @@ func columnFilterAll(col *column.Info) bool {
 }
 
 func columnFilterPK(col *column.Info) bool {
-	return col.PrimaryKey
+	return col.Tag.PrimaryKey
 }
 
 func columnFilterInsertable(col *column.Info) bool {
-	return !col.AutoIncrement
+	return !col.Tag.AutoIncrement
 }
 
 func columnFilterUpdateable(col *column.Info) bool {
-	return !col.PrimaryKey && !col.AutoIncrement
+	return !col.Tag.PrimaryKey && !col.Tag.AutoIncrement
 }
 
 // columnNameForConvention returns the column name for the column when
 // using the specified convention.
 func columnNameForConvention(info *column.Info, convention Convention) string {
-	var path = info.Path
-	var columnName string
-
-	for _, field := range path {
-		name := field.ColumnName
-		if name == "" {
-			name = convention.ColumnName(field.FieldName)
-		}
-		if columnName == "" {
-			columnName = name
-		} else {
-			columnName = convention.Join(columnName, name)
-		}
-	}
-	return columnName
+	return info.Path.ColumnName(convention)
 }

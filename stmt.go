@@ -69,7 +69,7 @@ func newStmt(dialect Dialect, convention Convention, rowType reflect.Type, sql s
 
 	if stmt.queryType == queryInsert {
 		for _, col := range stmt.columns {
-			if col.AutoIncrement {
+			if col.Tag.AutoIncrement {
 				stmt.autoIncrColumn = col
 				// TODO: return an error if col is not an integer type
 				break
@@ -229,11 +229,11 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		for i, col := range outputs {
 			cellValue := col.Index.ValueRW(rowValue)
 			cellPtr := cellValue.Addr().Interface()
-			if col.JSON {
+			if col.Tag.JSON {
 				jc := newJSONCell(col.Field.Name, cellPtr)
 				jsonCells = append(jsonCells, jc)
 				scanValues[i] = jc.ScanValue()
-			} else if col.EmptyNull {
+			} else if col.Tag.EmptyNull {
 				scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
 			} else {
 				scanValues[i] = cellPtr
@@ -287,11 +287,11 @@ func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, arg
 	for i, col := range outputs {
 		cellValue := col.Index.ValueRW(rowValue)
 		cellPtr := cellValue.Addr().Interface()
-		if col.JSON {
+		if col.Tag.JSON {
 			jc := newJSONCell(col.Field.Name, cellPtr)
 			jsonCells = append(jsonCells, jc)
 			scanValues[i] = jc.ScanValue()
-		} else if col.EmptyNull {
+		} else if col.Tag.EmptyNull {
 			scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
 		} else {
 			scanValues[i] = cellPtr
@@ -510,7 +510,7 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 	for _, input := range stmt.inputs {
 		if input.col != nil {
 			colVal := input.col.Index.ValueRO(rowVal)
-			if input.col.JSON {
+			if input.col.Tag.JSON {
 				// marshal field contents into JSON and pass as a byte array
 				valueRO := colVal.Interface()
 				if valueRO == nil {
@@ -524,7 +524,7 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 					}
 					args = append(args, data)
 				}
-			} else if input.col.EmptyNull {
+			} else if input.col.Tag.EmptyNull {
 				// TODO: store zero value with the column
 				zero := reflect.Zero(colVal.Type()).Interface()
 				ival := colVal.Interface()

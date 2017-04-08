@@ -11,119 +11,60 @@ import (
 // column that has been extracted from a struct field
 // using reflection.
 type Info struct {
-	Field         reflect.StructField
-	Index         Index
-	Path          Path
-	PrimaryKey    bool
-	AutoIncrement bool
-	Version       bool
-	JSON          bool
-	EmptyNull     bool
+	Field      reflect.StructField
+	Index      Index
+	Path       Path
+	FieldNames string  // one or more field names, joined by periods
+	Tag        TagInfo // meta data from the struct field tag
+	/*
+		PrimaryKey    bool
+		AutoIncrement bool
+		Version       bool
+		JSON          bool
+		EmptyNull     bool
+	*/
 }
 
 func newInfo(field reflect.StructField) *Info {
 	info := &Info{
 		Field: field,
+		Tag:   ParseTag(field.Tag),
 	}
-	info.updateOptsFromTag()
 	return info
-}
-
-func (info *Info) updateOptsFromTag() {
-	scan := newScanner(info.Field.Tag)
-	if scan == nil {
-		return
-	}
-	for scan.Scan() {
-		tok, lit := scan.Token(), scan.Text()
-		switch tok {
-		case scanner.KEYWORD:
-			switch strings.ToLower(lit) {
-			case "pk", "primary_key":
-				info.PrimaryKey = true
-			case "autoincrement", "autoincr":
-				info.AutoIncrement = true
-			case "primary":
-				if scan.Scan(); strings.ToLower(scan.Text()) == "key" {
-					info.PrimaryKey = true
-				}
-			case "auto":
-				if scan.Scan(); strings.ToLower(scan.Text()) == "increment" {
-					info.AutoIncrement = true
-				}
-			case "identity":
-				info.AutoIncrement = true
-			case "version":
-				info.Version = true
-			case "json", "jsonb":
-				info.JSON = true
-			case "null", "omitempty", "emptynull":
-				info.EmptyNull = true
-			}
-		}
-	}
-}
-
-// columnNameFromTag returns the column name from the field tag,
-// or the empty string if none specified.
-func columnNameFromTag(tags reflect.StructTag) string {
-	scan := newScanner(tags)
-	if scan == nil {
-		return ""
-	}
-	for scan.Scan() {
-		tok, lit := scan.Token(), scan.Text()
-		switch tok {
-		case scanner.KEYWORD:
-			// exit on first keyword, no column specified
-			return ""
-		case scanner.IDENT:
-			// first identifier indicates the column name, and
-			// may be quoted
-			return scanner.Unquote(lit)
-		case scanner.LITERAL:
-			if scanner.IsQuoted(lit) {
-				// a string literal is accepted as the column name
-				return scanner.Unquote(lit)
-			}
-		case scanner.OP:
-			if lit == "-" {
-				// indicates should not be a column
-				return lit
-			}
-		}
-	}
-	return ""
 }
 
 // newScanner returns a scanner for reading the contents of the struct tag.
 // Returns nil if there is no appropriate struct tag to read.
 func newScanner(tag reflect.StructTag) *scanner.Scanner {
-	for _, key := range []string{"sqlrow", "sql"} {
+	for _, key := range structTagKeys {
 		str := strings.TrimSpace(tag.Get(key))
 		if str != "" {
-			scan := scanner.New(strings.NewReader(str))
-			scan.IgnoreWhiteSpace = true
-			scan.AddKeywords(
-				"pk",
-				"primary_key",
-				"primary",
-				"autoincrement",
-				"autoincr",
-				"auto",
-				"identity",
-				"version",
-				"json",
-				"jsonb",
-				"natural",
-				"natural_key",
-				"null",
-				"omitempty",
-				"emptynull")
-			return scan
+			return newScannerForString(str)
 		}
 	}
 	return nil
+}
+
+func newScannerForString(str string) *scanner.Scanner {
+	scan := scanner.New(strings.NewReader(str))
+	scan.IgnoreWhiteSpace = true
+	scan.AddKeywords(
+		"pk",
+		"primary_key",
+		"primary",
+		"autoincrement",
+		"autoincr",
+		"auto",
+		"identity",
+		"version",
+		"json",
+		"jsonb",
+		"natural",
+		"natural_key",
+		"null",
+		"omitempty",
+		"emptynull")
+	return scan
 }
 
 // TagInfo is information obtained about a column from the
@@ -136,6 +77,7 @@ type TagInfo struct {
 	Version       bool
 	JSON          bool
 	NaturalKey    bool
+	EmptyNull     bool
 }
 
 // ParseTag returns a TagInfo containing information obtained from the
@@ -178,6 +120,8 @@ func ParseTag(tag reflect.StructTag) TagInfo {
 				if scan.Scan(); strings.ToLower(scan.Text()) == "key" {
 					tagInfo.NaturalKey = true
 				}
+			case "null", "omitempty", "emptynull":
+				tagInfo.EmptyNull = true
 			}
 		case scanner.IDENT:
 			if !hadKeyword && tagInfo.Name == "" {
