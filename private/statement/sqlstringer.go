@@ -1,6 +1,10 @@
 package statement
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/jjeffery/sqlrow/private/column"
+)
 
 // sqlStringer produces a fragment of SQL given a dialect and a column naming convention.
 type sqlStringer interface {
@@ -51,11 +55,11 @@ func (b *sqlStringerBuf) WritePlaceholder(position int) {
 	b.fragments = append(b.fragments, sqlPlaceholderFrag(position))
 }
 
-func (b *sqlStringerBuf) WriteColumns(cols columnsT) {
+func (b *sqlStringerBuf) WriteColumn(col *column.Info) {
 	if b.flush() != nil {
 		return
 	}
-	b.fragments = append(b.fragments, cols)
+	b.fragments = append(b.fragments, sqlColumnFrag{col: col})
 }
 
 func (b *sqlStringerBuf) WriteQuoted(lit string) {
@@ -93,6 +97,14 @@ type sqlQuoteFrag string
 
 func (f sqlQuoteFrag) SQLString(dialect Dialect, columnNamer ColumnNamer) string {
 	return dialect.Quote(string(f))
+}
+
+type sqlColumnFrag struct {
+	col *column.Info
+}
+
+func (f sqlColumnFrag) SQLString(dialect Dialect, columnNamer ColumnNamer) string {
+	return dialect.Quote(columnNamer.ColumnName(f.col))
 }
 
 // sqlFrags is an SQL stringer consisting of a list of SQL stringers to be

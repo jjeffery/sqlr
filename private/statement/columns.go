@@ -1,7 +1,6 @@
 package statement
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -24,10 +23,9 @@ type columnsT struct {
 	alias      string
 }
 
-func newColumns(allColumns []*column.Info, counter func() int) columnsT {
+func newColumns(allColumns []*column.Info) columnsT {
 	return columnsT{
 		allColumns: allColumns,
-		counter:    counter,
 		clause:     clauseSelectColumns,
 	}
 }
@@ -71,8 +69,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 // String returns a string representation of the columns.
 // The string returned depends on the SQL clause in which the
 // columns appear.
-func (cols columnsT) SQLString(dialect Dialect, columnNamer ColumnNamer) string {
-	var buf bytes.Buffer
+func (cols columnsT) writeToBuf(buf *sqlStringerBuf, counter func() int) {
 	for i, col := range cols.filtered() {
 		if i > 0 {
 			if cols.clause.matchAny(
@@ -90,22 +87,21 @@ func (cols columnsT) SQLString(dialect Dialect, columnNamer ColumnNamer) string 
 				buf.WriteString(cols.alias)
 				buf.WriteRune('.')
 			}
-			buf.WriteString(quotedColumnName(col, dialect, columnNamer))
+			buf.WriteColumn(col)
 		case clauseInsertColumns:
-			buf.WriteString(quotedColumnName(col, dialect, columnNamer))
+			buf.WriteColumn(col)
 		case clauseInsertValues:
-			buf.WriteString(dialect.Placeholder(cols.counter()))
+			buf.WritePlaceholder(counter())
 		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere, clauseSelectWhere:
 			if cols.alias != "" {
 				buf.WriteString(cols.alias)
 				buf.WriteRune('.')
 			}
-			buf.WriteString(quotedColumnName(col, dialect, columnNamer))
+			buf.WriteColumn(col)
 			buf.WriteRune('=')
-			buf.WriteString(dialect.Placeholder(cols.counter()))
+			buf.WritePlaceholder(counter())
 		}
 	}
-	return buf.String()
 }
 
 func (cols columnsT) filtered() []*column.Info {

@@ -124,7 +124,7 @@ func newStmt(rowType reflect.Type, sql string) (*Stmt, error) {
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column as long as
 // the SQL driver supports this functionality.
-func (stmt *Stmt) Exec(db Execer, dialect Dialect, columnNamer ColumnNamer, row interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Exec(db Execer, dialect Dialect, columnNamer ColumnNamer, row interface{}, args []interface{}) (int, error) {
 	if stmt.queryType == querySelect {
 		return 0, errors.New("attempt to call Exec on select statement")
 	}
@@ -177,13 +177,18 @@ func (stmt *Stmt) Exec(db Execer, dialect Dialect, columnNamer ColumnNamer, row 
 	return int(rowsAffected), nil
 }
 
+// SQLString returns the query SQL for the given dialect and column namer.
+func (stmt *Stmt) SQLString(dialect Dialect, columnNamer ColumnNamer) string {
+	return stmt.query.SQLString(dialect, columnNamer)
+}
+
 // Select executes the prepared query statement with the given arguments and
 // returns the query results in rows. If rows is a pointer to a slice of structs
 // then one item is added to the slice for each row returned by the query. If row
 // is a pointer to a struct then that struct is filled with the result of the first
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
-func (stmt *Stmt) Select(db Queryer, dialect Dialect, columnNamer ColumnNamer, rows interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Select(db Queryer, dialect Dialect, columnNamer ColumnNamer, rows interface{}, args []interface{}) (int, error) {
 	if rows == nil {
 		return 0, errors.New("nil pointer")
 	}
@@ -451,7 +456,7 @@ func (stmt *Stmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
 	var counter counterT
-	columns := newColumns(stmt.columns, counter.Next)
+	columns := newColumns(stmt.columns)
 	var insertColumns *columnsT
 	var clause sqlClause
 	var buf sqlStringerBuf
@@ -491,14 +496,14 @@ func (stmt *Stmt) scanSQL(query string) error {
 					// change the clause but keep the filter and generate string
 					cols := *insertColumns
 					cols.clause = clause
-					buf.WriteColumns(cols)
+					cols.writeToBuf(&buf, counter.Next)
 					stmt.addColumns(cols)
 				} else {
 					cols, err := columns.Parse(clause, lit)
 					if err != nil {
 						return fmt.Errorf("cannot expand %q in %q clause: %v", lit, clause, err)
 					}
-					buf.WriteColumns(cols)
+					cols.writeToBuf(&buf, counter.Next)
 					stmt.addColumns(cols)
 					if clause == clauseInsertColumns {
 						insertColumns = &cols
