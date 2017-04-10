@@ -16,6 +16,7 @@ install:
   - go get github.com/jjeffery/errors
   - go get github.com/lib/pq
   - go get github.com/mattn/go-sqlite3
+  - go get gopkg.in/DATA-DOG/go-sqlmock.v1
   - go get github.com/spf13/pflag
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
