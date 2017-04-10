@@ -6,10 +6,15 @@ import (
 )
 
 func Example() {
-	conventions := []Convention{Snake, Same, Lower}
+	type convention interface {
+		Convert(string) string
+		Join([]string) string
+	}
+	conventions := []convention{SnakeCase, SameCase, LowerCase}
+	names := []string{"snake case", "same case", "lower case"}
 
-	for _, convention := range conventions {
-		fmt.Printf("\n%s convention:\n\n", convention.Key())
+	for i, convention := range conventions {
+		fmt.Printf("\n%s:\n\n", names[i])
 		fmt.Println(convention.Convert("UserID"))
 		fmt.Println(convention.Convert("HomeAddress"))
 		fmt.Println(convention.Convert("StreetName"))
@@ -22,7 +27,7 @@ func Example() {
 
 	// Output:
 	//
-	// snake convention:
+	// snake case:
 	//
 	// user_id
 	// home_address
@@ -30,7 +35,7 @@ func Example() {
 	// home_address_street_name
 	// html_element
 	//
-	// same convention:
+	// same case:
 	//
 	// UserID
 	// HomeAddress
@@ -38,7 +43,7 @@ func Example() {
 	// HomeAddressStreetName
 	// HTMLElement
 	//
-	// lower convention:
+	// lower case:
 	//
 	// userid
 	// homeaddress
@@ -63,9 +68,8 @@ func TestSnakeJoin(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		actual := Snake.Join(tt.names)
-		if actual != tt.expected {
-			t.Errorf("expected=%q, actual=%q", tt.expected, actual)
+		if want, got := tt.expected, SnakeCase.Join(tt.names); want != got {
+			t.Errorf("expected=%q, actual=%q", want, got)
 		}
 	}
 }

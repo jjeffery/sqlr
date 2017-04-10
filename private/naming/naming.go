@@ -1,5 +1,5 @@
-// Package naming is concerned with naming database tables
-// and columns.
+// Package naming provides naming conventions used to convert
+// Go struct field names to database columns.
 package naming
 
 import (
@@ -8,75 +8,19 @@ import (
 	"unicode"
 )
 
-// Snake is the default convention, converting Go struct field
-// names into "snake case". So the field name "UserID" would be
-// converted to "user_id".
-var Snake Convention
+// Instances of the different naming conventions
+var (
+	SnakeCase SnakeCaseConvention
+	LowerCase LowerCaseConvention
+	SameCase  SameCaseConvention
+)
 
-func init() {
-	Snake = Convention{
-		key:     "snake",
-		convert: toSnakeCase,
-		join:    joinSnake,
-	}
-}
+// SnakeCaseConvention converts Go struct fields into "snake_case".
+// So the field name "UserID" would be converted to "user_id".
+type SnakeCaseConvention struct{}
 
-// Same is an alternative convention, where the database column
-// name is identical to the field name.
-var Same Convention
-
-func init() {
-	Same = Convention{
-		key:     "same",
-		convert: convertToSame,
-		join:    joinSame,
-	}
-}
-
-// Lower is an alternative convention, where the database column name
-// is the lower case of the field name. This convention is useful with
-// PostgreSQL.
-var Lower Convention
-
-func init() {
-	Lower = Convention{
-		key:     "lower",
-		convert: convertToLower,
-		join:    joinSame,
-	}
-}
-
-// A Convention provides a naming convention for
-// inferring database column names from Go struct field names.
-type Convention struct {
-	key     string
-	convert func(string) string
-	join    func([]string) string
-}
-
-// Key returns the key that describes the convention.
-// This key is used to locate the struct tag key value.
-func (c Convention) Key() string {
-	return c.key
-}
-
-// Convert converts a Go struct field name according to the naming convention.
-func (c Convention) Convert(fieldName string) string {
-	return c.convert(fieldName)
-}
-
-// Join the prefix string to the name to form a column name.
-// Used for inferring the database column name for fields
-// within embedded structs.
-func (c Convention) Join(names []string) string {
-	return c.join(names)
-}
-
-func joinSnake(names []string) string {
-	return strings.Join(names, "_")
-}
-
-func toSnakeCase(name string) string {
+// Convert converts fieldName into snake_case.
+func (sc SnakeCaseConvention) Convert(name string) string {
 	runes := []rune(name)
 	n := len(runes)
 	var buf bytes.Buffer
@@ -91,14 +35,33 @@ func toSnakeCase(name string) string {
 	return buf.String()
 }
 
-func convertToSame(fieldName string) string {
-	return fieldName
+// Join joins together the names with underscores.
+func (sc SnakeCaseConvention) Join(names []string) string {
+	return strings.Join(names, "_")
 }
 
-func joinSame(names []string) string {
+// LowerCaseConvention implements NamingConvention, by converting to lower case.
+type LowerCaseConvention struct{}
+
+// Convert converts the field name to lower case.
+func (lc LowerCaseConvention) Convert(fieldName string) string {
+	return strings.ToLower(fieldName)
+}
+
+// Join joins together the names with no separating characters between them.
+func (lc LowerCaseConvention) Join(names []string) string {
 	return strings.Join(names, "")
 }
 
-func convertToLower(fieldName string) string {
-	return strings.ToLower(fieldName)
+// SameCaseConvention implements NamingConvention. It does not alter field names.
+type SameCaseConvention struct{}
+
+// Convert returns fieldName unchanged.
+func (lc SameCaseConvention) Convert(fieldName string) string {
+	return fieldName
+}
+
+// Join joins together the names with no separating characters between them.
+func (lc SameCaseConvention) Join(names []string) string {
+	return strings.Join(names, "")
 }

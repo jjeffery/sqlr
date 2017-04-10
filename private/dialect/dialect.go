@@ -3,127 +3,71 @@
 package dialect
 
 import (
-	"database/sql"
+	"database/sql/driver"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
-// Dialect is an interface used to handle differences
-// in SQL dialects.
-type Dialect interface {
-	// Name of the dialect.
-	Name() string
-
-	// Quote a table name or column name so that it does
-	// not clash with any reserved words. The SQL-99 standard
-	// specifies double quotes (eg "table_name"), but many
-	// dialects, including MySQL use the backtick (eg `table_name`).
-	// SQL server uses square brackets (eg [table_name]).
-	Quote(name string) string
-
-	// Return the placeholder for binding a variable value.
-	// Most SQL dialects support a single question mark (?), but
-	// PostgreSQL uses numbered placeholders (eg $1).
-	Placeholder(n int) string
-}
-
-// For returns a dialect for the specified database driver.
-// If name is blank, then the dialect returned is for the first
-// driver returned by sql.Drivers(). If the driver name is
-// unknown, the default dialect is returned.
-//
-// Supported dialects include:
-//
-//  name      alternative names
-//  ----      -----------------
-//  mssql
-//  mysql
-//  postgres  pq, postgresql
-//  sqlite3   sqlite
-//  ql        ql-mem
-func For(name string) Dialect {
-	if name == "" {
-		drivers := sql.Drivers()
-		if len(drivers) > 0 {
-			name = drivers[0]
-		}
-	}
-	name = strings.TrimSpace(strings.ToLower(name))
-
-	d := dialects[name]
-	if d == nil {
-		d = defaultDialect
-	}
-
-	return d
-}
-
-// dialectT implements the Dialect interface.
-type dialectT struct {
-	name            string
-	altnames        []string
+type Dialect struct {
+	driverTypes     []string
 	quoteFunc       func(name string) string
 	placeholderFunc func(n int) string
 }
 
-func (d *dialectT) Name() string {
-	return d.name
-}
+// Pre-defined dialects
+var (
+	ANSI     *Dialect
+	MSSQL    *Dialect
+	MySQL    *Dialect
+	Postgres *Dialect
+	SQLite   *Dialect
+)
 
-func (d *dialectT) Quote(name string) string {
-	if d.quoteFunc == nil {
-		return name
-	}
+// Quote quotes a column name.
+func (d *Dialect) Quote(name string) string {
 	return d.quoteFunc(name)
 }
 
-func (d *dialectT) Placeholder(n int) string {
+// Placeholder returns the string for a placeholder.
+func (d *Dialect) Placeholder(n int) string {
 	if d.placeholderFunc == nil {
 		return "?"
 	}
 	return d.placeholderFunc(n)
 }
 
-// SQL Dialects for supported database servers.
-var (
-	dialects       map[string]*dialectT
-	defaultDialect *dialectT
-)
+// Match returns true if the dialect is appropriate for the driver.
+func (d *Dialect) Match(drv driver.Driver) bool {
+	driverType := fmt.Sprint(reflect.TypeOf(drv))
+	for _, dt := range d.driverTypes {
+		if driverType == dt {
+			return true
+		}
+	}
+	return false
+}
 
 func init() {
-	dialects = make(map[string]*dialectT)
-	defaultDialect = &dialectT{name: "default", quoteFunc: quoteFunc(`"`, `"`)}
-
-	for _, d := range []*dialectT{
-		{
-			name:      "mysql",
-			quoteFunc: quoteFunc("`", "`"),
-		},
-		{
-			name:      "sqlite",
-			altnames:  []string{"sqlite3"},
-			quoteFunc: quoteFunc("`", "`"),
-		},
-		{
-			name:      "mssql",
-			quoteFunc: quoteFunc("[", "]"),
-		},
-		{
-			name:            "postgres",
-			altnames:        []string{"pq", "postgresql"},
-			quoteFunc:       quoteFunc(`"`, `"`),
-			placeholderFunc: placeholderFunc("$%d"),
-		},
-		{
-			name:            "ql",
-			altnames:        []string{"ql-mem"},
-			placeholderFunc: placeholderFunc("?%d"),
-		},
-	} {
-		dialects[d.name] = d
-		for _, altname := range d.altnames {
-			dialects[altname] = d
-		}
+	ANSI = &Dialect{
+		quoteFunc: quoteFunc(`"`, `"`),
+	}
+	MSSQL = &Dialect{
+		quoteFunc:   quoteFunc("[", "]"),
+		driverTypes: []string{"*mssql.MssqlDriver"},
+	}
+	MySQL = &Dialect{
+		quoteFunc:   quoteFunc("`", "`"),
+		driverTypes: []string{"*mysql.MySQLDriver"},
+	}
+	SQLite = &Dialect{
+		quoteFunc:   quoteFunc("`", "`"),
+		driverTypes: []string{"*sqlite3.SQLiteDriver"},
+	}
+	Postgres = &Dialect{
+		quoteFunc:       quoteFunc(`"`, `"`),
+		placeholderFunc: placeholderFunc("$%d"),
+		driverTypes:     []string{"*pq.Driver"},
 	}
 }
 

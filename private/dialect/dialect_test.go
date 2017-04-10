@@ -1,73 +1,46 @@
 package dialect
 
 import (
-	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"testing"
 )
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		driverName          string
-		dataSource          string
-		expectedName        string
+		dialect             *Dialect
 		expectedQuoted      string
 		expectedPlaceholder string
 	}{
 		{
-			driverName:          "mysql",
-			dataSource:          "/dbname",
-			expectedName:        "mysql",
+			dialect:             MySQL,
 			expectedQuoted:      "`xxx`",
 			expectedPlaceholder: "?",
 		},
 		{
-			driverName:          "postgres",
-			dataSource:          "user=test dbname=test sslmode=none",
-			expectedName:        "postgres",
+			dialect:             Postgres,
 			expectedQuoted:      `"xxx"`,
 			expectedPlaceholder: "$2",
 		},
 		{
-			driverName:          "sqlite3",
-			dataSource:          ":memory:",
-			expectedName:        "sqlite",
+			dialect:             SQLite,
 			expectedQuoted:      "`xxx`",
 			expectedPlaceholder: "?",
 		},
 		{
-			driverName:          "mssql",
-			dataSource:          "server=.;user id=dbo;password=whatever",
-			expectedName:        "mssql",
+			dialect:             MSSQL,
 			expectedQuoted:      "[xxx]",
 			expectedPlaceholder: "?",
 		},
 		{
-			driverName:          "ql-mem",
-			dataSource:          "memory",
-			expectedName:        "ql",
-			expectedQuoted:      "xxx",
-			expectedPlaceholder: "?2",
-		},
-		{
-			driverName:          "ql-mem",
-			dataSource:          "database.dat",
-			expectedName:        "ql",
-			expectedQuoted:      "xxx",
-			expectedPlaceholder: "?2",
-		},
-		{
-			driverName:          "whatever",
-			dataSource:          "server=.;user id=dbo;password=whatever",
-			expectedName:        "default",
+			dialect:             ANSI,
 			expectedQuoted:      `"xxx"`,
 			expectedPlaceholder: "?",
 		},
 	}
 
 	for _, tt := range tests {
-		d := For(tt.driverName)
-		compareString(t, tt.expectedName, d.Name())
+		d := tt.dialect
 		compareString(t, tt.expectedQuoted, d.Quote("xxx"))
 		compareString(t, tt.expectedPlaceholder, d.Placeholder(2))
 	}
@@ -79,17 +52,50 @@ func compareString(t *testing.T, expected, actual string) {
 	}
 }
 
-type testDriver struct{}
+type testDriver1 struct{}
 
-func (d *testDriver) Open(name string) (driver.Conn, error) {
-	return nil, nil
+type testDriver2 struct{}
+
+func (d *testDriver1) Open(name string) (driver.Conn, error) {
+	return nil, errors.New("not implemented")
 }
 
-func TestInferFromDriver(t *testing.T) {
-	sql.Register("mysql", &testDriver{})
-	dialect := For("")
+func (d *testDriver2) Open(name string) (driver.Conn, error) {
+	return nil, errors.New("not implemented")
+}
 
-	if dialect.Name() != "mysql" {
-		t.Errorf("expected=%q, actual=%q", "mysql", dialect.Name())
+func TestMatch(t *testing.T) {
+	tests := []struct {
+		dialect *Dialect
+		driver  driver.Driver
+		match   bool
+	}{
+		{
+			dialect: &Dialect{
+				driverTypes: []string{"*dialect.testDriver1"},
+			},
+			driver: &testDriver1{},
+			match:  true,
+		},
+		{
+			dialect: &Dialect{
+				driverTypes: []string{"*dialect.testDriver1", "*dialect.testDriver2"},
+			},
+			driver: &testDriver2{},
+			match:  true,
+		},
+		{
+			dialect: &Dialect{
+				driverTypes: []string{"*dialect.testDriver1"},
+			},
+			driver: &testDriver2{},
+			match:  false,
+		},
+	}
+
+	for i, tt := range tests {
+		if got, want := tt.dialect.Match(tt.driver), tt.match; got != want {
+			t.Errorf("%d: want=%v, got=%v", i, want, got)
+		}
 	}
 }
