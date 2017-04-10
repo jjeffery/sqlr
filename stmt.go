@@ -18,15 +18,15 @@ import (
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
 type Stmt struct {
-	rowType    reflect.Type
-	queryType  queryType
-	query      string
-	dialect    Dialect
-	convention columnNamer
-	argCount   int
-	columns    []*column.Info
-	inputs     []inputT
-	output     struct {
+	rowType     reflect.Type
+	queryType   queryType
+	query       string
+	dialect     Dialect
+	columnNamer columnNamer
+	argCount    int
+	columns     []*column.Info
+	inputs      []inputT
+	output      struct {
 		mutex   sync.RWMutex
 		columns []*column.Info
 	}
@@ -36,6 +36,9 @@ type Stmt struct {
 // TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
 // based on these types.
 
+// inferRowType returns the type for the row parameter. It returns an
+// error if row is not a struct, or a pointer to struct, or a slice of
+// structs.
 func inferRowType(row interface{}) (reflect.Type, error) {
 	rowType := reflect.TypeOf(row)
 	if rowType.Kind() == reflect.Ptr {
@@ -53,14 +56,17 @@ func inferRowType(row interface{}) (reflect.Type, error) {
 	return rowType, nil
 }
 
-func newStmt(dialect Dialect, convention columnNamer, rowType reflect.Type, sql string) (*Stmt, error) {
-	stmt := &Stmt{}
-	stmt.dialect = dialect
-	stmt.convention = convention
-	stmt.rowType = rowType
+// newStmt creates a new statement for the row type and query. Panics if rowType does not
+// refer to a struct type.
+func newStmt(dialect Dialect, colNamer columnNamer, rowType reflect.Type, sql string) (*Stmt, error) {
+	stmt := &Stmt{
+		dialect:     dialect,
+		columnNamer: colNamer,
+		rowType:     rowType,
+	}
 	if stmt.rowType.Kind() != reflect.Struct {
-		// should never happen, see inferRowType; could turn this into a panic
-		return nil, errors.New("not a struct")
+		// should never happen, calls inferRowType before calling this function
+		panic("not a struct")
 	}
 	stmt.columns = column.ListForType(stmt.rowType)
 	if err := stmt.scanSQL(sql); err != nil {
@@ -332,7 +338,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 
 	columnMap := make(map[string]*column.Info)
 	for _, col := range stmt.columns {
-		columnName := stmt.convention.ColumnName(col)
+		columnName := stmt.columnNamer.ColumnName(col)
 		columnMap[columnName] = col
 	}
 
@@ -375,7 +381,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 			}
 			outputs[i] = col
 			delete(lowerColumnMap, columnNameLower)
-			delete(columnMap, stmt.convention.ColumnName(col))
+			delete(columnMap, stmt.columnNamer.ColumnName(col))
 		}
 
 		if len(unknownColumnNames) == 1 {
@@ -455,14 +461,14 @@ func (stmt *Stmt) scanSQL(query string) error {
 					// change the clause but keep the filter and generate string
 					cols := *insertColumns
 					cols.clause = clause
-					buf.WriteString(cols.String(stmt.dialect, stmt.convention, counter.Next))
+					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counter.Next))
 					stmt.addColumns(cols)
 				} else {
 					cols, err := columns.Parse(clause, lit)
 					if err != nil {
 						return fmt.Errorf("cannot expand %q in %q clause: %v", lit, clause, err)
 					}
-					buf.WriteString(cols.String(stmt.dialect, stmt.convention, counter.Next))
+					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counter.Next))
 					stmt.addColumns(cols)
 					if clause == clauseInsertColumns {
 						insertColumns = &cols
