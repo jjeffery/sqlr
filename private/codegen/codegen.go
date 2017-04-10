@@ -212,7 +212,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	}
 
 	if tableName == "" {
-		tableName = naming.Snake.Convert(rowType.Name)
+		tableName = naming.SnakeCase.Convert(rowType.Name)
 		tableName = toPlural(tableName)
 	}
 

@@ -1,5 +1,7 @@
 package sqlrow_test
 
+/**
+
 import (
 	"database/sql"
 	"log"
@@ -183,7 +185,7 @@ func ExampleStmt_Select_multipleRows() {
 	}
 
 	stmt, err := sqlrow.Prepare(UserRow{}, `
-		select {alias u} 
+		select {alias u}
 		from users u
 		inner join user_search_terms t on t.user_id = u.id
 		where t.search_term like ?
@@ -421,7 +423,7 @@ func ExampleSchema_Select_multipleRows() {
 	// find users with search terms
 	var rows []UserRow
 	n, err := mssql.Select(db, &rows, `
-		select {alias u} 
+		select {alias u}
 		from [Users] u
 		inner join [UserSearchTerms] t on t.UserID = u.ID
 		where t.SearchTerm like ?
@@ -438,3 +440,4 @@ func ExampleSchema_Select_multipleRows() {
 		log.Printf("not found")
 	}
 }
+*/

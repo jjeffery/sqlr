@@ -81,18 +81,18 @@ func (path Path) String() string {
 
 // ColumnName returns a column name by applying the naming
 // convention to the contents of the path.
-func (path Path) ColumnName(nc NamingConvention) string {
+func (path Path) ColumnName(nc NamingConvention, key string) string {
 	if len(path) == 1 {
 		// The path almost always has one element in it,
 		// so have a special case that requires less memory
 		// allocation.
-		return convertField(path[0].FieldName, path[0].FieldTag, nc)
+		return convertField(path[0].FieldName, path[0].FieldTag, nc, key)
 	}
 
 	// Less common case where there is more than one item in the path.
 	frags := make([]string, len(path))
 	for i, f := range path {
-		frags[i] = convertField(f.FieldName, f.FieldTag, nc)
+		frags[i] = convertField(f.FieldName, f.FieldTag, nc, key)
 	}
 	return nc.Join(frags)
 }
@@ -101,7 +101,7 @@ func (path Path) ColumnName(nc NamingConvention) string {
 // in order for column information.
 var structTagKeys = []string{"sqlrow", "sql"}
 
-func convertField(fieldName string, fieldTag reflect.StructTag, nc NamingConvention) string {
+func convertField(fieldName string, fieldTag reflect.StructTag, nc NamingConvention, key string) string {
 	if fieldTag != "" {
 		var nameFromTag string  // the name extracted from the tag, which might be empty
 		var foundNameInTag bool // was the name extracted from the tag
@@ -109,7 +109,7 @@ func convertField(fieldName string, fieldTag reflect.StructTag, nc NamingConvent
 		// First lookup the key for the naming convention. This key is different
 		// because, if it exists and is blank, then it means to stop searching
 		// and to use the naming convention rules.
-		if key := nc.Key(); key != "" {
+		if key != "" {
 			if value, ok := fieldTag.Lookup(key); ok {
 				foundNameInTag = true
 				nameFromTag = nameFromTagValue(value)

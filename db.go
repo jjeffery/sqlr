@@ -4,8 +4,7 @@ import (
 	"database/sql"
 )
 
-// DB is the interface that wraps the database access methods
-// used by this package.
+// The DB interface defines the SQL database access methods used by this package.
 //
 // The *DB and *Tx types in the standard library package "database/sql"
 // both implement this interface.

@@ -1,74 +1,111 @@
 package sqlrow
 
-import (
-	"github.com/jjeffery/sqlrow/private/dialect"
-	"github.com/jjeffery/sqlrow/private/naming"
-)
+import "github.com/jjeffery/sqlrow/private/column"
 
-// Default is the default schema, which can be modified as required.
+// Schema contains information about the database that is used
+// when generating SQL statements.
 //
-// The default schema has sensible defaults. If not explicitly
-// specified, the dialect is determined by the SQL database drivers
-// loaded. If the program only uses one database driver, then the default
-// schema will use the correct dialect.
+// Information stored in the schema includes the SQL dialect,
+// and the naming convention used to convert Go struct field names
+// into database column names.
 //
-// The default naming convention uses "snake case". So a struct field
-// named "GivenName" will have an associated column name of "given_name".
-var Default *Schema = &Schema{}
-
-// Schema contains configuration information that is common
-// to statements prepared for the same database schema.
+// Although the zero value schema can be used and represents a database schema
+// with default values, it is more common to use the NewSchema function to
+// create a schema with one or more options.
 //
-// If a program works with a single database driver (eg "mysql"),
-// and columns conform to a standard naming convention, then that
-// progam can use the default schema (DefaultSchema) and there is
-// no need to use the Schema type directly.
+// A schema maintains an internal cache, which is used to store details of
+// frequently called SQL commands for improved performance.
 //
-// Programs that operate with a number of different database
-// drivers and naming conventions should create a schema for each
-// combination of driver and naming convention, and use the appropriate
-// schema to prepare each statements
+// A schema can be inexpensively cloned to provide a deep copy.
+// This can occasionally be useful to define a common schema for a database,
+// and then create copies to handle naming rules that are specific to a particular
+// table, or a particular group of tables.
 type Schema struct {
-	// Dialect used for constructing SQL queries. If nil, the dialect
-	// is inferred from the list of SQL drivers loaded in the program.
-	Dialect Dialect
-
-	// Convention contains methods for inferring the name
-	// of database columns from the associated Go struct field names.
-	Convention Convention
+	dialect    Dialect
+	convention NamingConvention
+	cache      statementCache
+	fieldMap   *fieldMap
+	key        string
 }
 
-// Insert inserts a row. If the row has an auto-increment column
-// defined, then the generated value is retrieved and inserted into the
-// row. (If the database driver provides the necessary support).
-func (s *Schema) Insert(db DB, row interface{}, sql string) error {
-	_, err := s.execCommon(db, row, checkSQL(sql, insertFormat), nil)
-	return err
+// NewSchema creates a schema with options.
+func NewSchema(opts ...SchemaOption) *Schema {
+	schema := &Schema{}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(schema)
+		}
+	}
+	return schema
 }
 
-// Update updates a row. Returns the number of rows affected,
-// which should be zero or one.
-func (s *Schema) Update(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
-	return s.execCommon(db, row, checkSQL(sql, updateFormat), args)
+type schemaHelper struct {
+	schema *Schema
 }
 
-// Delete deletes a row. Returns the number of rows affected,
-// which should be zero or one.
-func (s *Schema) Delete(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
-	return s.execCommon(db, row, checkSQL(sql, deleteFormat), args)
+func (s schemaHelper) Dialect() Dialect {
+	if s.schema.dialect != nil {
+		return s.schema.dialect
+	}
+	return DefaultDialect
+}
+
+func (s schemaHelper) NamingConvention() NamingConvention {
+	if s.schema.convention != nil {
+		return s.schema.convention
+	}
+	return SnakeCase
+}
+
+func (s schemaHelper) ColumnName(col *column.Info) string {
+	if s.schema.fieldMap != nil {
+		if columnName := s.schema.fieldMap.lookup(col.FieldNames); columnName != "" {
+			return columnName
+		}
+	}
+	return col.Path.ColumnName(s.NamingConvention(), s.schema.key)
+}
+
+func (s *Schema) columnNamer() columnNamer {
+	return columnNamerFunc(func(col *column.Info) string {
+		if s.fieldMap != nil {
+			if columnName := s.fieldMap.lookup(col.FieldNames); columnName != "" {
+				return columnName
+			}
+		}
+		convention := s.convention
+		if convention == nil {
+			convention = SnakeCase
+		}
+		return col.Path.ColumnName(convention, s.key)
+	})
+}
+
+func (s *Schema) getDialect() Dialect {
+	if s.dialect != nil {
+		return s.dialect
+	}
+	return DefaultDialect
 }
 
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
 func (s *Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
-	rowType, err := inferRowType(row, "row")
+	rowType, err := inferRowType(row)
 	if err != nil {
 		return nil, err
 	}
-	// does not reference the cache because the calling program is
-	// taking responsibility for keeping track of this stmt
-	return newStmt(s.dialect(), s.convention(), rowType, sql)
+
+	stmt, _ := s.cache.lookup(rowType, sql)
+	if stmt == nil {
+		stmt, err = newStmt(s.getDialect(), s.columnNamer(), rowType, sql)
+		if err != nil {
+			return nil, err
+		}
+		stmt = s.cache.set(rowType, sql, stmt)
+	}
+	return stmt, nil
 }
 
 // Select executes a SELECT query and stores the result in rows.
@@ -86,45 +123,21 @@ func (s *Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
 // Select returns the number of rows returned by the SELECT
 // query.
 func (s *Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
-	sql = checkSQL(sql, selectFormat)
-	rowType, err := inferRowType(rows, "rows")
-	if err != nil {
-		return 0, err
-	}
-	//sql = checkSQL(sql, selectFormat)
-	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
+	stmt, err := s.Prepare(rows, sql)
 	if err != nil {
 		return 0, err
 	}
 	return stmt.Select(db, rows, args...)
 }
 
-func (s *Schema) dialect() Dialect {
-	if s.Dialect != nil {
-		return s.Dialect
-	}
-	if Default.Dialect != nil {
-		return Default.Dialect
-	}
-	return dialect.For("default")
-}
-
-func (s *Schema) convention() Convention {
-	if s.Convention != nil {
-		return s.Convention
-	}
-	if Default.Convention != nil {
-		return Default.Convention
-	}
-	return naming.Snake
-}
-
-func (s *Schema) execCommon(db DB, row interface{}, sql string, args []interface{}) (int, error) {
-	rowType, err := inferRowType(row, "row")
-	if err != nil {
-		return 0, err
-	}
-	stmt, err := getStmtFromCache(s.dialect(), s.convention(), rowType, sql)
+// Exec executes the query with the given row and optional arguments.
+// It returns the number of rows affected by the statement.
+//
+// If the statement is an INSERT statement and the row has an auto-increment field,
+// then the row is updated with the value of the auto-increment column, as long as
+// the SQL driver supports this functionality.
+func (s *Schema) Exec(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
+	stmt, err := s.Prepare(row, sql)
 	if err != nil {
 		return 0, err
 	}

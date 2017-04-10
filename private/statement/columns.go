@@ -17,7 +17,6 @@ import (
 // columns for the primary key.
 type columnsT struct {
 	allColumns []*column.Info
-	counter    func() int
 	filter     func(col *column.Info) bool
 	clause     sqlClause
 	alias      string

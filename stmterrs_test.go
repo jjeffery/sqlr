@@ -84,7 +84,8 @@ func TestSelectStmt1Errors(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		stmt, err := Prepare(Row{}, tt.sql)
+		schema := NewSchema()
+		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
 				t.Errorf("%d: expected no error, got %v", i, err)
@@ -170,7 +171,8 @@ func TestSelectStmt2Errors(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		stmt, err := Prepare(Row{}, tt.sql)
+		schema := NewSchema()
+		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
 				t.Errorf("%d: expected no error, got %q", i, err)
@@ -242,7 +244,8 @@ func TestInsertRowStmtErrors(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		stmt, err := Prepare(Row{}, tt.sql)
+		schema := NewSchema()
+		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
 				t.Errorf("%d: expected no error, got %q", i, err)
@@ -312,7 +315,8 @@ func TestExecRowStmtErrors(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		stmt, err := Prepare(&Row{}, tt.sql)
+		schema := NewSchema()
+		stmt, err := schema.Prepare(&Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
 				t.Errorf("%d: expected no error, got %q", i, err)

@@ -12,9 +12,6 @@ import (
 )
 
 func TestDB1(t *testing.T) {
-	// clear the stmt cache so we can check at the end of the test
-	clearStmtCache()
-
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
@@ -34,13 +31,15 @@ func TestDB1(t *testing.T) {
 		Number int    `sql:"int_column"`
 	}
 
+	schema := NewSchema(ForDB(db))
+
 	// insert three rows, IDs are automatically generated (1, 2, 3)
 	for i, s := range []string{"AAAA", "BBBB", "CCCC"} {
 		row := Row{
 			String: s,
 			Number: i,
 		}
-		err = Insert(db, &row, `test_table`)
+		_, err = schema.Exec(db, &row, `insert into test_table({}) values({})`)
 		if err != nil {
 			t.Fatal("insert: ", err)
 		}
@@ -48,7 +47,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := Select(db, &rows, "select {} from test_table order by {}")
+		n, err := schema.Select(db, &rows, "select {} from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -59,7 +58,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := Select(db, &rows, "select id, int_column, string_column from test_table order by {}")
+		n, err := schema.Select(db, &rows, "select id, int_column, string_column from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -70,7 +69,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var row Row
-		n, err := Select(db, &row, "select {} from test_table order by {}")
+		n, err := schema.Select(db, &row, "select {} from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -80,7 +79,7 @@ func TestDB1(t *testing.T) {
 		if want := "AAAA"; row.String != want {
 			t.Errorf("want %q, got %q", want, row.String)
 		}
-		n, err = Update(db, &row, "update test_table set {} where {} and int_column = ?", 0)
+		n, err = schema.Exec(db, &row, "update test_table set {} where {} and int_column = ?", 0)
 		if err != nil {
 			t.Fatal("sqlrow.Update:", err)
 		}
@@ -91,7 +90,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := Select(db, &rows, "select {} from test_table where string_column in (?)", []string{
+		n, err := schema.Select(db, &rows, "select {} from test_table where string_column in (?)", []string{
 			"AAAA",
 			"BBBB",
 			"CCCC",
@@ -106,11 +105,11 @@ func TestDB1(t *testing.T) {
 
 	{
 		expected := 5
-		actual := len(stmtCache.stmts)
+		actual := len(schema.cache.stmts)
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
-		for k, stmt := range stmtCache.stmts {
+		for k, stmt := range schema.cache.stmts {
 			t.Logf("%s=%v", k, stmt)
 		}
 	}
@@ -148,14 +147,16 @@ func TestJsonMarshaling(t *testing.T) {
 		},
 	}
 
-	err = Insert(db, &row, "test_table")
+	schema := NewSchema(ForDB(db))
+
+	_, err = schema.Exec(db, &row, "insert into test_table({}) values({})")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	{
 		var row2 Row
-		n, err := Select(db, &row2, "test_table", 1)
+		n, err := schema.Select(db, &row2, "select {} from test_table where {}", 1)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -172,7 +173,7 @@ func TestJsonMarshaling(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := Select(db, &rows, "test_table", 1)
+		n, err := schema.Select(db, &rows, "select {} from test_table where {}", 1)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -190,17 +191,11 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	// clear the stmt cache so we can check at the end of the test
-	clearStmtCache()
-
 	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
 	}
 	defer db.Close()
-
-	Default.Dialect = DialectFor("postgres")
-	defer func() { Default.Dialect = nil }()
 
 	_, err = db.Exec(`
 		drop table if exists t1;
@@ -219,6 +214,8 @@ func TestRace(t *testing.T) {
 		Name string
 	}
 
+	schema := NewSchema(ForDB(db))
+
 	var wg sync.WaitGroup
 
 	const loops = 10
@@ -233,13 +230,13 @@ func TestRace(t *testing.T) {
 					ID:   id,
 					Name: fmt.Sprintf("Row #%d", id),
 				}
-				if err := Insert(db, row, "t1"); err != nil {
+				if _, err := schema.Exec(db, row, "insert into t1({}) values({})"); err != nil {
 					t.Errorf("cannot insert row %d: %v", id, err)
 					return
 				}
 
 				var rows []Row1
-				if _, err := Select(db, &rows, "select {} from t1 order by id desc limit ?", id); err != nil {
+				if _, err := schema.Select(db, &rows, "select {} from t1 order by id desc limit ?", id); err != nil {
 					t.Errorf("%d: cannot query rows: %v", id, err)
 					return
 				}
@@ -251,11 +248,11 @@ func TestRace(t *testing.T) {
 
 	{
 		expected := 2
-		actual := len(stmtCache.stmts)
+		actual := len(schema.cache.stmts)
 		if actual != expected {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
-		for k, stmt := range stmtCache.stmts {
+		for k, stmt := range schema.cache.stmts {
 			t.Logf("%s=%v", k, stmt)
 		}
 	}
@@ -295,10 +292,7 @@ func TestNullable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	schema := &Schema{
-		Dialect:    DialectFor("postgres"),
-		Convention: ConventionSnake,
-	}
+	schema := NewSchema(ForDB(db))
 
 	type Row struct {
 		Id  int       `sql:"primary key"`
@@ -382,7 +376,7 @@ func TestNullable(t *testing.T) {
 
 	row2 := row
 	row2.Id = 2
-	if err := schema.Insert(db, row2, "nullable_types"); err != nil {
+	if _, err := schema.Exec(db, row2, "insert into nullable_types({}) values({})"); err != nil {
 		t.Fatal(err)
 	}
 

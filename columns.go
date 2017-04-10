@@ -18,20 +18,24 @@ import (
 // columns for the primary key.
 type columnsT struct {
 	allColumns []*column.Info
-	convention Convention
-	dialect    Dialect
-	counter    func() int
 	filter     func(col *column.Info) bool
 	clause     sqlClause
 	alias      string
 }
 
-func newColumns(allColumns []*column.Info, convention Convention, dialect Dialect, counter func() int) columnsT {
+type columnNamer interface {
+	ColumnName(col *column.Info) string
+}
+
+type columnNamerFunc func(*column.Info) string
+
+func (f columnNamerFunc) ColumnName(col *column.Info) string {
+	return f(col)
+}
+
+func newColumns(allColumns []*column.Info) columnsT {
 	return columnsT{
 		allColumns: allColumns,
-		convention: convention,
-		dialect:    dialect,
-		counter:    counter,
 		clause:     clauseSelectColumns,
 	}
 }
@@ -75,8 +79,16 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 // String returns a string representation of the columns.
 // The string returned depends on the SQL clause in which the
 // columns appear.
-func (cols columnsT) String() string {
+func (cols columnsT) String(dialect Dialect, columnNamer columnNamer, counter func() int) string {
 	var buf bytes.Buffer
+
+	quotedColumnName := func(col *column.Info) string {
+		return dialect.Quote(columnNamer.ColumnName(col))
+	}
+	placeholder := func() string {
+		return dialect.Placeholder(counter())
+	}
+
 	for i, col := range cols.filtered() {
 		if i > 0 {
 			if cols.clause.matchAny(
@@ -94,27 +106,22 @@ func (cols columnsT) String() string {
 				buf.WriteString(cols.alias)
 				buf.WriteRune('.')
 			}
-			buf.WriteString(cols.columnName(col))
+			buf.WriteString(quotedColumnName(col))
 		case clauseInsertColumns:
-			buf.WriteString(cols.columnName(col))
+			buf.WriteString(quotedColumnName(col))
 		case clauseInsertValues:
-			buf.WriteString(cols.dialect.Placeholder(cols.counter()))
+			buf.WriteString(placeholder())
 		case clauseUpdateSet, clauseUpdateWhere, clauseDeleteWhere, clauseSelectWhere:
 			if cols.alias != "" {
 				buf.WriteString(cols.alias)
 				buf.WriteRune('.')
 			}
-			buf.WriteString(cols.columnName(col))
+			buf.WriteString(quotedColumnName(col))
 			buf.WriteRune('=')
-			buf.WriteString(cols.dialect.Placeholder(cols.counter()))
+			buf.WriteString(placeholder())
 		}
 	}
 	return buf.String()
-}
-
-func (cols columnsT) columnName(info *column.Info) string {
-	columnName := columnNameForConvention(info, cols.convention)
-	return cols.dialect.Quote(columnName)
 }
 
 func (cols columnsT) filtered() []*column.Info {
@@ -141,10 +148,4 @@ func columnFilterInsertable(col *column.Info) bool {
 
 func columnFilterUpdateable(col *column.Info) bool {
 	return !col.Tag.PrimaryKey && !col.Tag.AutoIncrement
-}
-
-// columnNameForConvention returns the column name for the column when
-// using the specified convention.
-func columnNameForConvention(info *column.Info, convention Convention) string {
-	return info.Path.ColumnName(convention)
 }

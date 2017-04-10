@@ -13,6 +13,11 @@ import (
 	sqlmock "gopkg.in/DATA-DOG/go-sqlmock.v1"
 )
 
+var dialects = map[string]*dialect.Dialect{
+	"mysql":    dialect.MySQL,
+	"postgres": dialect.Postgres,
+}
+
 func TestPrepare(t *testing.T) {
 	tests := []struct {
 		row     interface{}
@@ -152,15 +157,15 @@ func TestPrepare(t *testing.T) {
 
 	for i, tt := range tests {
 		for dialectName, query := range tt.queries {
-			dia := dialect.For(dialectName)
-			namer := column.NewNamer(naming.Snake)
+			dia := dialects[dialectName]
+			namer := newNamer()
 			stmt, err := statement.Prepare(tt.row, tt.sql)
 			if err != nil {
 				t.Errorf("%d: expected no error: got %v", i, err)
 				continue
 			}
 			if got, want := stmt.SQLString(dia, namer), query; got != want {
-				t.Errorf("%d: %s: expected=%q, actual=%q", i, dia.Name(), want, got)
+				t.Errorf("%d: %s: expected=%q, actual=%q", i, dialectName, want, got)
 			}
 		}
 	}
@@ -171,8 +176,8 @@ func TestStatementExec(t *testing.T) {
 		row          interface{}
 		query        string
 		sql          string
-		dialect      dialect.Dialect
-		namer        *column.Namer
+		dialect      statement.Dialect
+		namer        *colNamer
 		args         []driver.Value
 		rowsAffected int64
 		lastInsertId int64
@@ -185,8 +190,8 @@ func TestStatementExec(t *testing.T) {
 				ID:   1,
 				Name: "xxx",
 			},
-			dialect:      dialect.For("mysql"),
-			namer:        column.NewNamer(naming.Snake),
+			dialect:      dialects["mysql"],
+			namer:        newNamer(),
 			query:        "insert into table1({}) values({})",
 			sql:          "insert into table1(`id`,`name`) values(?,?)",
 			args:         []driver.Value{1, "xxx"},
@@ -202,8 +207,8 @@ func TestStatementExec(t *testing.T) {
 				Name:     "yy",
 				OtherCol: 1,
 			},
-			dialect:      dialect.For("postgres"),
-			namer:        column.NewNamer(naming.Snake),
+			dialect:      dialects["postgres"],
+			namer:        newNamer(),
 			query:        "update table1 set {} where {}",
 			sql:          `update table1 set "the_name"=$1,"other_col"=$2 where "id"=$3`,
 			args:         []driver.Value{"yy", 1, 2},
@@ -257,4 +262,17 @@ func toRE(s string) string {
 		buf.WriteRune(ch)
 	}
 	return buf.String()
+}
+
+// Namer knows how to name a column using a naming convention.
+type colNamer struct{}
+
+// NewNamer creates a namer for a naming convention.
+func newNamer() *colNamer {
+	return &colNamer{}
+}
+
+// ColumnName returns the column name.
+func (n *colNamer) ColumnName(info *column.Info) string {
+	return info.Path.ColumnName(naming.SnakeCase, "snake")
 }

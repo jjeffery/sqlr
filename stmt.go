@@ -22,7 +22,7 @@ type Stmt struct {
 	queryType  queryType
 	query      string
 	dialect    Dialect
-	convention Convention
+	convention columnNamer
 	argCount   int
 	columns    []*column.Info
 	inputs     []inputT
@@ -36,7 +36,7 @@ type Stmt struct {
 // TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
 // based on these types.
 
-func inferRowType(row interface{}, argName string) (reflect.Type, error) {
+func inferRowType(row interface{}) (reflect.Type, error) {
 	rowType := reflect.TypeOf(row)
 	if rowType.Kind() == reflect.Ptr {
 		rowType = rowType.Elem()
@@ -48,12 +48,12 @@ func inferRowType(row interface{}, argName string) (reflect.Type, error) {
 		}
 	}
 	if rowType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("expected arg for %q to refer to a struct type", argName)
+		return nil, errors.New("expected arg to refer to a struct type")
 	}
 	return rowType, nil
 }
 
-func newStmt(dialect Dialect, convention Convention, rowType reflect.Type, sql string) (*Stmt, error) {
+func newStmt(dialect Dialect, convention columnNamer, rowType reflect.Type, sql string) (*Stmt, error) {
 	stmt := &Stmt{}
 	stmt.dialect = dialect
 	stmt.convention = convention
@@ -332,7 +332,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 
 	columnMap := make(map[string]*column.Info)
 	for _, col := range stmt.columns {
-		columnName := columnNameForConvention(col, stmt.convention)
+		columnName := stmt.convention.ColumnName(col)
 		columnMap[columnName] = col
 	}
 
@@ -375,7 +375,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 			}
 			outputs[i] = col
 			delete(lowerColumnMap, columnNameLower)
-			delete(columnMap, columnNameForConvention(col, stmt.convention))
+			delete(columnMap, stmt.convention.ColumnName(col))
 		}
 
 		if len(unknownColumnNames) == 1 {
@@ -416,7 +416,7 @@ func (stmt *Stmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
 	var counter counterT
-	columns := newColumns(stmt.columns, stmt.convention, stmt.dialect, counter.Next)
+	columns := newColumns(stmt.columns)
 	var insertColumns *columnsT
 	var clause sqlClause
 	var buf bytes.Buffer
@@ -455,14 +455,14 @@ func (stmt *Stmt) scanSQL(query string) error {
 					// change the clause but keep the filter and generate string
 					cols := *insertColumns
 					cols.clause = clause
-					buf.WriteString(cols.String())
+					buf.WriteString(cols.String(stmt.dialect, stmt.convention, counter.Next))
 					stmt.addColumns(cols)
 				} else {
 					cols, err := columns.Parse(clause, lit)
 					if err != nil {
 						return fmt.Errorf("cannot expand %q in %q clause: %v", lit, clause, err)
 					}
-					buf.WriteString(cols.String())
+					buf.WriteString(cols.String(stmt.dialect, stmt.convention, counter.Next))
 					stmt.addColumns(cols)
 					if clause == clauseInsertColumns {
 						insertColumns = &cols

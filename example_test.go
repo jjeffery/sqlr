@@ -1,5 +1,7 @@
 package sqlrow_test
 
+/**
+
 import (
 	"database/sql"
 	"fmt"
@@ -99,3 +101,4 @@ func setupSchema(db *sql.DB) {
 	`)
 	exitIfError(err)
 }
+*/

@@ -6,26 +6,26 @@ import (
 
 func TestDialect(t *testing.T) {
 	tests := []struct {
-		name        string
+		dialect     Dialect
 		quoted      string
 		placeholder string
 	}{
 		{
-			name:        "mysql",
+			dialect:     MySQL,
 			quoted:      "`quoted`",
 			placeholder: "?",
 		},
 		{
-			name:        "postgres",
+			dialect:     Postgres,
 			quoted:      `"quoted"`,
 			placeholder: "$1",
 		},
 	}
 
 	for _, tt := range tests {
-		dialog := DialectFor(tt.name)
-		quoted := dialog.Quote("quoted")
-		placeholder := dialog.Placeholder(1)
+		dialect := tt.dialect
+		quoted := dialect.Quote("quoted")
+		placeholder := dialect.Placeholder(1)
 		if quoted != tt.quoted {
 			t.Errorf("expected=%q, actual=%q", tt.quoted, quoted)
 		}

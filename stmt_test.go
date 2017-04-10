@@ -5,7 +5,10 @@ import (
 )
 
 func TestPrepare(t *testing.T) {
-	defer func() { Default.Dialect = nil }()
+	dialects := map[string]Dialect{
+		"mysql":    MySQL,
+		"postgres": Postgres,
+	}
 	tests := []struct {
 		row     interface{}
 		sql     string
@@ -143,21 +146,16 @@ func TestPrepare(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		for dialect, query := range tt.queries {
-			Default.Dialect = DialectFor(dialect)
-			fns := []func(interface{}, string) (*Stmt, error){
-				Prepare,
-				Default.Prepare,
+		for dialectName, query := range tt.queries {
+			dialect := dialects[dialectName]
+			schema := NewSchema(WithDialect(dialect))
+			stmt, err := schema.Prepare(tt.row, tt.sql)
+			if err != nil {
+				t.Errorf("%d: expected no error: got %v", i, err)
+				continue
 			}
-			for _, fn := range fns {
-				stmt, err := fn(tt.row, tt.sql)
-				if err != nil {
-					t.Errorf("%d: expected no error: got %v", i, err)
-					continue
-				}
-				if stmt.String() != query {
-					t.Errorf("%d: %s: expected=%q, actual=%q", i, dialect, query, stmt.String())
-				}
+			if stmt.String() != query {
+				t.Errorf("%d: %s: expected=%q, actual=%q", i, dialect, query, stmt.String())
 			}
 		}
 	}

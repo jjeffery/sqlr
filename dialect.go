@@ -1,23 +1,21 @@
 package sqlrow
 
 import (
+	"database/sql"
+	"database/sql/driver"
+
 	"github.com/jjeffery/sqlrow/private/dialect"
 )
 
 // Dialect is an interface used to handle differences
 // in SQL dialects.
 type Dialect interface {
-	// Name of the dialect. This name is used as
-	// a key for caching, so if If two dialects have
-	// the same name, then they should be identical.
-	Name() string
-
 	// Quote a table name or column name so that it does
 	// not clash with any reserved words. The SQL-99 standard
 	// specifies double quotes (eg "table_name"), but many
 	// dialects, including MySQL use the backtick (eg `table_name`).
 	// SQL server uses square brackets (eg [table_name]).
-	Quote(name string) string
+	Quote(column string) string
 
 	// Return the placeholder for binding a variable value.
 	// Most SQL dialects support a single question mark (?), but
@@ -25,22 +23,63 @@ type Dialect interface {
 	Placeholder(n int) string
 }
 
-// DialectFor returns the dialect for the specified database driver.
-// If name is blank, then the dialect returned is for the first
-// driver returned by sql.Drivers(). If only one SQL driver has
-// been loaded by the calling program then this will return the
-// correct dialect. If the driver name is unknown, the default
-// dialect is returned.
+// Pre-defined dialects
+var (
+	Postgres Dialect // Quote: "column_name", Placeholders: $1, $2, $3
+	MySQL    Dialect // Quote: `column_name`, Placeholders: ?, ?, ?
+	MSSQL    Dialect // Quote: [column_name], Placeholders: ?, ?, ?
+	SQLite   Dialect // Quote: `column_name`, Placeholders: ?, ?, ?
+	ANSISQL  Dialect // Quote: "column_name", Placeholders: ?, ?, ?
+)
+
+// DefaultDialect is the dialect used by a schema if none is specified.
+// It is chosen from the first driver in the list of drivers returned by the
+// sql.Drivers() function.
 //
-// Supported dialects include:
-//
-//  name      alternative names
-//  ----      -----------------
-//  mssql
-//  mysql
-//  postgres  pq, postgresql
-//  sqlite3   sqlite
-//  ql        ql-mem
-func DialectFor(name string) Dialect {
-	return dialect.For(name)
+// Many programs only load one database driver, and in this case the default
+// dialect should be the correct choice.
+var DefaultDialect Dialect // Depends on the DB driver loaded.
+
+var allDialects []Dialect
+
+func init() {
+	Postgres = dialect.Postgres
+	MySQL = dialect.MySQL
+	MSSQL = dialect.MSSQL
+	SQLite = dialect.SQLite
+	ANSISQL = dialect.ANSI
+	allDialects = []Dialect{Postgres, MySQL, MSSQL, SQLite, ANSISQL}
+
+	DefaultDialect = ANSISQL
+
+	for _, name := range sql.Drivers() {
+		switch name {
+		case "postgres":
+			DefaultDialect = Postgres
+		case "mysql":
+			DefaultDialect = MySQL
+		case "sqlite", "sqlite3":
+			DefaultDialect = SQLite
+		case "mssql":
+			DefaultDialect = MSSQL
+		}
+		break
+	}
+}
+
+func dialectFor(db *sql.DB) Dialect {
+	if db == nil {
+		return ANSISQL
+	}
+	drv := db.Driver()
+	for _, d := range allDialects {
+		if matcher, ok := d.(interface {
+			Match(driver.Driver) bool
+		}); ok {
+			if matcher.Match(drv) {
+				return d
+			}
+		}
+	}
+	return ANSISQL
 }
