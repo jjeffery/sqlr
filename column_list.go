@@ -9,14 +9,12 @@ import (
 	"github.com/jjeffery/sqlrow/private/scanner"
 )
 
-// columnsT represents a set of columns associated with
-// a table for use in a specific SQL clause.
+// columnList represents a list of columns for use in an SQL clause.
 //
-// Each columnsT set represents a subset of the columns
-// in the table. For example a column list for the WHERE
-// clause in a row update statement will only contain the
-// columns for the primary key.
-type columnsT struct {
+// Each columnList represents a subset of the available columns.
+// For example a column list for the WHERE clause in a row update
+// statement will only contain the columns for the primary key.
+type columnList struct {
 	allColumns []*column.Info
 	filter     func(col *column.Info) bool
 	clause     sqlClause
@@ -33,14 +31,14 @@ func (f columnNamerFunc) ColumnName(col *column.Info) string {
 	return f(col)
 }
 
-func newColumns(allColumns []*column.Info) columnsT {
-	return columnsT{
+func newColumns(allColumns []*column.Info) columnList {
+	return columnList{
 		allColumns: allColumns,
 		clause:     clauseSelectColumns,
 	}
 }
 
-func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
+func (cols columnList) Parse(clause sqlClause, text string) (columnList, error) {
 	cols2 := cols
 	cols2.clause = clause
 	cols2.filter = clause.defaultFilter()
@@ -60,7 +58,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 				if scan.Scan() {
 					cols2.alias = scan.Text()
 				} else {
-					return columnsT{}, fmt.Errorf("missing ident after 'alias'")
+					return columnList{}, fmt.Errorf("missing ident after 'alias'")
 				}
 			case "all":
 				cols2.filter = columnFilterAll
@@ -70,7 +68,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 		}
 	}
 	if err := scan.Err(); err != nil {
-		return columnsT{}, err
+		return columnList{}, err
 	}
 
 	return cols2, nil
@@ -79,7 +77,7 @@ func (cols columnsT) Parse(clause sqlClause, text string) (columnsT, error) {
 // String returns a string representation of the columns.
 // The string returned depends on the SQL clause in which the
 // columns appear.
-func (cols columnsT) String(dialect Dialect, columnNamer columnNamer, counter func() int) string {
+func (cols columnList) String(dialect Dialect, columnNamer columnNamer, counter func() int) string {
 	var buf bytes.Buffer
 
 	quotedColumnName := func(col *column.Info) string {
@@ -124,7 +122,7 @@ func (cols columnsT) String(dialect Dialect, columnNamer columnNamer, counter fu
 	return buf.String()
 }
 
-func (cols columnsT) filtered() []*column.Info {
+func (cols columnList) filtered() []*column.Info {
 	v := make([]*column.Info, 0, len(cols.allColumns))
 	for _, col := range cols.allColumns {
 		if cols.filter == nil || cols.filter(col) {

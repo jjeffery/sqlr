@@ -406,7 +406,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 	return stmt.output.columns, nil
 }
 
-func (stmt *Stmt) addColumns(cols columnsT) {
+func (stmt *Stmt) addColumns(cols columnList) {
 	if cols.clause.isInput() {
 		for _, col := range cols.filtered() {
 			stmt.inputs = append(stmt.inputs, inputT{col: col})
@@ -423,7 +423,7 @@ func (stmt *Stmt) scanSQL(query string) error {
 	scan := scanner.New(strings.NewReader(query))
 	var counter counterT
 	columns := newColumns(stmt.columns)
-	var insertColumns *columnsT
+	var insertColumns *columnList
 	var clause sqlClause
 	var buf bytes.Buffer
 	for scan.Scan() {
