@@ -34,3 +34,9 @@ func TestDialect(t *testing.T) {
 		}
 	}
 }
+
+func TestDialectFor(t *testing.T) {
+	if got, want := dialectFor(nil), DefaultDialect; got != want {
+		t.Errorf("want=%v, got=%v", want, got)
+	}
+}

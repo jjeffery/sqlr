@@ -1,8 +1,51 @@
 package sqlrow
 
 import (
+	"reflect"
 	"testing"
 )
+
+func TestInferRowType(t *testing.T) {
+	type Row struct {
+		ID int
+	}
+
+	tests := []struct {
+		row     interface{}
+		rowType reflect.Type
+		errText string
+	}{
+		{
+			row:     Row{},
+			rowType: reflect.TypeOf(Row{}),
+		},
+		{
+			row:     &Row{},
+			rowType: reflect.TypeOf(Row{}),
+		},
+		{
+			row:     []Row{},
+			rowType: reflect.TypeOf(Row{}),
+		},
+		{
+			row:     []*Row{},
+			rowType: reflect.TypeOf(Row{}),
+		},
+	}
+
+	for i, tt := range tests {
+		rowType, err := inferRowType(tt.row)
+		if err != nil {
+			if got, want := err.Error(), tt.errText; got != want {
+				t.Errorf("%d: want=%q, got=%q", i, want, got)
+			}
+			continue
+		}
+		if got, want := rowType, tt.rowType; got != want {
+			t.Errorf("%d: want=%v, got=%v", i, want, got)
+		}
+	}
+}
 
 func TestPrepare(t *testing.T) {
 	dialects := map[string]Dialect{

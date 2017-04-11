@@ -139,6 +139,7 @@ func (list *columnList) addField(field reflect.StructField, i int, state stateT)
 
 	info.Index = state.index
 	info.Path = state.path
+	info.FieldNames = info.Path.String()
 
 	*list = append(*list, info)
 }

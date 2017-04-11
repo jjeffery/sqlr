@@ -64,9 +64,6 @@ func checkSQL(sql string) string {
 	if match("insert", "into", "") {
 		return fmt.Sprintf("insert into %s({}) values({})", words[2])
 	}
-	if match("insert", "") {
-		return fmt.Sprintf("insert into %s({}) values({})", words[1])
-	}
 	if match("update", "") {
 		return fmt.Sprintf("update %s set {} where {}", words[1])
 	}
