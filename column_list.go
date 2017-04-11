@@ -9,6 +9,18 @@ import (
 	"github.com/jjeffery/sqlrow/private/scanner"
 )
 
+// The columnNamer interface is used for naming columns.
+type columnNamer interface {
+	ColumnName(col *column.Info) string
+}
+
+// columnNamerFunc converts a function into a columnNamer.
+type columnNamerFunc func(*column.Info) string
+
+func (f columnNamerFunc) ColumnName(col *column.Info) string {
+	return f(col)
+}
+
 // columnList represents a list of columns for use in an SQL clause.
 //
 // Each columnList represents a subset of the available columns.
@@ -21,16 +33,6 @@ type columnList struct {
 	alias      string
 }
 
-type columnNamer interface {
-	ColumnName(col *column.Info) string
-}
-
-type columnNamerFunc func(*column.Info) string
-
-func (f columnNamerFunc) ColumnName(col *column.Info) string {
-	return f(col)
-}
-
 func newColumns(allColumns []*column.Info) columnList {
 	return columnList{
 		allColumns: allColumns,
@@ -38,6 +40,12 @@ func newColumns(allColumns []*column.Info) columnList {
 	}
 }
 
+// Parse parses the text inside the curly braces to obtain more information
+// about how to render the column list. It is not very sophisticated at the moment,
+// currently the only recognised values are:
+//  "alias n" => use alias "n" for each column in the list
+//  "pk"      => primary key columns only
+//  "all"     => all columns
 func (cols columnList) Parse(clause sqlClause, text string) (columnList, error) {
 	cols2 := cols
 	cols2.clause = clause
@@ -122,6 +130,7 @@ func (cols columnList) String(dialect Dialect, columnNamer columnNamer, counter 
 	return buf.String()
 }
 
+// filtered returns the columns after the filter has been applied
 func (cols columnList) filtered() []*column.Info {
 	v := make([]*column.Info, 0, len(cols.allColumns))
 	for _, col := range cols.allColumns {
@@ -132,18 +141,24 @@ func (cols columnList) filtered() []*column.Info {
 	return v
 }
 
+// columnFilter is the filter for all columns
 func columnFilterAll(col *column.Info) bool {
 	return true
 }
 
+// columnFilterPK is the filter for primary key columns only
 func columnFilterPK(col *column.Info) bool {
 	return col.Tag.PrimaryKey
 }
 
+// columnFilterInsertable is the filter for all columns except the autoincrement
+// column (if it exists)
 func columnFilterInsertable(col *column.Info) bool {
 	return !col.Tag.AutoIncrement
 }
 
+// columnFitlerUpdateable is the filter for all columns not part of the primary key,
+// and not autoincrement
 func columnFilterUpdateable(col *column.Info) bool {
 	return !col.Tag.PrimaryKey && !col.Tag.AutoIncrement
 }

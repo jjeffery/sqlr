@@ -276,6 +276,8 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 	return rowCount, sqlRows.Err()
 }
 
+// TODO(jpj): need to merge the common code in Select and selectOne
+
 func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
 	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
 	if err != nil {
@@ -438,7 +440,7 @@ func (stmt *Stmt) scanSQL(query string) error {
 		case scanner.LITERAL, scanner.OP:
 			buf.WriteString(lit)
 		case scanner.PLACEHOLDER:
-			// TODO(SELECT): should parse the placeholder in case it is positional
+			// TODO(jpj): should parse the placeholder in case it is positional
 			// instead of just allocating it a number assuming it is not positional
 			buf.WriteString(stmt.dialect.Placeholder(counterNext()))
 			stmt.inputs = append(stmt.inputs, inputSource{argIndex: stmt.argCount})

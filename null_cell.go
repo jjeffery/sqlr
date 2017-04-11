@@ -13,8 +13,8 @@ var (
 )
 
 // newNullCell returns a scannable value for fields that are configured
-// so that a null value means to store an empty value. These fields should
-// have a backing field type of int, uint, bool, float, string or time.Time.
+// such that a SQL NULL value means to store an empty value for the type.
+// These fields should have a backing field type of int, uint, bool, float, string or time.Time.
 func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) interface{} {
 	switch cellValue.Kind() {
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:

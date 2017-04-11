@@ -39,48 +39,33 @@ func NewSchema(opts ...SchemaOption) *Schema {
 	return schema
 }
 
-type schemaHelper struct {
-	schema *Schema
-}
-
-func (s schemaHelper) Dialect() Dialect {
-	if s.schema.dialect != nil {
-		return s.schema.dialect
-	}
-	return DefaultDialect
-}
-
-func (s schemaHelper) NamingConvention() NamingConvention {
-	if s.schema.convention != nil {
-		return s.schema.convention
-	}
-	return SnakeCase
-}
-
-func (s schemaHelper) ColumnName(col *column.Info) string {
-	if s.schema.fieldMap != nil {
-		if columnName := s.schema.fieldMap.lookup(col.FieldNames); columnName != "" {
-			return columnName
-		}
-	}
-	return col.Path.ColumnName(s.NamingConvention(), s.schema.key)
-}
-
+// columnNamer returns an object that implements the columnNamer interface
+// for the schema. The column namer returns the column name based on the
+// list of field name/column name mappings for the schema, and the naming
+// convention.
 func (s *Schema) columnNamer() columnNamer {
 	return columnNamerFunc(func(col *column.Info) string {
 		if s.fieldMap != nil {
-			if columnName := s.fieldMap.lookup(col.FieldNames); columnName != "" {
-				return columnName
+			if columnName, ok := s.fieldMap.lookup(col.FieldNames); ok {
+				// If the field map returns an empty string, this means to
+				// fallback to the naming convention. This provides a mechanism
+				// to override any naming from a previous schema.
+				if columnName != "" {
+					return columnName
+				}
 			}
 		}
 		convention := s.convention
 		if convention == nil {
-			convention = SnakeCase
+			convention = defaultNamingConvention
 		}
 		return col.Path.ColumnName(convention, s.key)
 	})
 }
 
+// getDialect returns the dialect for the schema. The aim is to make
+// and empty Schema usable, so this method is necessary to ensure that
+// a non-nil dialect is always available.
 func (s *Schema) getDialect() Dialect {
 	if s.dialect != nil {
 		return s.dialect
@@ -91,19 +76,27 @@ func (s *Schema) getDialect() Dialect {
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
-func (s *Schema) Prepare(row interface{}, sql string) (*Stmt, error) {
+func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
+	// determine row type to use for statement
 	rowType, err := inferRowType(row)
 	if err != nil {
 		return nil, err
 	}
 
-	stmt, _ := s.cache.lookup(rowType, sql)
-	if stmt == nil {
-		stmt, err = newStmt(s.getDialect(), s.columnNamer(), rowType, sql)
+	// convert common shorthand SQL notations
+	query = checkSQL(query)
+
+	// attempt to get statement from the schema's statement cache
+	stmt, ok := s.cache.lookup(rowType, query)
+	if !ok {
+		// build statement from scratch
+		stmt, err = newStmt(s.getDialect(), s.columnNamer(), rowType, query)
 		if err != nil {
 			return nil, err
 		}
-		stmt = s.cache.set(rowType, sql, stmt)
+		// add to schema's statement cache, returning the statement in the
+		// cache -- this is just in case another goroutine has beaten us to it
+		stmt = s.cache.set(rowType, query, stmt)
 	}
 	return stmt, nil
 }

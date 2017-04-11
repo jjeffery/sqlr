@@ -24,6 +24,12 @@ var (
 	LowerCase NamingConvention // eg "FieldName" -> "fieldname"
 )
 
+var (
+	// defaultNamingConvention is used for a schema if no naming
+	// convention has been specified
+	defaultNamingConvention NamingConvention = naming.SnakeCase
+)
+
 func init() {
 	SnakeCase = naming.SnakeCase
 	SameCase = naming.SameCase

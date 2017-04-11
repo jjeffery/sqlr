@@ -20,10 +20,13 @@ func newJSONCell(colname string, v interface{}) *jsonCell {
 	}
 }
 
+// ScanValue returns the value to present to the sql.Rows for scanning.
 func (jc *jsonCell) ScanValue() interface{} {
 	return &jc.data
 }
 
+// Unmarshal unmarshals the JSON text after it has been scanned from
+// the sql.Row.
 func (jc *jsonCell) Unmarshal() error {
 	if len(jc.data) == 0 {
 		// No JSON data to unmarshal, so set to the zero value

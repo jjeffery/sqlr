@@ -22,12 +22,15 @@ func (fm *fieldMap) add(fieldName string, columnName string) {
 	fm.fields[fieldName] = columnName
 }
 
-func (fm *fieldMap) lookup(fieldName string) string {
+// lookup the field name in the field map and return a column name.
+// The boolean returns true if there was a match. If there is a match
+// and the string is empty, this means to fallback to the naming convention.
+func (fm *fieldMap) lookup(fieldName string) (string, bool) {
 	if columnName, ok := fm.fields[fieldName]; ok {
-		return columnName
+		return columnName, ok
 	}
 	if fm.prev != nil {
 		return fm.prev.lookup(fieldName)
 	}
-	return ""
+	return "", false
 }
