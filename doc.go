@@ -1,17 +1,9 @@
 /*
-OLD DESCRIPTION
-
-Package sqlrow makes it easy to construct and execute SQL
-queries for common, row-based scenarios. Supported scenarios include:
-
- (a) Insert, update or delete a single row based on the contents of a Go struct;
- (b) Select a single row into a Go struct; and
- (c) Select zero, one or more rows into a slice of Go structs.
-
-This package is intended for programmers who are comfortable with
-writing SQL, but would like assistance with the sometimes tedious
-process of preparing SELECT, INSERT, UPDATE and DELETE statements
-for tables that have a large number of columns.
+Package sqlrow is designed to reduce the effort required to implement
+common operations performed with SQL databases. It is intended for programmers
+who are comfortable with writing SQL, but would like assistance with the
+sometimes tedious process of preparing SQL queries for tables that have a
+large number of columns, or have a variable number of input parameters.
 
 This package is designed to work seamlessly with the standard library
 "database/sql" package. It does not provide any layer on top of *sql.DB
@@ -19,117 +11,20 @@ or *sql.Tx. If the calling program has a need to execute queries independently
 of this package, it can use "database/sql" directly, or make use of any other
 third party package that uses "database/sql".
 
-SQL INSERT
+The following features are provided to simplify writing SQL database queries:
+ - Prepare SQL from row structures
+ - Autoincrement column values
+ - Null columns
+ - JSON columns
+ - WHERE IN Clauses with multiple values
+ - Code generation
 
-Package sqlrow uses reflection on the supplied row to provide assistance
-with creating SQL. This assistance is particularly useful for tables with
-many columns, but the following examples use this simple structure:
-
- type UserRow struct {
-	ID         int64 `sql:"primary key autoincrement"`
-	GivenName  string
-	FamilyName string
- }
-
-For a row of type UserRow the following INSERT query:
-
- sqlrow.Insert(db, row, `insert into users({}) values({})`)
-
-will be translated into the following, depending on the SQL dialect:
- insert into users(`given_name`,`family_name`) values(?,?)   -- MySQL, SQLite
- insert into users("given_name","family_name") values($1,$2) -- PostgreSQL
- insert into users([given_name],[family_name]) values(?,?)   -- MSSQL
-
-In the above example note that the "id" column is not inserted. This is
-because it is defined as an auto-increment column. If it were not an
-auto-increment column it would be included in the column list.
-
-This pattern is so common for inserting individual rows that,
-for convenience, providing just the table name has the same result:
-
- sqlrow.Insert(db, row, `users`)
-
-SQL UPDATE
-
-The following UPDATE query:
-
- sqlrow.Update(db, row, `update users set {} where {}`)
-
-will be translated into the following:
- update users set `given_name`=?,`family_name`=? where `id`=?    -- MySQL, SQLite
- update users set "given_name"=$1,"family_name"=$2 where "id"=$3 -- PostgreSQL
- update users set [given_name]=?,[family_name]=? where [id]=?    -- MSSQL
-
-This pattern is so common for inserting individual rows that,
-for convenience, providing just the table name has the same result:
-
- sqlrow.Update(db, row, `users`)
-
-It is possible to construct more complex UPDATE statements. The following
-example can be useful for rows that make use of optimistic locking:
- sqlrow.Update(db, row, `update users set {} where {} and version = ?', oldVersion)
-
-SQL DELETE
-
-DELETE queries are similar to UPDATE queries:
-
- sqlrow.Delete(db, row, `delete from users where {}`)
-and
- sqlrow.Delete(db, row, `users`)
-
-are both translated as (for MySQL, SQLite):
- delete from users where `id`=?
-
-SQL SELECT
-
-SQL SELECT queries can be constructed easily
-
- var rows []UserRow
- sql.Select(db, &rows, `select {} from users where given_name=?`, "Smith")
-
-is translated as (for MySQL, SQLite):
- select `id`,`given_name`,`family_name` from users where given_name=?
-
-More complex queries involving joins and table aliases are possible:
-
- sql.Select(db, &rows, `
-   select {alias u}
-   from users u
-   inner join user_search_terms t on t.user_id = u.id
-   where t.search_term like ?`, "Jon%")
-
-is translated as (for MySQL, SQLite):
- select u.`id`,u.`given_name`,u.`family_name`
- from users u inner join user_search_terms t
- on t.user_id = u.id
- where t.search_term like ?
-
-Performance and Caching
-
-Package sqlrow makes use of reflection in order to build the SQL that is sent
-to the database server, and this imposes a performance penalty. In order
-to reduce this overhead the package caches queries generated. The end result
-is that the performance of this package is close to the performance of
-code that uses hand-constructed SQL queries to call package "database/sql"
-directly.
-
-Source Code
-
-More information about this package can be found at https://github.com/jjeffery/sqlrow.
-*/
-
-/*
-Package sqlrow is designed to reduce the effort required to implement
-common operations against SQL databases. It is intended for programmers
-who are comfortable with writing SQL, but would like assistance with the
-sometimes tedious process of preparing SQL queries for tables that have a
-large number of columns, or have a variable number of input parameters.
-
-Prepare SQL from Row structures
+Prepare SQL from row structures
 
 Preparing SQL queries with many placeholder arguments is tedious and error-prone. The following
-insert query has a dozen placeholders, and it is difficult enough to match the columns with the
-placeholder. Many tables have multiple dozens of columns, some have more.
+insert query has a dozen placeholders, and it is difficult to match up the columns with the
+placeholders. It is not uncommon to have tables with many dozens of columns, at which point the
+process of preparing SQL queries using the standard library becomes extremely tiresome.
  insert into users(id,given_name,family_name,dob,ssn,street,locality,postcode,country,phone,mobile,fax)
  values(?,?,?,?,?,?,?,?,?,?,?,?)
 This package uses reflection to simplify the construction of SQL statements for insert, update, delete
@@ -147,7 +42,7 @@ in the associated field.
      Country     string
      Phone       string    `sql:"null"`
      Mobile      string    `sql:"null"`
-     Facsimile   string    `sql:"fax null"`
+     Facsimile   string    `sql:"fax null"` // "fax" overrides the column name
  }
 The calling program creates a schema, which describes rules for generating SQL statements. These
 rules include specifying the SQL dialect (eg MySQL, Posgres, SQLite) and the naming convention
@@ -216,17 +111,21 @@ The examples are using a MySQL dialect. If the schema had been setup for, say, a
 dialect, a generated query would look more like
  select "id","given_name","family_name","dob","ssn","street","locality","postcode","country",
  "phone","mobile","fax" from users where postcode=$1
+It is an important point to note that this feature is not about writing the SQL for the programmer.
+Rather it is "filling in the blanks" and allowing the programmer to specify as much of the
+SQL query as they want without having to write the tiresome bits.
 
-Autoincrement Primary Keys
+Autoincrement Column Values
 
 When inserting rows, if a column is defined as an autoincrement column, then the generated
-value will be retrieved and the corresponding field in the row structure will be updated.
+value will be retrieved from the database server, and the corresponding field in the row
+structure will be updated.
  type Row {
    ID   int    `sql:"primary key autoincrement"`
    Name string
  }
 
- row := &Row{ Name: "some name"}
+ row := &Row{Name: "some name"}
  _, err := schema.Exec(db, row, "insert into table_name({}) values({})")
  if err != nil {
    log.Fatal(err)
@@ -234,5 +133,94 @@ value will be retrieved and the corresponding field in the row structure will be
 
  // row.ID will contain the auto-generated value
  fmt.Println(row.ID)
+This feature only works with database drivers that support autoincrement columns. The Postgres
+driver, in particular, does not support this feature.
+
+Null Columns
+
+Most SQL database tables have columns that are nullable, and it can be tiresome to always
+map to pointer types of special nullable types such as sql.NullString. In many cases it is
+acceptable to map a database NULL value to the empty value for the corresponding Go struct
+field. (NOTE: It is not always acceptable, but experience has shown that it is a common
+enough situation).
+
+Where it is acceptable to map a NULL value to an empty value and vice-versa, the Go struct
+field can be marked with the "null" keyword in the field's struct tag.
+ type User struct {
+     ID       int     `sql:"primary key"`
+     Name     string
+     SpouseID int     `sql:"null"`
+     Phone    string  `sql:"null"`
+ }
+In the above example the `spouse_id` column can be null, but because all IDs are non-zero,
+it is unambiguous to map a database NULL to the zero value. Similarly, if the `phone` column
+is null it will be mapped to an empty string. An empty string in the Go struct field will
+be mapped to NULL in the database.
+
+Care should be taken, because there are cases where an empty value and a database NULL are not
+the same thing. There are many cases, however, where this feature can be applied, and result
+is simpler code that is easier to read.
+
+JSON Columns
+
+It is not uncommon to serialize complex objects as JSON text for storage in an SQL database.
+Native support for JSON is available in some database servers: in partcular Postgres has
+excellent support for JSON.
+
+It is straightforward to use this package to serialize a structure field to JSON.
+ type SomethingComplex struct {
+     Name       string
+     Values     []int
+     MoreValues map[string]float64
+     // ... and more fields here ...
+ }
+
+ type Row struct {
+     ID    int                `sql:"primary key"`
+     Name  string
+     Cmplx *SomethingComplex  `sql:"json"`
+ }
+In the example above the `Cmplx` field will be marshaled as JSON text when
+writing to the database, and unmarshaled into the struct when reading from
+the database.
+
+WHERE IN Clauses with Multiple Values
+
+While most SQL queries accept a fixed number of parameters, if the SQL query
+contains a `WHERE IN` clause, it requires additional string manipulation to match
+the number of placeholders in the query with args.
+
+This package simplifies queries with a variable number of arguments. When processing
+an SQL query, it detects if any of the arguments are slices:
+ // GetWidgets returns all the widgets associated with the supplied IDs.
+ func GetWidgets(db *sql.DB, ids ...int) ([]*Widget, error) {
+     var rows []*Widget
+     _, err := schema.Select(db, &rows, `select {} from widgets where id in (?)`, ids)
+     if err != nil {
+       return nil, err
+     }
+     return widgets, nil
+ }
+In the above example, the number of placeholders ("?") in the query will be increased to
+match the number of values in the `ids` slice. The expansion logic can handle any mix of
+slice and scalar arguments.
+
+Code Generation
+
+This package contains a code generation tool in the "./cmd/sqlrow-gen" directory. It can
+be quite useful to reduce the amount of code even further.
+
+Performance and Caching
+
+This package makes use of reflection in order to build the SQL that is sent
+to the database server, and this imposes a performance penalty. In order
+to reduce this overhead each schema instance caches queries generated.
+The end result is that the performance of this package is close to the
+performance of code that uses hand-constructed SQL queries to call
+package "database/sql" directly.
+
+Source Code
+
+More information about this package can be found at https://github.com/jjeffery/sqlrow.
 */
 package sqlrow

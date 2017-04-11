@@ -1,3 +1,4 @@
+// sqlrow-gen is a code generation utility for SQL CRUD operations.
 package main
 
 import (
