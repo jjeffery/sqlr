@@ -1,6 +1,4 @@
-package sqlrow_test
-
-/**
+package sqlrow
 
 import (
 	"database/sql"
@@ -8,12 +6,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/jjeffery/sqlrow"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // The UserRow struct represents a single row in the users table.
-// Note that the sqlrow package becomes more useful when tables
+// Note that this package becomes more useful when tables
 // have many more columns than shown in this example.
 type UserRow struct {
 	ID         int64 `sql:"primary key autoincrement"`
@@ -30,41 +27,43 @@ func Example() {
 	exitIfError(err)
 	defer tx.Rollback()
 
+	schema := NewSchema(ForDB(db))
+
 	// insert three rows, IDs are automatically generated (1, 2, 3)
 	for _, givenName := range []string{"John", "Jane", "Joan"} {
 		u := &UserRow{
 			GivenName:  givenName,
 			FamilyName: "Citizen",
 		}
-		err = sqlrow.Insert(tx, u, `users`)
+		_, err = schema.Exec(tx, u, `insert into users`)
 		exitIfError(err)
 	}
 
 	// get user with ID of 3 and then delete it
 	{
 		var u UserRow
-		_, err = sqlrow.Select(tx, &u, `users`, 3)
+		_, err = schema.Select(tx, &u, `select users`, 3)
 		exitIfError(err)
 
-		_, err = sqlrow.Delete(tx, u, `users`)
+		_, err = schema.Exec(tx, u, `delete from users where {}`)
 		exitIfError(err)
 	}
 
 	// update family name for user with ID of 2
 	{
 		var u UserRow
-		_, err = sqlrow.Select(tx, &u, `users`, 2)
+		_, err = schema.Select(tx, &u, `select users`, 2)
 		exitIfError(err)
 
 		u.FamilyName = "Doe"
-		_, err = sqlrow.Update(tx, u, `users`)
+		_, err = schema.Exec(tx, u, `update users`)
 		exitIfError(err)
 	}
 
 	// select rows from table and print
 	{
 		var users []*UserRow
-		_, err = sqlrow.Select(tx, &users, `
+		_, err = schema.Select(tx, &users, `
 			select {}
 			from users
 			order by id
@@ -101,4 +100,3 @@ func setupSchema(db *sql.DB) {
 	`)
 	exitIfError(err)
 }
-*/

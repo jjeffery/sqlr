@@ -1,41 +1,12 @@
-package sqlrow_test
-
-/**
+package sqlrow
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
-
-	"github.com/jjeffery/sqlrow"
 )
 
 var db *sql.DB
-
-func ExamplePrepare() {
-	type UserRow struct {
-		ID         int `sql:"primary key autoincrement"`
-		GivenName  string
-		FamilyName string
-	}
-
-	stmt, err := sqlrow.Prepare(UserRow{}, `insert into users({}) values({})`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// ... later on ...
-
-	row := UserRow{
-		GivenName:  "John",
-		FamilyName: "Citizen",
-	}
-
-	_, err = stmt.Exec(db, row)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func ExampleSchema_Prepare() {
 	type UserRow struct {
@@ -44,30 +15,37 @@ func ExampleSchema_Prepare() {
 		FamilyName string
 	}
 
-	// Schema for an MSSQL database, where column names
-	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
+	// Define different schemas for different dialects and naming conventions
+
+	mssql := NewSchema(
+		WithDialect(MSSQL),
+		WithNamingConvention(SameCase),
+	)
+
+	mysql := NewSchema(
+		WithDialect(MySQL),
+		WithNamingConvention(LowerCase),
+	)
+
+	postgres := NewSchema(
+		WithDialect(Postgres),
+		WithNamingConvention(SnakeCase),
+	)
+
+	// for each schema, print the SQL generated for each statement
+	for _, schema := range []*Schema{mssql, mysql, postgres} {
+		stmt, err := schema.Prepare(UserRow{}, `insert into users({}) values({})`)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(stmt)
 	}
 
-	stmt, err := mssql.Prepare(UserRow{}, `insert into users({}) values({})`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// ... later on ...
-
-	row := UserRow{
-		GivenName:  "John",
-		FamilyName: "Citizen",
-	}
-
-	_, err = stmt.Exec(db, row)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Output:
+	// insert into users([GivenName],[FamilyName]) values(?,?)
+	// insert into users(`givenname`,`familyname`) values(?,?)
+	// insert into users("given_name","family_name") values($1,$2)
 }
 
 func ExampleStmt_Exec_insert() {
@@ -77,7 +55,9 @@ func ExampleStmt_Exec_insert() {
 		FamilyName string
 	}
 
-	stmt, err := sqlrow.Prepare(UserRow{}, `insert into users({}) values({})`)
+	schema := NewSchema()
+
+	stmt, err := schema.Prepare(UserRow{}, `insert into users({}) values({})`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,7 +83,9 @@ func ExampleStmt_Exec_update() {
 		FamilyName string
 	}
 
-	stmt, err := sqlrow.Prepare(UserRow{}, `update users set {} where {}`)
+	schema := NewSchema()
+
+	stmt, err := schema.Prepare(UserRow{}, `update users set {} where {}`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,7 +112,9 @@ func ExampleStmt_Exec_delete() {
 		FamilyName string
 	}
 
-	stmt, err := sqlrow.Prepare(UserRow{}, `delete from users where {}`)
+	schema := NewSchema()
+
+	stmt, err := schema.Prepare(UserRow{}, `delete from users where {}`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -157,7 +141,9 @@ func ExampleStmt_Select_oneRow() {
 		FamilyName string
 	}
 
-	stmt, err := sqlrow.Prepare(UserRow{}, `select {} from users where {}`)
+	schema := NewSchema()
+
+	stmt, err := schema.Prepare(UserRow{}, `select {} from users where {}`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,7 +170,9 @@ func ExampleStmt_Select_multipleRows() {
 		FamilyName string
 	}
 
-	stmt, err := sqlrow.Prepare(UserRow{}, `
+	schema := NewSchema()
+
+	stmt, err := schema.Prepare(UserRow{}, `
 		select {alias u}
 		from users u
 		inner join user_search_terms t on t.user_id = u.id
@@ -210,6 +198,8 @@ func ExampleStmt_Select_multipleRows() {
 		log.Printf("not found")
 	}
 }
+
+/**** obsolete
 
 func ExampleInsert() {
 	type UserRow struct {
@@ -377,6 +367,7 @@ func ExampleSelect_oneRow() {
 		log.Printf("not found")
 	}
 }
+****/
 
 func ExampleSchema_Select_oneRow() {
 	type UserRow struct {
@@ -387,10 +378,10 @@ func ExampleSchema_Select_oneRow() {
 
 	// Schema for an MSSQL database, where column names
 	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
-	}
+	mssql := NewSchema(
+		WithDialect(MSSQL),
+		WithNamingConvention(SameCase),
+	)
 
 	// find user with ID=42
 	var row UserRow
@@ -415,10 +406,10 @@ func ExampleSchema_Select_multipleRows() {
 
 	// Schema for an MSSQL database, where column names
 	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
-	}
+	mssql := NewSchema(
+		WithDialect(MSSQL),
+		WithNamingConvention(SameCase),
+	)
 
 	// find users with search terms
 	var rows []UserRow
@@ -440,4 +431,3 @@ func ExampleSchema_Select_multipleRows() {
 		log.Printf("not found")
 	}
 }
-*/
