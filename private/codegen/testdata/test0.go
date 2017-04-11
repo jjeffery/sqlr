@@ -11,6 +11,6 @@ type Row0 struct {
 
 type Row0Query struct {
 	db      sqlrow.DB `methods:"Get,Select,SelectOne,Insert,Update,Delete,Upsert"`
-	schema  sqlrow.Schema
+	schema  *sqlrow.Schema
 	rowType *Row0 `table:"xyz.rows" singular:"document" plural:"documents"`
 }

@@ -11,6 +11,6 @@ import (
 
 type Row3Query struct {
 	db      sqlrow.DB
-	schema  sqlrow.Schema
+	schema  *sqlrow.Schema
 	rowType *rowtype.Row3
 }

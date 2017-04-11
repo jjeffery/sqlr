@@ -18,6 +18,6 @@ type Row2 struct {
 
 type Row2Query struct {
 	db      sqlrow.DB
-	schema  sqlrow.Schema
+	schema  *sqlrow.Schema
 	rowType *Row2
 }

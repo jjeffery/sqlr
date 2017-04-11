@@ -54,7 +54,7 @@ func (q *DocumentQuery) selectOne(query string, args ...interface{}) (*Document,
 
 // insert inserts a Document row.
 func (q *DocumentQuery) insert(row *Document) error {
-	err := q.schema.Insert(q.db, row, "documents")
+	_, err := q.schema.Exec(q.db, row, "insert into documents({}) values({})")
 	if err != nil {
 		return errors.Wrap(err, "cannot insert Document").With(
 			"ID", row.ID,
@@ -66,7 +66,7 @@ func (q *DocumentQuery) insert(row *Document) error {
 // update updates an existing Document row. Returns the number of rows updated,
 // which should be zero or one.
 func (q *DocumentQuery) update(row *Document) (int, error) {
-	n, err := q.schema.Update(q.db, row, "documents")
+	n, err := q.schema.Exec(q.db, row, "update documents set {} where {}")
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot update Document").With(
 			"ID", row.ID,
@@ -77,7 +77,7 @@ func (q *DocumentQuery) update(row *Document) (int, error) {
 
 // upsert attempts to update a Document row, and if it does not exist then insert it.
 func (q *DocumentQuery) upsert(row *Document) error {
-	n, err := q.schema.Update(q.db, row, "documents")
+	n, err := q.schema.Exec(q.db, row, "update documents set {} where {}")
 	if err != nil {
 		return errors.Wrap(err, "cannot update Document for upsert").With(
 			"ID", row.ID,
@@ -87,7 +87,7 @@ func (q *DocumentQuery) upsert(row *Document) error {
 		// update successful, row updated
 		return nil
 	}
-	if err := q.schema.Insert(q.db, row, "documents"); err != nil {
+	if _, err := q.schema.Exec(q.db, row, "insert into documents({}) values({})"); err != nil {
 		return errors.Wrap(err, "cannot insert Document for upsert").With(
 			"ID", row.ID,
 		)
@@ -98,7 +98,7 @@ func (q *DocumentQuery) upsert(row *Document) error {
 // delete deletes a Document row. Returns the number of rows deleted, which should
 // be zero or one.
 func (q *DocumentQuery) delete(row *Document) (int, error) {
-	n, err := q.schema.Delete(q.db, row, "documents")
+	n, err := q.schema.Exec(q.db, row, "delete from documents where {}")
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot delete Document").With(
 			"ID", row.ID,

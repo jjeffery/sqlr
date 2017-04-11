@@ -17,12 +17,12 @@ type Document struct {
 
 type DocumentQuery struct {
 	db      sqlrow.DB
-	schema  sqlrow.Schema
+	schema  *sqlrow.Schema
 	rowType *Document
 }
 
 // FindModifiedAfter is an example of how to build a method with a custom
 // query using the code-generated Select method.
 func (q DocumentQuery) FindModifiedAfter(t time.Time) ([]*Document, error) {
-	return q.Select("select {} from documents where updated_at > ?", t)
+	return q.selectRows("select {} from documents where updated_at > ?", t)
 }

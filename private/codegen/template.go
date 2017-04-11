@@ -64,7 +64,7 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.SelectOne}}(query string, arg
 {{- if .Method.Insert}}
 // {{.Method.Insert}} inserts a {{.Singular}} row.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Insert}}(row *{{.RowType.Name}}) error {
-	err := {{.ReceiverIdent}}.{{.SchemaField}}.Insert({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedTableName}})
+	_, err := {{.ReceiverIdent}}.{{.SchemaField}}.Exec({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedInsert}})
 	if err != nil {
 		return errors.Wrap(err, "cannot insert {{.Singular}}").With(
             {{range .RowType.LogProps}}"{{.}}", row.{{.}}, {{end}}
@@ -77,7 +77,7 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Insert}}(row *{{.RowType.Name
 // {{.Method.Update}} updates an existing {{.Singular}} row. Returns the number of rows updated,
 // which should be zero or one.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Update}}(row *{{.RowType.Name}}) (int, error) {
-	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Update({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedTableName}})
+	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Exec({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedUpdate}})
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot update {{.Singular}}").With(
             {{range .RowType.LogProps}}"{{.}}", row.{{.}}, {{end}}
@@ -89,7 +89,7 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Update}}(row *{{.RowType.Name
 {{- if .Method.Upsert}}
 // {{.Method.Upsert}} attempts to update a {{.Singular}} row, and if it does not exist then insert it.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Upsert}}(row *{{.RowType.Name}}) error {
-	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Update({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedTableName}})
+	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Exec({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedUpdate}})
     if err != nil {
 		return errors.Wrap(err, "cannot update {{.Singular}} for upsert").With(
             {{range .RowType.LogProps}}"{{.}}", row.{{.}}, {{end}}
@@ -99,7 +99,7 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Upsert}}(row *{{.RowType.Name
         // update successful, row updated
         return nil
     }
-	if err := {{.ReceiverIdent}}.{{.SchemaField}}.Insert({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedTableName}}); err != nil {
+	if _, err := {{.ReceiverIdent}}.{{.SchemaField}}.Exec({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedInsert}}); err != nil {
 		return errors.Wrap(err, "cannot insert {{.Singular}} for upsert").With(
             {{range .RowType.LogProps}}"{{.}}", row.{{.}}, {{end}}
 		)
@@ -111,7 +111,7 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Upsert}}(row *{{.RowType.Name
 // {{.Method.Delete}} deletes a {{.Singular}} row. Returns the number of rows deleted, which should
 // be zero or one.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Delete}}(row *{{.RowType.Name}}) (int, error) {
-	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Delete({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedTableName}})
+	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Exec({{.ReceiverIdent}}.{{.DBField}}, row, {{.QuotedDelete}})
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot delete {{.Singular}}").With(
             {{range .RowType.LogProps}}"{{.}}", row.{{.}}, {{end}}

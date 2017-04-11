@@ -55,6 +55,10 @@ func (imp *Import) String() string {
 type QueryType struct {
 	TypeName        string
 	QuotedTableName string // Table name in quotes
+	QuotedSelect    string
+	QuotedInsert    string
+	QuotedUpdate    string
+	QuotedDelete    string
 	Singular        string // Describes one instance in error msg
 	Plural          string // Describes multiple instances in error msg
 	DBField         string // Name of the field of type sqlrow.DB (probably db)
@@ -255,6 +259,10 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	queryType := &QueryType{
 		TypeName:        typeSpec.Name.Name,
 		QuotedTableName: fmt.Sprintf("%q", tableName),
+		QuotedSelect:    quotedString(fmt.Sprintf(`select {} from %s where {}`, tableName)),
+		QuotedInsert:    quotedString(fmt.Sprintf(`insert into %s({}) values({})`, tableName)),
+		QuotedUpdate:    quotedString(fmt.Sprintf("update %s set {} where {}", tableName)),
+		QuotedDelete:    quotedString(fmt.Sprintf("delete from %s where {}", tableName)),
 		Singular:        singular,
 		Plural:          plural,
 		DBField:         dbField.Names[0].Name,
@@ -490,4 +498,8 @@ func inferReceiverIdent(file *ast.File, typeSpec *ast.TypeSpec) string {
 		}
 	}
 	return defaultReceiverIdent
+}
+
+func quotedString(s string) string {
+	return fmt.Sprintf("%q", s)
 }
