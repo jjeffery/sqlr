@@ -19,7 +19,7 @@ func TestPrepare(t *testing.T) {
 				ID   string `sql:"primary key auto increment"`
 				Name string
 			}{},
-			sql: "insert into tbl({}) values({})",
+			sql: "insert into tbl",
 			queries: map[string]string{
 				"mysql":    "insert into tbl(`name`) values(?)",
 				"postgres": `insert into tbl("name") values($1)`,
@@ -41,7 +41,7 @@ func TestPrepare(t *testing.T) {
 				ID   string `sql:"primary key"`
 				Name string
 			}{},
-			sql: "insert into tbl({}) values({})",
+			sql: "insert tbl",
 			queries: map[string]string{
 				"mysql":    "insert into tbl(`id`,`name`) values(?,?)",
 				"postgres": `insert into tbl("id","name") values($1,$2)`,
@@ -53,6 +53,17 @@ func TestPrepare(t *testing.T) {
 				Name string
 			}{},
 			sql: "update tbl set {} where {}",
+			queries: map[string]string{
+				"mysql":    "update tbl set `name`=? where `id`=?",
+				"postgres": `update tbl set "name"=$1 where "id"=$2`,
+			},
+		},
+		{
+			row: struct {
+				ID   string `sql:"primary key auto increment"`
+				Name string
+			}{},
+			sql: "update tbl",
 			queries: map[string]string{
 				"mysql":    "update tbl set `name`=? where `id`=?",
 				"postgres": `update tbl set "name"=$1 where "id"=$2`,
