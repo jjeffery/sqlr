@@ -52,8 +52,12 @@ func init() {
 
 	DefaultDialect = ANSISQL
 
-	for _, name := range sql.Drivers() {
-		switch name {
+	// If one or more drivers have been loaded, choose the default dialect
+	// based on the first driver in the list. If there are multiple drivers
+	// the first driver is going to be the first alphabetically, as the driver
+	// names are sorted.
+	if drivers := sql.Drivers(); len(drivers) > 0 {
+		switch drivers[0] {
 		case "postgres":
 			DefaultDialect = Postgres
 		case "mysql":
@@ -63,23 +67,23 @@ func init() {
 		case "mssql":
 			DefaultDialect = MSSQL
 		}
-		break
 	}
 }
 
 func dialectFor(db *sql.DB) Dialect {
-	if db == nil {
-		return ANSISQL
-	}
-	drv := db.Driver()
-	for _, d := range allDialects {
-		if matcher, ok := d.(interface {
-			Match(driver.Driver) bool
-		}); ok {
-			if matcher.Match(drv) {
-				return d
+	if db != nil {
+		if drvr := db.Driver(); drvr != nil {
+			for _, dlct := range allDialects {
+				if matcher, ok := dlct.(interface {
+					Match(driver.Driver) bool
+				}); ok {
+					if matcher.Match(drvr) {
+						return dlct
+					}
+				}
 			}
 		}
 	}
-	return ANSISQL
+	// dialect not found for driver, use default
+	return DefaultDialect
 }

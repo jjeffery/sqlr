@@ -23,7 +23,7 @@ import "github.com/jjeffery/sqlrow/private/column"
 type Schema struct {
 	dialect    Dialect
 	convention NamingConvention
-	cache      statementCache
+	cache      stmtCache
 	fieldMap   *fieldMap
 	key        string
 }

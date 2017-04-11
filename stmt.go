@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/jjeffery/sqlrow/private/column"
 	"github.com/jjeffery/sqlrow/private/scanner"
@@ -23,14 +22,27 @@ type Stmt struct {
 	query       string
 	dialect     Dialect
 	columnNamer columnNamer
-	argCount    int
 	columns     []*column.Info
-	inputs      []inputT
-	output      struct {
+	inputs      []inputSource
+	argCount    int      // the number of args expected in addition to fields from the row
+	output      struct { // outputs from a select query are determined the first time it is run
 		mutex   sync.RWMutex
 		columns []*column.Info
 	}
 	autoIncrColumn *column.Info
+}
+
+// inputSource describes where to source the input to an SQL query. (There is
+// one input for each placeholder in the query).
+//
+// If col is non-nil, then the input should be sourced from the field
+// associated with the column.
+//
+// If col is nil, then argIndex is the index into the args array, and the
+// corresponding arg should be used as input.
+type inputSource struct {
+	col      *column.Info
+	argIndex int // used only if col == nil
 }
 
 // TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
@@ -406,26 +418,16 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 	return stmt.output.columns, nil
 }
 
-func (stmt *Stmt) addColumns(cols columnList) {
-	if cols.clause.isInput() {
-		for _, col := range cols.filtered() {
-			stmt.inputs = append(stmt.inputs, inputT{col: col})
-		}
-	}
-
-	// Note that we don't record output columns anymore prior to running the query.
-	// This way it does not matter if columns are specified explicitly or
-	// if they are expanded out using the {} mechanism.
-}
-
 func (stmt *Stmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
-	var counter counterT
 	columns := newColumns(stmt.columns)
+	var counter int
+	counterNext := func() int { counter++; return counter }
 	var insertColumns *columnList
 	var clause sqlClause
 	var buf bytes.Buffer
+
 	for scan.Scan() {
 		tok, lit := scan.Token(), scan.Text()
 		switch tok {
@@ -438,8 +440,8 @@ func (stmt *Stmt) scanSQL(query string) error {
 		case scanner.PLACEHOLDER:
 			// TODO(SELECT): should parse the placeholder in case it is positional
 			// instead of just allocating it a number assuming it is not positional
-			buf.WriteString(stmt.dialect.Placeholder(counter.Next()))
-			stmt.inputs = append(stmt.inputs, inputT{argIndex: stmt.argCount})
+			buf.WriteString(stmt.dialect.Placeholder(counterNext()))
+			stmt.inputs = append(stmt.inputs, inputSource{argIndex: stmt.argCount})
 			stmt.argCount++
 		case scanner.IDENT:
 			if lit[0] == '{' {
@@ -461,15 +463,15 @@ func (stmt *Stmt) scanSQL(query string) error {
 					// change the clause but keep the filter and generate string
 					cols := *insertColumns
 					cols.clause = clause
-					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counter.Next))
-					stmt.addColumns(cols)
+					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counterNext))
+					stmt.addInputColumns(cols)
 				} else {
 					cols, err := columns.Parse(clause, lit)
 					if err != nil {
 						return fmt.Errorf("cannot expand %q in %q clause: %v", lit, clause, err)
 					}
-					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counter.Next))
-					stmt.addColumns(cols)
+					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counterNext))
+					stmt.addInputColumns(cols)
 					if clause == clauseInsertColumns {
 						insertColumns = &cols
 					}
@@ -491,6 +493,14 @@ func (stmt *Stmt) scanSQL(query string) error {
 	}
 	stmt.query = strings.TrimSpace(buf.String())
 	return nil
+}
+
+func (stmt *Stmt) addInputColumns(cols columnList) {
+	if cols.clause.isInput() {
+		for _, col := range cols.filtered() {
+			stmt.inputs = append(stmt.inputs, inputSource{col: col})
+		}
+	}
 }
 
 // getArgs returns an array of args to send to the SQL query, based
@@ -552,221 +562,4 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 
 func (stmt *Stmt) expectedTypeName() string {
 	return fmt.Sprintf("%s.%s", stmt.rowType.PkgPath(), stmt.rowType.Name())
-}
-
-// counterT is used for keeping track of placeholders
-type counterT int
-
-func (c *counterT) Next() int {
-	*c++
-	return int(*c)
-}
-
-// inputT describes an input to an SQL query.
-//
-// If col is non-nil, then it refers to the column/field
-// used as the input for the corresponding placeholder in the
-// SQL query.
-//
-// If col is nil, then argIndex is the index into the args
-// array for the associated arg that will be used for the placeholder.
-type inputT struct {
-	col      *column.Info
-	argIndex int // used only if col == nil
-}
-
-// jsonCell is used to unmarshal JSON cells into their destination type
-type jsonCell struct {
-	colname   string
-	cellValue interface{}
-	data      []byte
-}
-
-func newJSONCell(colname string, v interface{}) *jsonCell {
-	return &jsonCell{
-		colname:   colname,
-		cellValue: v,
-	}
-}
-
-func (jc *jsonCell) ScanValue() interface{} {
-	return &jc.data
-}
-
-func (jc *jsonCell) Unmarshal() error {
-	if len(jc.data) == 0 {
-		// No JSON data to unmarshal, so set to the zero value
-		// for this type. We know that jc.cellValue is a pointer,
-		// so it is safe to call Elem() and set the value.
-		valptr := reflect.ValueOf(jc.cellValue)
-		val := valptr.Elem()
-		val.Set(reflect.Zero(val.Type()))
-		return nil
-	}
-	if err := json.Unmarshal(jc.data, jc.cellValue); err != nil {
-		// TODO(jpj): if Wrap makes it into the stdlib, use it here
-		return fmt.Errorf("cannot unmarshal JSON field %q: %v", jc.colname, err)
-	}
-	return nil
-}
-
-var (
-	timeType = reflect.TypeOf(time.Time{})
-	timeZero = reflect.Zero(reflect.TypeOf(time.Time{}))
-)
-
-// newNullCell returns a scannable value for fields that are configured
-// so that a null value means to store an empty value. These fields should
-// have a backing field type of int, uint, bool, float or string.
-func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) interface{} {
-	switch cellValue.Kind() {
-	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		return &nullIntCell{colname: colname, cellValue: cellValue}
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		return &nullUintCell{colname: colname, cellValue: cellValue}
-	case reflect.Float32, reflect.Float64:
-		return &nullFloatCell{colname: colname, cellValue: cellValue}
-	case reflect.Bool:
-		return &nullBoolCell{colname: colname, cellValue: cellValue}
-	case reflect.String:
-		return &nullStringCell{colname: colname, cellValue: cellValue}
-	case reflect.Struct:
-		if cellValue.Type() == timeType {
-			return &nullTimeCell{colname: colname, cellValue: cellValue}
-		}
-		return cellPtr
-	default:
-		// other valid types include pointer and slice, which
-		// can handle a null value without resorting to reflection
-		return cellPtr
-	}
-}
-
-type nullIntCell struct {
-	colname   string
-	cellValue reflect.Value
-	bits      int
-}
-
-func (nc *nullIntCell) Scan(v interface{}) (err error) {
-	defer func() {
-		// handle panic if SetFloat overflows
-		if r := recover(); r != nil {
-			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
-		}
-	}()
-	var nullable sql.NullInt64
-	if err = nullable.Scan(v); err != nil {
-		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
-	}
-	if nullable.Valid {
-		nc.cellValue.SetInt(nullable.Int64)
-	} else {
-		nc.cellValue.SetInt(0)
-	}
-	return nil
-}
-
-type nullUintCell struct {
-	colname   string
-	cellValue reflect.Value
-}
-
-func (nc *nullUintCell) Scan(v interface{}) (err error) {
-	defer func() {
-		// handle panic if SetFloat overflows
-		if r := recover(); r != nil {
-			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
-		}
-	}()
-	var nullable sql.NullInt64
-	if err = nullable.Scan(v); err != nil {
-		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
-	}
-	if nullable.Valid {
-		nc.cellValue.SetUint(uint64(nullable.Int64))
-	} else {
-		nc.cellValue.SetUint(0)
-	}
-	return nil
-}
-
-type nullFloatCell struct {
-	colname   string
-	cellValue reflect.Value
-	bits      int
-}
-
-func (nc *nullFloatCell) Scan(v interface{}) (err error) {
-	defer func() {
-		// handle panic if SetFloat overflows
-		if r := recover(); r != nil {
-			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
-		}
-	}()
-	var nullable sql.NullFloat64
-	if err := nullable.Scan(v); err != nil {
-		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
-	}
-	if nullable.Valid {
-		nc.cellValue.SetFloat(nullable.Float64)
-	} else {
-		nc.cellValue.SetFloat(0.0)
-	}
-	return nil
-}
-
-type nullBoolCell struct {
-	colname   string
-	cellValue reflect.Value
-}
-
-func (nc *nullBoolCell) Scan(v interface{}) error {
-	var nullable sql.NullBool
-	if err := nullable.Scan(v); err != nil {
-		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
-	}
-	if nullable.Valid {
-		nc.cellValue.SetBool(nullable.Bool)
-	} else {
-		nc.cellValue.SetBool(false)
-	}
-	return nil
-}
-
-type nullStringCell struct {
-	colname   string
-	cellValue reflect.Value
-}
-
-func (nc *nullStringCell) Scan(v interface{}) error {
-	var nullable sql.NullString
-	if err := nullable.Scan(v); err != nil {
-		return fmt.Errorf("cannot scan column %q: %v", nc.colname, err)
-	}
-	if nullable.Valid {
-		nc.cellValue.SetString(nullable.String)
-	} else {
-		nc.cellValue.SetString("")
-	}
-	return nil
-}
-
-type nullTimeCell struct {
-	colname   string
-	cellValue reflect.Value
-}
-
-func (nc *nullTimeCell) Scan(v interface{}) error {
-	if v == nil {
-		nc.cellValue.Set(timeZero)
-		return nil
-	}
-	switch v.(type) {
-	case time.Time:
-		nc.cellValue.Set(reflect.ValueOf(v))
-		return nil
-	}
-
-	return fmt.Errorf("cannot scan column %q: type %q is not compatible with time.Time", nc.colname, reflect.TypeOf(v))
 }
