@@ -73,9 +73,8 @@ func (s *Schema) getDialect() Dialect {
 	return DefaultDialect
 }
 
-// clone creates a copy of the schema, with options applied.
-// TODO(jpj): the idea is to make this method public when it is needed
-func (s *Schema) clone(opts ...SchemaOption) *Schema {
+// Clone creates a copy of the schema, with options applied.
+func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 	clone := &Schema{
 		dialect:    s.dialect,
 		convention: s.convention,
