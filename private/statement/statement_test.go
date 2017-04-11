@@ -5,10 +5,10 @@ import (
 	"database/sql/driver"
 	"testing"
 
-	"github.com/jjeffery/sqlrow/private/column"
-	"github.com/jjeffery/sqlrow/private/dialect"
-	"github.com/jjeffery/sqlrow/private/naming"
-	"github.com/jjeffery/sqlrow/private/statement"
+	"github.com/jjeffery/sqlr/private/column"
+	"github.com/jjeffery/sqlr/private/dialect"
+	"github.com/jjeffery/sqlr/private/naming"
+	"github.com/jjeffery/sqlr/private/statement"
 
 	sqlmock "gopkg.in/DATA-DOG/go-sqlmock.v1"
 )

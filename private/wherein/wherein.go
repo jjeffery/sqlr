@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlr/private/scanner"
 )
 
 var (

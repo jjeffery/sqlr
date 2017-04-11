@@ -1,4 +1,4 @@
-package sqlrow
+package sqlr
 
 import (
 	"database/sql"

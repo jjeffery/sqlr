@@ -1,8 +1,8 @@
 package testdata
 
-//go:generate sqlrow-gen
+//go:generate sqlr-gen
 
-import "github.com/jjeffery/sqlrow"
+import "github.com/jjeffery/sqlr"
 
 type Row0 struct {
 	ID   string `sql:"primary key"`
@@ -10,7 +10,7 @@ type Row0 struct {
 }
 
 type Row0Query struct {
-	db      sqlrow.DB `methods:"Get,Select,SelectOne,Insert,Update,Delete,Upsert"`
-	schema  *sqlrow.Schema
+	db      sqlr.DB `methods:"Get,Select,SelectOne,Insert,Update,Delete,Upsert"`
+	schema  *sqlr.Schema
 	rowType *Row0 `table:"xyz.rows" singular:"document" plural:"documents"`
 }

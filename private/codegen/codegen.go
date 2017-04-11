@@ -12,8 +12,8 @@ import (
 	"unicode"
 
 	"github.com/jjeffery/errors"
-	"github.com/jjeffery/sqlrow/private/column"
-	"github.com/jjeffery/sqlrow/private/naming"
+	"github.com/jjeffery/sqlr/private/column"
+	"github.com/jjeffery/sqlr/private/naming"
 )
 
 // DefaultOutput returns the default filename for generated output
@@ -61,8 +61,8 @@ type QueryType struct {
 	QuotedDelete    string
 	Singular        string // Describes one instance in error msg
 	Plural          string // Describes multiple instances in error msg
-	DBField         string // Name of the field of type sqlrow.DB (probably db)
-	SchemaField     string // Name of the schema field of type sqlrow.Schema (probably schema)
+	DBField         string // Name of the field of type sqlr.DB (probably db)
+	SchemaField     string // Name of the schema field of type sqlr.Schema (probably schema)
 	ReceiverIdent   string // Name of the receiver identifier
 	RowType         *RowType
 	Method          struct {
@@ -130,6 +130,7 @@ func Parse(filename string) (*Model, error) {
 }
 
 var dbTypeNames = map[string]bool{
+	"sqlr.DB":   true,
 	"sqlrow.DB": true,
 	"sql.DB":    true,
 	"sql.Tx":    true,
@@ -147,9 +148,9 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	var plural string
 	var receiverIdent string
 
-	const dbTypeName = "sqlrow.DB"
+	const dbTypeName = "sqlr.DB"
 	const rowTypeFieldName = "rowType"
-	const schemaTypeName = "sqlrow.Schema"
+	const schemaTypeName = "sqlr.Schema"
 
 	// Use a local import resolver for resolving field type names that will not
 	// be used in generated code.

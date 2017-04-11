@@ -3,7 +3,7 @@ package statement
 import (
 	"database/sql"
 
-	"github.com/jjeffery/sqlrow/private/column"
+	"github.com/jjeffery/sqlr/private/column"
 )
 
 // Dialect is an interface used to handle differences in SQL dialects.

@@ -1,4 +1,4 @@
-package sqlrow
+package sqlr
 
 import (
 	"database/sql"
@@ -212,7 +212,7 @@ func ExampleInsert() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
-	err := sqlrow.Insert(db, &row, "users")
+	err := sqlr.Insert(db, &row, "users")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -230,9 +230,9 @@ func ExampleSchema_Insert() {
 
 	// Schema for an MSSQL database, where column names
 	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
+	mssql := sqlr.Schema{
+		Dialect:    sqlr.DialectFor("mssql"),
+		Convention: sqlr.ConventionSame,
 	}
 
 	row := UserRow{
@@ -260,7 +260,7 @@ func ExampleUpdate() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
-	n, err := sqlrow.Update(db, &row, "users")
+	n, err := sqlr.Update(db, &row, "users")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -277,9 +277,9 @@ func ExampleSchema_Update() {
 
 	// Schema for an MSSQL database, where column names
 	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
+	mssql := sqlr.Schema{
+		Dialect:    sqlr.DialectFor("mssql"),
+		Convention: sqlr.ConventionSame,
 	}
 
 	row := UserRow{
@@ -307,7 +307,7 @@ func ExampleDelete() {
 		GivenName:  "John",
 		FamilyName: "Citizen",
 	}
-	n, err := sqlrow.Delete(db, &row, "users")
+	n, err := sqlr.Delete(db, &row, "users")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -324,9 +324,9 @@ func ExampleSchema_Delete() {
 
 	// Schema for an MSSQL database, where column names
 	// are the same as the Go struct field names.
-	mssql := sqlrow.Schema{
-		Dialect:    sqlrow.DialectFor("mssql"),
-		Convention: sqlrow.ConventionSame,
+	mssql := sqlr.Schema{
+		Dialect:    sqlr.DialectFor("mssql"),
+		Convention: sqlr.ConventionSame,
 	}
 
 	row := UserRow{
@@ -344,7 +344,7 @@ func ExampleSchema_Delete() {
 
 func ExampleDialectFor() {
 	// Set the default dialect for PostgreSQL.
-	sqlrow.Default.Dialect = sqlrow.DialectFor("postgres")
+	sqlr.Default.Dialect = sqlr.DialectFor("postgres")
 }
 
 func ExampleSelect_oneRow() {
@@ -356,7 +356,7 @@ func ExampleSelect_oneRow() {
 
 	// find user with ID=42
 	var row UserRow
-	n, err := sqlrow.Select(db, &row, `select {} from users where ID=?`, 42)
+	n, err := sqlr.Select(db, &row, `select {} from users where ID=?`, 42)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,7 +3,7 @@ package statement
 import (
 	"bytes"
 
-	"github.com/jjeffery/sqlrow/private/column"
+	"github.com/jjeffery/sqlr/private/column"
 )
 
 // sqlStringer produces a fragment of SQL given a dialect and a column naming convention.

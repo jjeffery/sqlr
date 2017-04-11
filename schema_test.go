@@ -1,1 +1,1 @@
-package sqlrow
+package sqlr

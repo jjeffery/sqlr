@@ -1,4 +1,4 @@
 // Package codegen provides the code-generation functionality
-// used by the sqlrow-gen tool.
+// used by the sqlr-gen tool.
 package codegen
 

@@ -1,6 +1,6 @@
-package sqlrow
+package sqlr
 
-import "github.com/jjeffery/sqlrow/private/column"
+import "github.com/jjeffery/sqlr/private/column"
 
 // Schema contains information about the database that is used
 // when generating SQL statements.

@@ -1,9 +1,9 @@
-package sqlrow
+package sqlr
 
 import (
 	"testing"
 
-	"github.com/jjeffery/sqlrow/private/column"
+	"github.com/jjeffery/sqlr/private/column"
 )
 
 func TestWithNamingConvention(t *testing.T) {

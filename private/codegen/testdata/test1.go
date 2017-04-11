@@ -1,11 +1,11 @@
 package testdata
 
-//go:generate sqlrow-gen
+//go:generate sqlr-gen
 
 import (
 	"time"
 
-	"github.com/jjeffery/sqlrow"
+	"github.com/jjeffery/sqlr"
 )
 
 type Document struct {
@@ -16,8 +16,8 @@ type Document struct {
 }
 
 type DocumentQuery struct {
-	db      sqlrow.DB
-	schema  *sqlrow.Schema
+	db      sqlr.DB
+	schema  *sqlr.Schema
 	rowType *Document
 }
 

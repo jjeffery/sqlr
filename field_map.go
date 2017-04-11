@@ -1,4 +1,4 @@
-package sqlrow
+package sqlr
 
 // fieldMap is used to lookup column names associated with fields.
 // There is no mutex because once a schema has been initialized, its

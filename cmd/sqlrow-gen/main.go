@@ -1,4 +1,4 @@
-// sqlrow-gen is a code generation utility for SQL CRUD operations.
+// sqlr-gen is a code generation utility for SQL CRUD operations.
 package main
 
 import (
@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/codegen"
+	"github.com/jjeffery/sqlr/private/codegen"
 	"github.com/spf13/pflag"
 )
 

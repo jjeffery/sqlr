@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlr/private/scanner"
 )
 
 // A Path contains information about all the StructFields traversed
@@ -99,7 +99,7 @@ func (path Path) ColumnName(nc NamingConvention, key string) string {
 
 // structTagKeys specifies the list of struct tag keys that are searched
 // in order for column information.
-var structTagKeys = []string{"sqlrow", "sql"}
+var structTagKeys = []string{"sqlr", "sql"}
 
 func convertField(fieldName string, fieldTag reflect.StructTag, nc NamingConvention, key string) string {
 	if fieldTag != "" {

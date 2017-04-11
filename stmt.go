@@ -1,4 +1,4 @@
-package sqlrow
+package sqlr
 
 import (
 	"bytes"
@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jjeffery/sqlrow/private/column"
-	"github.com/jjeffery/sqlrow/private/scanner"
-	"github.com/jjeffery/sqlrow/private/wherein"
+	"github.com/jjeffery/sqlr/private/column"
+	"github.com/jjeffery/sqlr/private/scanner"
+	"github.com/jjeffery/sqlr/private/wherein"
 )
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.

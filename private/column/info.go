@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlr/private/scanner"
 )
 
 // Info contains information about a database

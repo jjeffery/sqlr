@@ -1,7 +1,7 @@
-package sqlrow
+package sqlr
 
 import (
-	"github.com/jjeffery/sqlrow/private/naming"
+	"github.com/jjeffery/sqlr/private/naming"
 )
 
 // The NamingConvention interface provides methods that are used to

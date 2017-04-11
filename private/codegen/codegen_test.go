@@ -38,7 +38,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("%d: %v", i, err)
 			continue
 		}
-		model.CommandLine = "sqlrow-gen"
+		model.CommandLine = "sqlr-gen"
 		output := DefaultOutput(filename)
 
 		var buf bytes.Buffer

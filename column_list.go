@@ -1,12 +1,12 @@
-package sqlrow
+package sqlr
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/column"
-	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlr/private/column"
+	"github.com/jjeffery/sqlr/private/scanner"
 )
 
 // The columnNamer interface is used for naming columns.

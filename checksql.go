@@ -1,11 +1,11 @@
-package sqlrow
+package sqlr
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/jjeffery/sqlrow/private/scanner"
+	"github.com/jjeffery/sqlr/private/scanner"
 )
 
 // statement formats when only a table name is given

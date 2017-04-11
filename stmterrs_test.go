@@ -1,4 +1,4 @@
-package sqlrow
+package sqlr
 
 // tests for statement error conditions
 
@@ -54,7 +54,7 @@ func TestSelectStmt1Errors(t *testing.T) {
 		{
 			row:     Row{},
 			sql:     "tablename",
-			errExec: "expected rows to be *[]github.com/jjeffery/sqlrow.Row, *[]*github.com/jjeffery/sqlrow.Row, or *github.com/jjeffery/sqlrow.Row",
+			errExec: "expected rows to be *[]github.com/jjeffery/sqlr.Row, *[]*github.com/jjeffery/sqlr.Row, or *github.com/jjeffery/sqlr.Row",
 		},
 		{
 			row:     nil,
@@ -69,7 +69,7 @@ func TestSelectStmt1Errors(t *testing.T) {
 		{
 			row:     &NotARow{},
 			sql:     "tablename",
-			errExec: "expected rows to be *[]github.com/jjeffery/sqlrow.Row, *[]*github.com/jjeffery/sqlrow.Row, or *github.com/jjeffery/sqlrow.Row",
+			errExec: "expected rows to be *[]github.com/jjeffery/sqlr.Row, *[]*github.com/jjeffery/sqlr.Row, or *github.com/jjeffery/sqlr.Row",
 		},
 		{
 			row:        Row{},
@@ -118,9 +118,9 @@ func TestSelectStmt2Errors(t *testing.T) {
 		SomethingElse int
 	}
 	const errorTypePtr = "expected rows to be " +
-		"*[]github.com/jjeffery/sqlrow.Row, " +
-		"*[]*github.com/jjeffery/sqlrow.Row, or " +
-		"*github.com/jjeffery/sqlrow.Row"
+		"*[]github.com/jjeffery/sqlr.Row, " +
+		"*[]*github.com/jjeffery/sqlr.Row, or " +
+		"*github.com/jjeffery/sqlr.Row"
 	var invalidSlice []NotARow
 	var validRows []Row
 	tests := []struct {

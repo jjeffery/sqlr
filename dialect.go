@@ -1,10 +1,10 @@
-package sqlrow
+package sqlr
 
 import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/jjeffery/sqlrow/private/dialect"
+	"github.com/jjeffery/sqlr/private/dialect"
 )
 
 // Dialect is an interface used to handle differences

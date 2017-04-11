@@ -2,12 +2,12 @@ package testdata
 
 // Test case: row type without primary key does not generate methods that would require one
 
-//go:generate sqlrow-gen
+//go:generate sqlr-gen
 
 import (
 	"time"
 
-	"github.com/jjeffery/sqlrow"
+	"github.com/jjeffery/sqlr"
 )
 
 type Row2 struct {
@@ -17,7 +17,7 @@ type Row2 struct {
 }
 
 type Row2Query struct {
-	db      sqlrow.DB
-	schema  *sqlrow.Schema
+	db      sqlr.DB
+	schema  *sqlr.Schema
 	rowType *Row2
 }

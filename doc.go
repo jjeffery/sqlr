@@ -1,5 +1,5 @@
 /*
-Package sqlrow is designed to reduce the effort required to implement
+Package sqlr is designed to reduce the effort required to implement
 common operations performed with SQL databases. It is intended for programmers
 who are comfortable with writing SQL, but would like assistance with the
 sometimes tedious process of preparing SQL queries for tables that have a
@@ -207,7 +207,7 @@ slice and scalar arguments.
 
 Code Generation
 
-This package contains a code generation tool in the "./cmd/sqlrow-gen" directory. It can
+This package contains a code generation tool in the "./cmd/sqlr-gen" directory. It can
 be quite useful to reduce the amount of code even further.
 
 Performance and Caching
@@ -221,6 +221,6 @@ package "database/sql" directly.
 
 Source Code
 
-More information about this package can be found at https://github.com/jjeffery/sqlrow.
+More information about this package can be found at https://github.com/jjeffery/sqlr.
 */
-package sqlrow
+package sqlr
