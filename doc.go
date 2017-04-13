@@ -112,7 +112,7 @@ dialect, a generated query would look more like
  select "id","given_name","family_name","dob","ssn","street","locality","postcode","country",
  "phone","mobile","fax" from users where postcode=$1
 It is an important point to note that this feature is not about writing the SQL for the programmer.
-Rather it is "filling in the blanks" and allowing the programmer to specify as much of the
+Rather it is about "filling in the blanks": allowing the programmer to specify as much of the
 SQL query as they want without having to write the tiresome bits.
 
 Autoincrement Column Values
@@ -158,7 +158,7 @@ is null it will be mapped to an empty string. An empty string in the Go struct f
 be mapped to NULL in the database.
 
 Care should be taken, because there are cases where an empty value and a database NULL are not
-the same thing. There are many cases, however, where this feature can be applied, and result
+the same thing. There are many cases, however, where this feature can be applied, and the result
 is simpler code that is easier to read.
 
 JSON Columns
