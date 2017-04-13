@@ -7,6 +7,7 @@
 - [Creating the Schema](#creating-the-schema)
 - [Mapping Individual Field/Column Names](#mapping-individual-fieldcolumn-names)
 - [Cloning a Schema](#cloning-a-schema)
+- [Using a Schema to perform Queries](#using-a-schema-to-perform-queries)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -48,23 +49,25 @@ if err != nil {
 // create a new schema whose dialect matches the db, with default
 // naming convention
 schema := sqlr.NewSchema(
-    WithDB(db), // will choose the correct dialect for db
+    ForDB(db), // will choose the correct dialect for db
     WithNamingConvention(sqlr.LowerCase),
 )
 ```
 
-*NOTE* It not all that expensive to create a schema, but it a better 
+It not all that expensive to create a schema, but it is a good 
 idea to create a schema at program initialization and re-use it rather 
 than create one whenever necessary. The reason for this is that the 
-schema caches information about Go structures and SQL statements created to 
-improve performance.
+schema caches information about Go structures and SQL statements in order
+to improve performance.
 
 ## Mapping Individual Field/Column Names
 
 Sometimes it is necessary to provide a special naming convention for
-creating a column name from a Go struct field. When this is necessary,
-it can be achieved using the `WithField` schema option. Take the following
-(simplified) table:
+creating a column name from a Go struct field. Although it is probably
+more common to use Go struct tags to specify a column name for a field,
+there are times when this is not possible. When this happens, it is 
+possible to specify individual naming rules using the `WithField` schema 
+option. Take the following (simplified) table:
 
 ```sql
 create table contact_details(
@@ -76,12 +79,12 @@ create table contact_details(
 )
 ```
 There is some inconsistency in the column names, but we want to use a common
-structure to handle the contact details:
+structure to handle the location-specific contact details:
 
 ```go
 type LocationContact struct {
     Email     string
-    Facsimile string
+    Facsimile string // cannot specify a struct tag here for two different column names
 }
 
 type ContactDetail struct {
@@ -156,5 +159,36 @@ func init() {
         WithField("Home.Locality", "HomeSuburb"),
         WithField("ID", "table2_id"),
     )
+}
+```
+
+## Using a Schema to perform Queries
+
+The `Schema` type has the following methods to support performing queries:
+
+* `Exec` method; and
+* `Select` method.
+
+These methods are shorthand for preparing a statement (`Stmt`) and then
+performing the corresponding `Exec` or `Select` method on that statement.
+
+For example:
+
+```go
+_, err := schema.Exec(db, row, "update table1")
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+Is the same as:
+```go
+stmt, err := schema.Prepare(row, "update table1")
+if err != nil {
+    log.Fatal(err)
+}
+_, err = stmt.Exec(db, row)
+if err != nil {
+    log.Fatal(err)
 }
 ```
