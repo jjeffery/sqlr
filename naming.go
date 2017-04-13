@@ -27,7 +27,7 @@ var (
 var (
 	// defaultNamingConvention is used for a schema if no naming
 	// convention has been specified
-	defaultNamingConvention NamingConvention = naming.SnakeCase
+	defaultNamingConvention = naming.SnakeCase
 )
 
 func init() {
