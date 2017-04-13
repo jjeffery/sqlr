@@ -24,7 +24,7 @@ Prepare SQL from row structures
 Preparing SQL queries with many placeholder arguments is tedious and error-prone. The following
 insert query has a dozen placeholders, and it is difficult to match up the columns with the
 placeholders. It is not uncommon to have tables with many dozens of columns, at which point the
-process of preparing SQL queries using the standard library becomes extremely tiresome.
+process of preparing SQL queries using the standard library becomes tiresome.
  insert into users(id,given_name,family_name,dob,ssn,street,locality,postcode,country,phone,mobile,fax)
  values(?,?,?,?,?,?,?,?,?,?,?,?)
 This package uses reflection to simplify the construction of SQL statements for insert, update, delete
