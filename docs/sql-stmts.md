@@ -68,7 +68,7 @@ if err != nil {
 
 ## The Schema type
 
-The `Schema` type keeps track of the informatio required to map a Go struct
+The `Schema` type keeps track of the information required to map a Go struct
 field name into a corresponding column name. To prepare SQL statements, first
 create a `Schema` object.
 
@@ -98,6 +98,9 @@ The following naming conventions are supported out of the box:
 
 Preparing a new naming convention is possible, by implementing 
 the `sqlr.NamingConvention`.
+
+There is more detailed information on [the Schema type](./schema.md), but for
+now we will move onto the more interesting topic of performing queries.
 
 ## Performing Queries
 
