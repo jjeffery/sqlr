@@ -4,7 +4,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 
-- [Creating the Schema](#creating-the-schema)
+- [The Schema type](#the-schema-type)
 - [Performing Queries](#performing-queries)
   - [Inserting a row](#inserting-a-row)
   - [Updating a row](#updating-a-row)
