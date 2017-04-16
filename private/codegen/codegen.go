@@ -23,7 +23,7 @@ func DefaultOutput(filename string) string {
 		return ""
 	}
 	output := strings.TrimSuffix(filename, filepath.Ext(filename))
-	output = output + "_sqlrow.go"
+	output = output + "_sqlr.go"
 	return output
 }
 

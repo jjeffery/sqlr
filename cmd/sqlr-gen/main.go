@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"go/format"
 	"io"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/jjeffery/sqlr/private/codegen"
-	"github.com/spf13/pflag"
 )
 
 var command struct {
@@ -21,11 +21,11 @@ var command struct {
 func main() {
 	log.SetFlags(0)
 	command.filename = os.Getenv("GOFILE")
-	pflag.StringVarP(&command.filename, "file", "f", command.filename, "source file")
-	pflag.StringVarP(&command.output, "output", "o", codegen.DefaultOutput(command.filename), "output")
-	pflag.Parse()
-	if len(pflag.Args()) > 0 {
-		log.Fatalln("unrecognized args:", strings.Join(pflag.Args(), " "))
+	flag.StringVar(&command.filename, "file", command.filename, "source file")
+	flag.StringVar(&command.output, "output", codegen.DefaultOutput(command.filename), "output")
+	flag.Parse()
+	if len(flag.Args()) > 0 {
+		log.Fatalln("unrecognized args:", strings.Join(flag.Args(), " "))
 	}
 	if command.filename == "" {
 		log.Fatal("no file specified (-f or $GOFILE)")
