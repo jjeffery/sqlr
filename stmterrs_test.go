@@ -252,8 +252,8 @@ func TestInsertRowStmtErrors(t *testing.T) {
 			}
 		} else if err == nil {
 			t.Errorf("%d: expected %q, got nil", i, tt.errPrepare)
-		} else if tt.errPrepare != err.Error() {
-			t.Errorf("%d: expected %q, got %q", err)
+		} else if got, want := err.Error(), tt.errPrepare; got != want {
+			t.Errorf("%d: expected %q, got %q", i, want, got)
 		}
 
 		if err != nil {
@@ -323,8 +323,8 @@ func TestExecRowStmtErrors(t *testing.T) {
 			}
 		} else if err == nil {
 			t.Errorf("%d: expected %q, got nil", i, tt.errPrepare)
-		} else if tt.errPrepare != err.Error() {
-			t.Errorf("%d: expected %q, got %q", i, err)
+		} else if got, want := err.Error(), tt.errPrepare; got != want {
+			t.Errorf("%d: expected %q, got %q", i, want, got)
 		}
 
 		if err != nil {

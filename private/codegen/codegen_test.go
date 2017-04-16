@@ -20,7 +20,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, fileInfo := range fileInfos {
 		filename := fileInfo.Name()
-		if strings.HasSuffix(filename, "_sqlrow.go") {
+		if strings.HasSuffix(filename, "_sqlr.go") {
 			continue
 		}
 		if !strings.HasSuffix(filename, ".go") {
