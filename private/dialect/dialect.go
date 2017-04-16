@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Dialect provides information about an SQL dialect.
 type Dialect struct {
 	driverTypes     []string
 	quoteFunc       func(name string) string
