@@ -1,4 +1,4 @@
-# sqlr:  reduces effort when writing SQL code
+# sqlr:  SQL API for Go
 [![GoDoc](https://godoc.org/github.com/jjeffery/sqlr?status.svg)](https://godoc.org/github.com/jjeffery/sqlr)
 [![Documentation](https://img.shields.io/badge/documentation-reference-blue.svg)](https://jjeffery.github.io/sqlr)
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlr/master/LICENSE.md)
