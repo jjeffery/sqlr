@@ -98,7 +98,9 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	}
 
 	// convert common shorthand SQL notations
-	query = checkSQL(query)
+	if query, err = checkSQL(query); err != nil {
+		return nil, err
+	}
 
 	// attempt to get statement from the schema's statement cache
 	stmt, ok := s.cache.lookup(rowType, query)
