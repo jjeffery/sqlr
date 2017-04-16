@@ -1,4 +1,5 @@
-# Code Generation using sqlr-gen
+Code Generation using sqlr-gen
+==============================
 
 TODO
 
