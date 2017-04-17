@@ -10,7 +10,7 @@ type Row0 struct {
 }
 
 type Row0Query struct {
-	db      sqlr.DB `methods:"Get,Select,SelectOne,Insert,Update,Delete,Upsert"`
+	db      sqlr.DB `methods:"Get,Select,SelectRow,Insert,Update,Delete,Upsert"`
 	schema  *sqlr.Schema
 	rowType *Row0 `table:"xyz.rows" singular:"document" plural:"documents"`
 }

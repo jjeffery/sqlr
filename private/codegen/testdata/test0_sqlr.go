@@ -34,10 +34,10 @@ func (q *Row0Query) Select(query string, args ...interface{}) ([]*Row0, error) {
 	return rows, nil
 }
 
-// SelectOne selects a document from an SQL query. Returns nil if the query returns no rows.
+// SelectRow selects a document from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q *Row0Query) SelectOne(query string, args ...interface{}) (*Row0, error) {
+func (q *Row0Query) SelectRow(query string, args ...interface{}) (*Row0, error) {
 	var row Row0
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {

@@ -19,10 +19,10 @@ func (q *Row2Query) selectRows(query string, args ...interface{}) ([]*Row2, erro
 	return rows, nil
 }
 
-// selectOne selects a Row2 from an SQL query. Returns nil if the query returns no rows.
+// selectRow selects a Row2 from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q *Row2Query) selectOne(query string, args ...interface{}) (*Row2, error) {
+func (q *Row2Query) selectRow(query string, args ...interface{}) (*Row2, error) {
 	var row Row2
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {

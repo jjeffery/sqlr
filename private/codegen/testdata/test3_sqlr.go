@@ -20,10 +20,10 @@ func (q *Row3Query) selectRows(query string, args ...interface{}) ([]*rowtype.Ro
 	return rows, nil
 }
 
-// selectOne selects a Row3 from an SQL query. Returns nil if the query returns no rows.
+// selectRow selects a Row3 from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q *Row3Query) selectOne(query string, args ...interface{}) (*rowtype.Row3, error) {
+func (q *Row3Query) selectRow(query string, args ...interface{}) (*rowtype.Row3, error) {
 	var row rowtype.Row3
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {

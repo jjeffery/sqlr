@@ -42,11 +42,11 @@ func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Select}}(query string, args .
 	return rows, nil
 }
 {{end -}}
-{{- if .Method.SelectOne}}
-// {{.Method.SelectOne}} selects a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
+{{- if .Method.SelectRow}}
+// {{.Method.SelectRow}} selects a {{.Singular}} from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.SelectOne}}(query string, args ...interface{}) (*{{.RowType.Name}}, error) {
+func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.SelectRow}}(query string, args ...interface{}) (*{{.RowType.Name}}, error) {
 	var row {{.RowType.Name}}
 	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Select({{.ReceiverIdent}}.{{.DBField}}, &row, query, args...)
 	if err != nil {

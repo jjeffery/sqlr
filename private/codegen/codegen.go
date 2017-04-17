@@ -68,7 +68,7 @@ type QueryType struct {
 	Method          struct {
 		Get       string
 		Select    string
-		SelectOne string
+		SelectRow string
 		Insert    string
 		Update    string
 		Delete    string
@@ -244,11 +244,11 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 	}
 	if methods == "" {
 		if rowType.IDArgs == "" {
-			// without knowing the primary key we can only do select and selectOne
-			methods = "select,selectOne"
+			// without knowing the primary key we can only do select and selectRow
+			methods = "select,selectRow"
 		} else {
 			// if not specified, do all
-			methods = "get,select,selectOne,insert,update,delete,upsert"
+			methods = "get,select,selectRow,insert,update,delete,upsert"
 		}
 	}
 
@@ -287,7 +287,7 @@ func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, st
 				queryType.Method.Select = method
 			}
 		case "selectone", "selectrow":
-			queryType.Method.SelectOne = method
+			queryType.Method.SelectRow = method
 		case "insert", "insertrow":
 			if err := requirePrimaryKey(method); err != nil {
 				return nil, err

@@ -85,3 +85,8 @@ To obtain a copy of the `sqlr` package, use ``go get``:
 
 Note that additional setup is required if you wish to run the tests
 against database servers. The setup required is discussed in :ref:`tests`.
+
+Source Code
+-----------
+
+The source code is available at https://github.com/jjeffery/sqlr.

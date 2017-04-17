@@ -34,10 +34,10 @@ func (q *DocumentQuery) selectRows(query string, args ...interface{}) ([]*Docume
 	return rows, nil
 }
 
-// selectOne selects a Document from an SQL query. Returns nil if the query returns no rows.
+// selectRow selects a Document from an SQL query. Returns nil if the query returns no rows.
 // If the query returns one or more rows the value for the first is returned and any subsequent
 // rows are discarded.
-func (q *DocumentQuery) selectOne(query string, args ...interface{}) (*Document, error) {
+func (q *DocumentQuery) selectRow(query string, args ...interface{}) (*Document, error) {
 	var row Document
 	n, err := q.schema.Select(q.db, &row, query, args...)
 	if err != nil {
