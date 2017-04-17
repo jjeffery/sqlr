@@ -1,6 +1,8 @@
+// Directory docs contains detailed documentation.
+package main
+
 // copy-html.go copies from the _build/html directory to the
 // directory specified in the SQLR_GHPAGES environment variable.
-package main
 
 import (
 	"io/ioutil"
