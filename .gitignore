@@ -2,3 +2,5 @@ node_modules
 coverage.out
 *.bak
 debug.test
+_build
+
