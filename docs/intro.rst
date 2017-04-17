@@ -15,12 +15,63 @@ third party package that uses "database/sql".
 
 The following features are provided to simplify writing SQL database queries:
 
-- Prepare SQL from row structures
-- Autoincrement column values
-- Null columns
-- JSON columns
-- WHERE IN Clauses with multiple values
-- Code generation
+Prepare SQL from row structures 
+    It is error-prone and tedious to write SQL queries with long lists of column
+    names and placeholder variables. Package sqlr provides a way to map column lists
+    in the SQL with a Go language structure. The result is a way to write concise 
+    SQL queries even for tables with large number of columns::
+
+        schema.Exec(db, row, "insert into table_name({}) values({})")
+
+Autoincrement column values
+    When inserting rows, if a column is defined as an autoincrement column, then the 
+    generated value will be retrieved from the database server, and the corresponding 
+    field in the row structure will be updated::
+
+        type Row struct {
+            Id         int     `sql:"primary key autoincrement"`
+            GivenName  string
+            FamilyName string
+        }
+    
+Null columns
+    Package sqlr provides a convenient mechanism to map NULL values in the database to
+    the equivalent empty value in the Go struct field, for example mapping NULL to zero
+    for integer values, or NULL to the empty string for string values. This is not always
+    applicable as NULL and the empty string are not necessarily the same thing, but in many
+    cases there is no ambiguity, and the result is simpler, smaller code::
+
+        type Row struct {
+            // ... lots of other fields and then ...
+
+            PhoneNumber string  `sql:"null"` // stores NULL for empty string
+            FaxNumber   string  `sql:"null"`
+            AddressID   int     `sql:"null"` // stores NULL for zero
+        }
+
+JSON columns
+    A convenient mechanism for marshaling complex objects as JSON text for storage in 
+    an SQL database is supported::
+
+        type Row struct {
+            // ... lots of other fields and then ...
+
+            Cmplx  *MyComplexDataStructure `sql:"json"` // will be stored as JSON text
+        }
+
+WHERE IN Clauses with multiple values
+    When an SQL query contains a `WHERE IN` clause, it usually requires additional string 
+    manipulation to match the number of placeholders in the query with args. 
+    This package simplifies queries with a variable number of arguments: when processing
+    an SQL query, it detects if any of the arguments are slices and adjusts the query
+    accordingly::
+
+        id := []int {1, 3, 5, 7, 9}
+        _, err := schema.Select(db, &rows, `select {} from widgets where id in (?)`, ids)
+    
+    
+Code generation
+    The `sqlr-gen` command is provided to help with generating repetitive code.
 
 
 Installing
