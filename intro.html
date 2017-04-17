@@ -177,14 +177,69 @@ or <cite>*sql.Tx</cite>. If the calling program has a need to execute queries in
 of this package, it can use &#8220;database/sql&#8221; directly, or make use of any other
 third party package that uses &#8220;database/sql&#8221;.</p>
 <p>The following features are provided to simplify writing SQL database queries:</p>
-<ul class="simple">
-<li>Prepare SQL from row structures</li>
-<li>Autoincrement column values</li>
-<li>Null columns</li>
-<li>JSON columns</li>
-<li>WHERE IN Clauses with multiple values</li>
-<li>Code generation</li>
-</ul>
+<dl class="docutils">
+<dt>Prepare SQL from row structures</dt>
+<dd><p class="first">It is error-prone and tedious to write SQL queries with long lists of column
+names and placeholder variables. Package sqlr provides a way to map column lists
+in the SQL with a Go language structure. The result is a way to write concise
+SQL queries even for tables with large number of columns:</p>
+<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;insert into table_name({}) values({})&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>Autoincrement column values</dt>
+<dd><p class="first">When inserting rows, if a column is defined as an autoincrement column, then the
+generated value will be retrieved from the database server, and the corresponding
+field in the row structure will be updated:</p>
+<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Id</span>         <span class="kt">int</span>     <span class="s">`sql:&quot;primary key autoincrement&quot;`</span>
+    <span class="nx">GivenName</span>  <span class="kt">string</span>
+    <span class="nx">FamilyName</span> <span class="kt">string</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd>
+<dt>Null columns</dt>
+<dd><p class="first">Package sqlr provides a convenient mechanism to map NULL values in the database to
+the equivalent empty value in the Go struct field, for example mapping NULL to zero
+for integer values, or NULL to the empty string for string values. This is not always
+applicable as NULL and the empty string are not necessarily the same thing, but in many
+cases there is no ambiguity, and the result is simpler, smaller code:</p>
+<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// ... lots of other fields and then ...</span>
+
+    <span class="nx">PhoneNumber</span> <span class="kt">string</span>  <span class="s">`sql:&quot;null&quot;`</span> <span class="c1">// stores NULL for empty string</span>
+    <span class="nx">FaxNumber</span>   <span class="kt">string</span>  <span class="s">`sql:&quot;null&quot;`</span>
+    <span class="nx">AddressID</span>   <span class="kt">int</span>     <span class="s">`sql:&quot;null&quot;`</span> <span class="c1">// stores NULL for zero</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd>
+<dt>JSON columns</dt>
+<dd><p class="first">A convenient mechanism for marshaling complex objects as JSON text for storage in
+an SQL database is supported:</p>
+<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="c1">// ... lots of other fields and then ...</span>
+
+    <span class="nx">Cmplx</span>  <span class="o">*</span><span class="nx">MyComplexDataStructure</span> <span class="s">`sql:&quot;json&quot;`</span> <span class="c1">// will be stored as JSON text</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd>
+<dt>WHERE IN Clauses with multiple values</dt>
+<dd><p class="first">When an SQL query contains a <cite>WHERE IN</cite> clause, it usually requires additional string
+manipulation to match the number of placeholders in the query with args.
+This package simplifies queries with a variable number of arguments: when processing
+an SQL query, it detects if any of the arguments are slices and adjusts the query
+accordingly:</p>
+<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="nx">id</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">}</span>
+<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rows</span><span class="p">,</span> <span class="s">`select {} from widgets where id in (?)`</span><span class="p">,</span> <span class="nx">ids</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>Code generation</dt>
+<dd>The <cite>sqlr-gen</cite> command is provided to help with generating repetitive code.</dd>
+</dl>
 <div class="section" id="installing">
 <h2>Installing<a class="headerlink" href="#installing" title="Permalink to this headline">¶</a></h2>
 <p>To obtain a copy of the <cite>sqlr</cite> package, use <code class="docutils literal"><span class="pre">go</span> <span class="pre">get</span></code>:</p>

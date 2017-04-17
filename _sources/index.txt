@@ -5,13 +5,13 @@
 
 
 sqlr -- SQL package
-================================
+===================
 
-Package `sqlr` is designed to reduce the effort required to implement
-common operations performed with SQL databases. It is intended for programmers
-who are comfortable with writing SQL, but would like assistance with the
-sometimes tedious process of preparing SQL queries for tables that have a
-large number of columns, or have a variable number of input parameters.
++--------------------+-----------------------------------+
+| GoDoc Documenation | https://godoc.org/github.com/sqlr |
++--------------------+-----------------------------------+
+| Source Code        | https://github.com/sqlr           |
++--------------------+-----------------------------------+
 
 .. toctree::
    :maxdepth: 1
