@@ -1,0 +1,508 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Performing Queries &mdash; sqlr</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="sqlr" href="index.html"/>
+        <link rel="next" title="Column Mapping" href="column-mapping.html"/>
+        <link rel="prev" title="Introduction" href="intro.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> sqlr
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Performing Queries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#creating-the-schema">Creating the Schema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inserting-a-row">Inserting a row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#updating-a-row">Updating a row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deleting-a-row">Deleting a row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#selecting-a-single-row">Selecting a single row</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#selecting-multiple-rows">Selecting multiple rows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#where-in-clauses">WHERE IN Clauses</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="column-mapping.html">Column Mapping</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sql-format.html">Extended SQL Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dialects.html">SQL Dialects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="naming-conventions.html">Column Naming Conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">The Schema Type</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Running the Tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">sqlr</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Performing Queries</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/queries.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="performing-queries">
+<h1>Performing Queries<a class="headerlink" href="#performing-queries" title="Permalink to this headline">¶</a></h1>
+<p>The <cite>sqlr</cite> package provides assistance in the more tedious aspects
+of writing SQL queries, particularly queries that involve rows with
+a large number of columns.</p>
+<p>Having said that, in the interest of keeping the examples concise,
+the following examples do not have very complex table structures,
+or very many columns. Keep in mind, however, that the <cite>sqlr</cite> package
+becomes quite useful when the tables have a large number of columns.</p>
+<p>Consider the following simple table:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">table</span> <span class="nf">users</span><span class="p">(</span>
+        <span class="n">id</span>            <span class="kt">integer</span> <span class="k">primary</span> <span class="k">key</span> <span class="n">autoincrement</span> <span class="k">not</span> <span class="no">null</span><span class="p">,</span>
+        <span class="n">given_name</span>    <span class="kt">text</span><span class="p">,</span>
+        <span class="n">family_name</span>   <span class="kt">text</span><span class="p">,</span>
+        <span class="n">email_address</span> <span class="kt">text</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>A corresponding Go struct for representing a row in the <cite>users</cite> table is:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+        <span class="nx">ID</span>           <span class="kt">int</span> <span class="s">`sql:&quot;primary key autoincrement&quot;`</span>
+        <span class="nx">GivenName</span>    <span class="kt">string</span>
+        <span class="nx">FamilyName</span>   <span class="kt">string</span>
+        <span class="nx">EmailAddress</span> <span class="kt">string</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Note the use of struct tags to include information about the primary key
+and auto-increment behaviour.</p>
+<p>The following examples assume that a database has been opened, the database
+table has been created, and the <cite>*sql.DB</cite> is stored in variable <code class="docutils literal"><span class="pre">db</span></code>:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sql</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">&quot;sqlite3&quot;</span><span class="p">,</span> <span class="s">&quot;:memory:&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">db</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="s">`</span>
+<span class="s">        create table users(</span>
+<span class="s">                id            integer primary key autoincrement not null,</span>
+<span class="s">                given_name    text,</span>
+<span class="s">                family_name   text,</span>
+<span class="s">                email_address text</span>
+<span class="s">        );`</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="creating-the-schema">
+<h2>Creating the Schema<a class="headerlink" href="#creating-the-schema" title="Permalink to this headline">¶</a></h2>
+<p>The <cite>Schema</cite> type keeps track of the information required to map a Go struct field name
+into a corresponding column name. To prepare SQL statements, first create a <cite>Schema</cite> object:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+        <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SQLite</span><span class="p">),</span>
+        <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The example above creates a schema that will generate SQL using a dialect compatible
+with SQLite, where columns follow a
+<a class="reference external" href="https://en.wikipedia.org/wiki/Snake_case">snake_case</a> naming convention.</p>
+<p>There is more detailed information on <a class="reference internal" href="schema.html#schema-type"><span class="std std-ref">the Schema type</span></a>,
+<a class="reference internal" href="dialects.html#dialects"><span class="std std-ref">dialects</span></a>, and <a class="reference internal" href="naming-conventions.html#naming-conventions"><span class="std std-ref">naming conventions</span></a>,
+but for now we will move onto the more immediate topic of performing queries.</p>
+</div>
+<div class="section" id="inserting-a-row">
+<h2>Inserting a row<a class="headerlink" href="#inserting-a-row" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// create the row object and populate with data</span>
+<span class="nx">userRow</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">User</span><span class="p">{</span>
+        <span class="nx">GivenName</span><span class="p">:</span>    <span class="s">&quot;Jane&quot;</span><span class="p">,</span>
+        <span class="nx">FamilyName</span><span class="p">:</span>   <span class="s">&quot;Citizen&quot;</span><span class="p">,</span>
+        <span class="nx">EmailAddress</span><span class="p">:</span> <span class="s">&quot;jane@citizen.com&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">// insert the row into the `users` table using the db connection opened earlier,</span>
+<span class="c1">// and the schema created in the previous code sample</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">userRow</span><span class="p">,</span> <span class="s">&quot;insert into users({}) values({})&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// userRow.ID contains the autoincrement value assigned by the DB server</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;User ID:&quot;</span><span class="p">,</span> <span class="nx">userRow</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+
+<span class="c1">// Output: User ID: 1</span>
+</pre></div>
+</div>
+<p>Note the non-standard <code class="docutils literal"><span class="pre">{}</span></code> in the SQL query above. The <cite>sqlr</cite> package
+knows to substitute in column names in the appropriate quoted format that
+is acceptable for the SQL dialect. In the example above, the SQL generated
+will look like the following:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">insert</span> <span class="k">into</span> <span class="nf">users</span><span class="p">(</span><span class="ss">`given_name`</span><span class="p">,</span><span class="ss">`family_name`</span><span class="p">,</span><span class="ss">`email_address`</span><span class="p">)</span>
+<span class="k">values</span><span class="p">(</span><span class="o">?</span><span class="p">,</span><span class="o">?</span><span class="p">,</span><span class="o">?</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The format of this &#8220;extended&#8221; SQL syntax is
+<a class="reference internal" href="sql-format.html#sql-format"><span class="std std-ref">covered in more detail later</span></a>, but for now take it as a given that
+the schema knows how to expand the <code class="docutils literal"><span class="pre">{}</span></code> symbol into a column list that is
+appropriate for the SQL clause in which it appears.</p>
+<p>Because this is an insert statement, and the <code class="docutils literal"><span class="pre">id</span></code> column is an auto-increment
+column, the value of <code class="docutils literal"><span class="pre">userRow.ID</span></code> will contain the auto-generated value after
+the insert row statement has been executed.</p>
+<p>(Note that the Postgres driver <cite>github.com/lib/pq</cite> does not support
+the <cite>Result.LastInsertId</cite> method, and so this feature does not work for that
+driver. See the <cite>pq</cite> package <a class="reference external" href="https://godoc.org/github.com/lib/pq">GoDoc</a> for
+a work-around).</p>
+</div>
+<div class="section" id="updating-a-row">
+<h2>Updating a row<a class="headerlink" href="#updating-a-row" title="Permalink to this headline">¶</a></h2>
+<p>Continuing from the previous example:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// change user details</span>
+<span class="nx">userRow</span><span class="p">.</span><span class="nx">EmailAddress</span> <span class="p">=</span> <span class="s">&quot;jane.citizen.314159@gmail.com&quot;</span>
+
+<span class="c1">// update the row in the `users` table</span>
+<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">userRow</span><span class="p">,</span> <span class="s">&quot;update users set {} where {}&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Number of rows updated:&quot;</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span>
+
+<span class="c1">// Output: Number of rows updated: 1</span>
+</pre></div>
+</div>
+<p>Once again the &#8220;extended&#8221; SQL syntax has been expanded into something more like:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">update</span> <span class="n">users</span> <span class="kt">set</span> <span class="ss">`given_name`</span><span class="o">=?</span><span class="p">,</span><span class="ss">`family_name`</span><span class="o">=?</span><span class="p">,</span><span class="ss">`email_address`</span><span class="o">=?</span> <span class="k">where</span> <span class="n">id</span><span class="o">=</span><span class="ss">`?`</span>
+</pre></div>
+</div>
+<p>The value of the fields in the <code class="docutils literal"><span class="pre">userRow</span></code> instance have been supplied as arguments
+for the placeholders in the update query.</p>
+</div>
+<div class="section" id="deleting-a-row">
+<h2>Deleting a row<a class="headerlink" href="#deleting-a-row" title="Permalink to this headline">¶</a></h2>
+<p>Continuing from the previous example:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// delete the row in the `users` table</span>
+<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">userRow</span><span class="p">,</span> <span class="s">&quot;delete from users where {}&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Number of rows deleted:&quot;</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span>
+
+<span class="c1">// Output: Number of rows deleted: 1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="selecting-a-single-row">
+<h2>Selecting a single row<a class="headerlink" href="#selecting-a-single-row" title="Permalink to this headline">¶</a></h2>
+<p>Pretending that we have not deleted the row in the previous example:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">userRow</span> <span class="nx">User</span>
+
+<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">userRow</span><span class="p">,</span> <span class="s">&quot;select {} from users where {}&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Rows returned:&quot;</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;User email:&quot;</span><span class="p">,</span> <span class="nx">u</span><span class="p">.</span><span class="nx">EmailAddress</span><span class="p">)</span>
+
+<span class="c1">// Output:</span>
+<span class="c1">// Rows returned: 1</span>
+<span class="c1">// User email: jane.citizen.314159@gmail.com</span>
+</pre></div>
+</div>
+<p>The SQL generated in the above example would look like:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="ss">`id`</span><span class="p">,</span><span class="ss">`given_name`</span><span class="p">,</span><span class="ss">`family_name`</span><span class="p">,</span><span class="ss">`email_address`</span> <span class="k">from</span> <span class="n">users</span> <span class="k">where</span> <span class="ss">`id`</span><span class="o">=?</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">{}</span></code> in the where clause always expands to the column or columns for the
+primary key. It possible (and common) to specify other criteria in the where
+clause, something like:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="p">{}</span> <span class="k">from</span> <span class="n">users</span> <span class="k">where</span> <span class="n">email_address</span> <span class="o">=</span> <span class="o">?</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="selecting-multiple-rows">
+<h2>Selecting multiple rows<a class="headerlink" href="#selecting-multiple-rows" title="Permalink to this headline">¶</a></h2>
+<p>Performing a query that returns multiple rows is similar to returning a single
+row. The only difference is that instead of passing a pointer to a struct, pass
+a pointer to a slice of structs, or a pointer to a slice of struct pointers:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// declare a slice of users for receiving the result of the query</span>
+<span class="kd">var</span> <span class="nx">users</span> <span class="p">[]</span><span class="o">*</span><span class="nx">User</span>
+
+<span class="c1">// perform the query, specifying an argument for each of the</span>
+<span class="c1">// placeholders in the SQL query</span>
+<span class="nx">_</span><span class="p">,</span>  <span class="nx">err</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">users</span><span class="p">,</span> <span class="s">`</span>
+<span class="s">        select {}</span>
+<span class="s">        from users</span>
+<span class="s">        where family_name = ?`</span><span class="p">,</span> <span class="s">&quot;Citizen&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// at this point, the users slice will contain one object for each</span>
+<span class="c1">// row returned by the SQL query</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">u</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">users</span> <span class="p">{</span>
+        <span class="nx">doSomethingWith</span><span class="p">(</span><span class="nx">u</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Note, once again, the non-standard <code class="docutils literal"><span class="pre">{}</span></code> in the SQL query above. The <cite>sqlr</cite>
+package knows to substitute in column names in the appropriate format. In the
+example above, the SQL generated will look like the following:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="ss">`id`</span><span class="p">,</span><span class="ss">`family_name`</span><span class="p">,</span><span class="ss">`given_name`</span><span class="p">,</span><span class="ss">`email_address`</span>
+<span class="k">from</span> <span class="n">users</span>
+<span class="k">where</span> <span class="n">family_name</span> <span class="o">=</span> <span class="o">?</span>
+</pre></div>
+</div>
+<p>For queries that involve multiple tables, it is always a good idea to
+use table aliases:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// declare a slice of users for receiving the result of the query</span>
+<span class="kd">var</span> <span class="nx">users</span> <span class="p">[]</span><span class="o">*</span><span class="nx">User</span>
+
+<span class="c1">// perform the query, specifying an argument for each of the</span>
+<span class="c1">// placeholders in the SQL query</span>
+<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">users</span><span class="p">,</span> <span class="s">`</span>
+<span class="s">        select {alias u}</span>
+<span class="s">        from users u</span>
+<span class="s">        inner join user_search_terms t on t.user_id = u.id</span>
+<span class="s">        where u.term like ?`</span><span class="p">,</span> <span class="s">&quot;cit%&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+        <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">u</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">users</span> <span class="p">{</span>
+        <span class="nx">doSomethingWith</span><span class="p">(</span><span class="nx">u</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The SQL generated in this example looks like the following:</p>
+<div class="highlight-mysql"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="n">u</span><span class="p">.</span><span class="ss">`id`</span><span class="p">,</span><span class="n">u</span><span class="p">.</span><span class="ss">`family_name`</span><span class="p">,</span><span class="n">u</span><span class="p">.</span><span class="ss">`given_name`</span><span class="p">,</span><span class="n">u</span><span class="p">.</span><span class="ss">`email_address`</span>
+<span class="k">from</span> <span class="n">users</span> <span class="n">u</span>
+<span class="k">inner</span> <span class="k">join</span> <span class="n">user_search_terms</span> <span class="n">t</span> <span class="k">on</span> <span class="n">t</span><span class="p">.</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">u</span><span class="p">.</span><span class="n">id</span>
+<span class="k">where</span> <span class="n">u</span><span class="p">.</span><span class="n">term</span> <span class="k">like</span> <span class="o">?</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="where-in-clauses">
+<h2>WHERE IN Clauses<a class="headerlink" href="#where-in-clauses" title="Permalink to this headline">¶</a></h2>
+<p>While most SQL queries accept a fixed number of parameters, if the SQL query
+contains a <cite>WHERE IN</cite> clause, it requires additional string manipulation to match
+the number of placeholders in the query with args.</p>
+<p>This package simplifies queries with a variable number of arguments. When processing
+an SQL query, it detects if any of the arguments are slices:</p>
+<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// GetWidgets returns all the widgets associated with the supplied IDs.</span>
+<span class="kd">func</span> <span class="nx">GetWidgets</span><span class="p">(</span><span class="nx">db</span> <span class="o">*</span><span class="nx">sql</span><span class="p">.</span><span class="nx">DB</span><span class="p">,</span> <span class="nx">ids</span> <span class="o">...</span><span class="kt">int</span><span class="p">)</span> <span class="p">([]</span><span class="o">*</span><span class="nx">Widget</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">rows</span> <span class="p">[]</span><span class="o">*</span><span class="nx">Widget</span>
+        <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rows</span><span class="p">,</span> <span class="s">`select {} from widgets where id in (?)`</span><span class="p">,</span> <span class="nx">ids</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">widgets</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In the above example, the number of placeholders (<code class="docutils literal"><span class="pre">?</span></code>) in the query will be increased to
+match the number of values in the <code class="docutils literal"><span class="pre">ids</span></code> slice. The expansion logic can handle any mix of
+slice and scalar arguments.</p>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="column-mapping.html" class="btn btn-neutral float-right" title="Column Mapping" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="intro.html" class="btn btn-neutral" title="Introduction" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, John Jeffery.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: ''
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
