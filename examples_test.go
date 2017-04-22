@@ -199,6 +199,46 @@ func ExampleStmt_Select_multipleRows() {
 	}
 }
 
+func ExampleWithIdentifier() {
+	// Take an example of a program that operates against an SQL Server
+	// database where a table is named "[User]", but the same table is
+	// named "users" in the Postgres schema.
+	mssql := NewSchema(
+		WithDialect(MSSQL),
+		WithNamingConvention(SameCase),
+		WithIdentifier("[User]", "users"),
+		WithIdentifier("UserId", "user_id"),
+		WithIdentifier("[Name]", "name"),
+	)
+	postgres := NewSchema(
+		WithDialect(Postgres),
+		WithNamingConvention(SnakeCase),
+	)
+
+	type User struct {
+		UserId int `sql:"primary key"`
+		Name   string
+	}
+
+	// If a statement is prepared and executed for both
+	const query = "select {} from users where user_id = ?"
+
+	mssqlStmt, err := mssql.Prepare(User{}, query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(mssqlStmt)
+	postgresStmt, err := postgres.Prepare(User{}, query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(postgresStmt)
+
+	// Output:
+	// select [UserId],[Name] from [User] where UserId = ?
+	// select "user_id","name" from users where user_id = $1
+}
+
 /**** obsolete
 
 func ExampleInsert() {

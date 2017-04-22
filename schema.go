@@ -25,6 +25,7 @@ type Schema struct {
 	convention NamingConvention
 	cache      stmtCache
 	fieldMap   *fieldMap
+	identMap   *identMap
 	key        string
 }
 
@@ -63,6 +64,14 @@ func (s *Schema) columnNamer() columnNamer {
 	})
 }
 
+// renameIdent implements the identRenamer interface.
+func (s *Schema) renameIdent(ident string) (string, bool) {
+	if s.identMap == nil {
+		return "", false
+	}
+	return s.identMap.lookup(ident)
+}
+
 // getDialect returns the dialect for the schema. The aim is to make
 // and empty Schema usable, so this method is necessary to ensure that
 // a non-nil dialect is always available.
@@ -79,6 +88,7 @@ func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 		dialect:    s.dialect,
 		convention: s.convention,
 		fieldMap:   newFieldMap(s.fieldMap),
+		identMap:   newIdentMap(s.identMap),
 		key:        s.key,
 	}
 	for _, opt := range opts {
@@ -106,7 +116,7 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	stmt, ok := s.cache.lookup(rowType, query)
 	if !ok {
 		// build statement from scratch
-		stmt, err = newStmt(s.getDialect(), s.columnNamer(), rowType, query)
+		stmt, err = newStmt(s.getDialect(), s.columnNamer(), s, rowType, query)
 		if err != nil {
 			return nil, err
 		}

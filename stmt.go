@@ -45,6 +45,11 @@ type inputSource struct {
 	argIndex int // used only if col == nil
 }
 
+// identRenamer renames identifiers
+type identRenamer interface {
+	renameIdent(ident string) (string, bool)
+}
+
 // TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
 // based on these types.
 
@@ -70,7 +75,7 @@ func inferRowType(row interface{}) (reflect.Type, error) {
 
 // newStmt creates a new statement for the row type and query. Panics if rowType does not
 // refer to a struct type.
-func newStmt(dialect Dialect, colNamer columnNamer, rowType reflect.Type, sql string) (*Stmt, error) {
+func newStmt(dialect Dialect, colNamer columnNamer, renamer identRenamer, rowType reflect.Type, sql string) (*Stmt, error) {
 	stmt := &Stmt{
 		dialect:     dialect,
 		columnNamer: colNamer,
@@ -81,7 +86,7 @@ func newStmt(dialect Dialect, colNamer columnNamer, rowType reflect.Type, sql st
 		panic("not a struct")
 	}
 	stmt.columns = column.ListForType(stmt.rowType)
-	if err := stmt.scanSQL(sql); err != nil {
+	if err := stmt.scanSQL(sql, renamer); err != nil {
 		return nil, err
 	}
 
@@ -420,7 +425,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 	return stmt.output.columns, nil
 }
 
-func (stmt *Stmt) scanSQL(query string) error {
+func (stmt *Stmt) scanSQL(query string, renamer identRenamer) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
 	columns := newColumns(stmt.columns)
@@ -429,6 +434,12 @@ func (stmt *Stmt) scanSQL(query string) error {
 	var insertColumns *columnList
 	var clause sqlClause
 	var buf bytes.Buffer
+	rename := func(name string) string {
+		if newName, ok := renamer.renameIdent(name); ok {
+			return newName
+		}
+		return name
+	}
 
 	for scan.Scan() {
 		tok, lit := scan.Token(), scan.Text()
@@ -479,9 +490,10 @@ func (stmt *Stmt) scanSQL(query string) error {
 					}
 				}
 			} else if scanner.IsQuoted(lit) {
-				lit = scanner.Unquote(lit)
+				lit = rename(scanner.Unquote(lit))
 				buf.WriteString(stmt.dialect.Quote(lit))
 			} else {
+				lit = rename(lit)
 				buf.WriteString(lit)
 
 				// An unquoted identifer might be an SQL keyword.

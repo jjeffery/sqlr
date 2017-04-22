@@ -66,3 +66,21 @@ func WithField(fieldName string, columnName string) SchemaOption {
 		schema.fieldMap.add(fieldName, columnName)
 	}
 }
+
+// WithIdentifier creates an option that performs a global rename
+// of an identifier when preparing SQL queries. This option is not
+// needed very often: its main purpose is for helping a program
+// operate against two different database schemas where table and
+// column names follow a different naming convention.
+//
+// The example shows a situation where a program operates against
+// an SQL Server database where a table is named "[User]", but the
+// same table is named "users" in the Postgres schema.
+func WithIdentifier(identifier string, meaning string) SchemaOption {
+	return func(schema *Schema) {
+		if schema.identMap == nil {
+			schema.identMap = newIdentMap(schema.identMap)
+		}
+		schema.identMap.add(meaning, identifier)
+	}
+}
