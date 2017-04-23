@@ -278,7 +278,21 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 		}
 	}
 
-	return rowCount, sqlRows.Err()
+	if err := sqlRows.Err(); err != nil {
+		return 0, err
+	}
+
+	// If the slice is nil, return an empty slice. This way the returned slice is
+	// always non-nil for a successful call.
+	if sliceValue.IsNil() {
+		if isPtr {
+			sliceValue.Set(reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(rowType)), 0, 0))
+		} else {
+			sliceValue.Set(reflect.MakeSlice(reflect.SliceOf(rowType), 0, 0))
+		}
+	}
+
+	return rowCount, nil
 }
 
 // TODO(jpj): need to merge the common code in Select and selectOne
