@@ -105,3 +105,14 @@ func TestWithNamingConvention(t *testing.T) {
 
 	}
 }
+
+func TestWithKey(t *testing.T) {
+	s := NewSchema()
+	if got, want := s.Key(), ""; got != want {
+		t.Errorf("got=%q want=%q", got, want)
+	}
+	s = NewSchema(WithKey("xxx"))
+	if got, want := s.Key(), "xxx"; got != want {
+		t.Errorf("got=%q want=%q", got, want)
+	}
+}

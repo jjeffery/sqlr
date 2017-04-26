@@ -85,11 +85,11 @@ func WithIdentifier(identifier string, meaning string) SchemaOption {
 	}
 }
 
-// WithTagKey creates an option that associates the schema
+// WithKey creates an option that associates the schema
 // with a key in struct field tags. This option is not needed
 // very often: its main purpose is for helping a program operate
 // against two different database schemas.
-func WithTagKey(key string) SchemaOption {
+func WithKey(key string) SchemaOption {
 	return func(schema *Schema) {
 		schema.key = key
 	}

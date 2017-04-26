@@ -162,3 +162,8 @@ func (s *Schema) Exec(db DB, row interface{}, sql string, args ...interface{}) (
 	}
 	return stmt.Exec(db, row, args...)
 }
+
+// Key returns the key associated with the schema.
+func (s *Schema) Key() string {
+	return s.key
+}

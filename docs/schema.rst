@@ -132,7 +132,7 @@ the schema::
     schema := NewSchema(
         WithDialect(sqlr.Postgres),
         WithNamingConvention(sqlr.SnakeCase),
-        WithTagKey("pg"),
+        WithKey("pg"),
     )
 
 Where does this come in useful? Perhaps it is best to describe the scenario
@@ -181,20 +181,20 @@ specify two different column names in the Go struct tag.
 
 While it is possible to get around this problem using the ``WithField`` schema
 option, there is some benefit visibility-wise if the two column names can
-appear in the Go struct field. This is where the ``WithTagKey`` schema option
+appear in the Go struct field. This is where the ``WithKey`` schema option
 becomes relevant. If the two schemas each specify a different struct tag key, then
 the ``sqlr`` package will look in the struct tag key for column names::
 
     mssqlSchema := sqlr.NewSchema(
         WithDialect(sqlr.MSSQL),
         WithNamingConvention(sqlr.SameCase),
-        WithTagKey("mssql"),
+        WithKey("mssql"),
     )
 
     pgSchema := sqlr.NewSchema(
         WithDialect(sqlr.Postgres),
         WithNamingConvention(sqlr.SnakeCase),
-        WithTagKey("pg"),
+        WithKey("pg"),
     )
 
 So now the column name exceptions can be included in the struct tag, and will only
@@ -267,7 +267,7 @@ the configuration and allows for further configuration::
     schemaForContactDetails := schema.Clone(
         WithField("Work.Facsimile", "work_fax"),
         WithField("Home.Facsimile", "home_fax_number"),
-        WithTagKey("pg"),
+        WithKey("pg"),
         WithIdentifer("Users", "users"),
     )
 
