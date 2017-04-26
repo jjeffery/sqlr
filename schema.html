@@ -32,6 +32,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="sqlr" href="index.html"/>
         <link rel="next" title="Code Generation using sqlr-gen" href="sqlr-gen.html"/>
         <link rel="prev" title="Column Naming Conventions" href="naming-conventions.html"/> 
@@ -156,7 +159,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/schema.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/schema.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -293,7 +296,7 @@ the schema:</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -339,19 +342,19 @@ database (which also treats <code class="docutils literal"><span class="pre">max
 specify two different column names in the Go struct tag.</p>
 <p>While it is possible to get around this problem using the <code class="docutils literal"><span class="pre">WithField</span></code> schema
 option, there is some benefit visibility-wise if the two column names can
-appear in the Go struct field. This is where the <code class="docutils literal"><span class="pre">WithTagKey</span></code> schema option
+appear in the Go struct field. This is where the <code class="docutils literal"><span class="pre">WithKey</span></code> schema option
 becomes relevant. If the two schemas each specify a different struct tag key, then
 the <code class="docutils literal"><span class="pre">sqlr</span></code> package will look in the struct tag key for column names:</p>
 <div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">MSSQL</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SameCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;mssql&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;mssql&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 
 <span class="nx">pgSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -418,7 +421,7 @@ the configuration and allows for further configuration:</p>
 <span class="nx">schemaForContactDetails</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Clone</span><span class="p">(</span>
     <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Work.Facsimile&quot;</span><span class="p">,</span> <span class="s">&quot;work_fax&quot;</span><span class="p">),</span>
     <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Home.Facsimile&quot;</span><span class="p">,</span> <span class="s">&quot;home_fax_number&quot;</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
     <span class="nx">WithIdentifer</span><span class="p">(</span><span class="s">&quot;Users&quot;</span><span class="p">,</span> <span class="s">&quot;users&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
@@ -504,7 +507,7 @@ for a database whose tables have evolved with different naming conventions:</p>
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>

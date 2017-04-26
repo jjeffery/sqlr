@@ -267,7 +267,7 @@ the configuration and allows for further configuration::
     schemaForContactDetails := schema.Clone(
         WithField("Work.Facsimile", "work_fax"),
         WithField("Home.Facsimile", "home_fax_number"),
-        WithTagKey("pg"),
+        WithKey("pg"),
         WithIdentifer("Users", "users"),
     )
 
