@@ -16,7 +16,7 @@ import ({{range .Imports}}
 // {{.Method.Get}} retrieves a {{.Singular}} by its primary key. Returns nil if not found.
 func ({{.ReceiverIdent}} *{{.TypeName}}) {{.Method.Get}}({{.RowType.IDParams}}) (*{{.RowType.Name}}, error) {
 	var row {{.RowType.Name}}
-	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Select({{.ReceiverIdent}}.{{.DBField}}, &row, {{.QuotedTableName}}, {{.RowType.IDArgs}})
+	n, err := {{.ReceiverIdent}}.{{.SchemaField}}.Select({{.ReceiverIdent}}.{{.DBField}}, &row, {{.QuotedSelect}}, {{.RowType.IDArgs}})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get {{.Singular}}").With(
             {{.RowType.IDKeyvals}}
