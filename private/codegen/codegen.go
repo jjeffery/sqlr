@@ -354,18 +354,46 @@ func newRowType(file *ast.File, ir *importResolver, typeExpr ast.Expr) (*RowType
 		return nil, errors.New("unexpected type for rowType")
 	}
 
+	// prependPackageName prepends the package name to an identifier
+	// if it is declared in the same package as the struct type.
+	// This handles the case where a row's primary key identifier
+	// (or identifiers) are custom types declared in the same package.
+	// eg:
+	//  type MyRow struct {
+	//      ID         MyRowID `sql:"primary key"`
+	//      OtherField string
+	//  }
+	//
+	//  type MyRowID int
+	//
+	// In the above example, the primary key type needs to have the same
+	// package name prepended to it as the MyRow type.
+	prependPackageName := func(typeName string) string {
+		// The default implementation does not change the type name.
+		// This implementation gets replaced if the row type is a
+		// selector expression, which means that it is in a different package.
+		return typeName
+	}
+
 	var structType *ast.StructType
 	var rowTypeName string
 	{
 		if selectorExpr, ok := typeExpr.(*ast.SelectorExpr); ok {
 			rowTypeName = ir.exprString(selectorExpr)
-			selectorName := ir.exprString(selectorExpr.X)
-			pkg, err := ir.ParsePackage(selectorName)
+			packageName := ir.exprString(selectorExpr.X)
+			pkg, err := ir.ParsePackage(packageName)
 			if err != nil {
 				return nil, err
 			}
 			typeName := ir.exprString(selectorExpr.Sel)
 			structType = findStructTypeInPkg(pkg, typeName)
+			prependPackageName = func(typeName string) string {
+				if t := findTypeInPkg(pkg, typeName); t != nil {
+					// add the package selector in front
+					return fmt.Sprintf("%s.%s", packageName, typeName)
+				}
+				return typeName
+			}
 		} else {
 			rowTypeIdent, ok := typeExpr.(*ast.Ident)
 			if !ok {
@@ -404,7 +432,7 @@ func newRowType(file *ast.File, ir *importResolver, typeExpr ast.Expr) (*RowType
 				pkKeyvals = append(pkKeyvals, fmt.Sprintf("%q", paramName))
 				pkKeyvals = append(pkKeyvals, paramName)
 				kvArgs = append(kvArgs, fieldName.Name)
-				typeName := ir.exprString(field.Type)
+				typeName := prependPackageName(ir.exprString(field.Type))
 				pkParams = append(pkParams, fmt.Sprintf("%s %s", paramName, typeName))
 			}
 		}
@@ -447,6 +475,28 @@ func findStructType(file *ast.File, name string) *ast.StructType {
 					if typeSpec.Name.Name == name {
 						return structType
 					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func findTypeInPkg(pkg *ast.Package, name string) *ast.TypeSpec {
+	for _, file := range pkg.Files {
+		if t := findTypeInFile(file, name); t != nil {
+			return t
+		}
+	}
+	return nil
+}
+
+func findTypeInFile(file *ast.File, name string) *ast.TypeSpec {
+	for _, decl := range file.Decls {
+		if genDecl, ok := decl.(*ast.GenDecl); ok {
+			for _, spec := range genDecl.Specs {
+				if typeSpec, ok := spec.(*ast.TypeSpec); ok {
+					return typeSpec
 				}
 			}
 		}
