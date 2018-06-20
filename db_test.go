@@ -110,7 +110,7 @@ func TestDB1(t *testing.T) {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
 		for k, stmt := range schema.cache.stmts {
-			t.Logf("%s=%v", k, stmt)
+			t.Logf("%v=%v", k, stmt)
 		}
 	}
 }
@@ -191,7 +191,7 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
 	}
@@ -253,13 +253,13 @@ func TestRace(t *testing.T) {
 			t.Errorf("statement cache: expected = %d, actual = %d", expected, actual)
 		}
 		for k, stmt := range schema.cache.stmts {
-			t.Logf("%s=%v", k, stmt)
+			t.Logf("%v=%v", k, stmt)
 		}
 	}
 }
 
 func TestNullable(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlrow_test:sqlrow_test@localhost/sqlrow_test?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
 	if err != nil {
 		t.Fatal("sql.Open:", err)
 	}

@@ -9,7 +9,7 @@ import (
 // Get retrieves a document by its primary key. Returns nil if not found.
 func (q *Row0Query) Get(id string) (*Row0, error) {
 	var row Row0
-	n, err := q.schema.Select(q.db, &row, "xyz.rows", id)
+	n, err := q.schema.Select(q.db, &row, "select {} from xyz.rows where {}", id)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get document").With(
 			"id", id,
