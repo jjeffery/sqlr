@@ -10,7 +10,7 @@ import (
 )
 
 type Row3Query struct {
-	db      sqlr.DB
+	db      sqlr.Querier
 	schema  *sqlr.Schema
 	rowType *rowtype.Row3
 }

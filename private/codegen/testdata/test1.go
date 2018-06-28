@@ -16,7 +16,7 @@ type Document struct {
 }
 
 type DocumentQuery struct {
-	db      sqlr.DB
+	db      sqlr.Querier
 	schema  *sqlr.Schema
 	rowType *Document
 }

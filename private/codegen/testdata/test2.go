@@ -17,7 +17,7 @@ type Row2 struct {
 }
 
 type Row2Query struct {
-	db      sqlr.DB
+	db      sqlr.Querier
 	schema  *sqlr.Schema
 	rowType *Row2
 }

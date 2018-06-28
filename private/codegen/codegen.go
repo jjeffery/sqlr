@@ -130,12 +130,14 @@ func Parse(filename string) (*Model, error) {
 }
 
 var dbTypeNames = map[string]bool{
-	"sqlr.DB":   true,
-	"sqlrow.DB": true,
-	"sql.DB":    true,
-	"sql.Tx":    true,
-	"sqlx.DB":   true,
-	"sqlx.Tx":   true,
+	"sql.Querier":    true,
+	"sqlexp.Querier": true,
+	"sqlr.Querier":   true,
+	"sqlr.DB":        true, // deprecated
+	"sql.DB":         true,
+	"sql.Tx":         true,
+	"sqlx.DB":        true,
+	"sqlx.Tx":        true,
 }
 
 func newQueryType(file *ast.File, ir *importResolver, typeSpec *ast.TypeSpec, structType *ast.StructType) (*QueryType, error) {

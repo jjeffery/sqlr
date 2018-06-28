@@ -4,11 +4,11 @@ import (
 	"database/sql"
 )
 
-// The DB interface defines the SQL database access methods used by this package.
+// The Querier interface defines the SQL database access methods used by this package.
 //
 // The *DB and *Tx types in the standard library package "database/sql"
 // both implement this interface.
-type DB interface {
+type Querier interface {
 	// Exec executes a query without returning any rows.
 	// The args are for any placeholder parameters in the query.
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -17,3 +17,8 @@ type DB interface {
 	// The args are for any placeholder parameters in the query.
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
+
+// DB is the deprecated name for Querier.
+//
+// Deprecated: use Querier instead.
+type DB = Querier

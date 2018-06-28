@@ -126,7 +126,7 @@ func (stmt *Stmt) String() string {
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column as long as
 // the SQL driver supports this functionality.
-func (stmt *Stmt) Exec(db DB, row interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Exec(db Querier, row interface{}, args ...interface{}) (int, error) {
 	if stmt.queryType == querySelect {
 		return 0, errors.New("attempt to call Exec on select statement")
 	}
@@ -185,7 +185,7 @@ func (stmt *Stmt) Exec(db DB, row interface{}, args ...interface{}) (int, error)
 // is a pointer to a struct then that struct is filled with the result of the first
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
-func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Select(db Querier, rows interface{}, args ...interface{}) (int, error) {
 	if rows == nil {
 		return 0, errors.New("nil pointer")
 	}
@@ -297,7 +297,7 @@ func (stmt *Stmt) Select(db DB, rows interface{}, args ...interface{}) (int, err
 
 // TODO(jpj): need to merge the common code in Select and selectOne
 
-func (stmt *Stmt) selectOne(db DB, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
+func (stmt *Stmt) selectOne(db Querier, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
 	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
 	if err != nil {
 		return 0, err

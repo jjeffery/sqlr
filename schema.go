@@ -141,7 +141,7 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 //
 // Select returns the number of rows returned by the SELECT
 // query.
-func (s *Schema) Select(db DB, rows interface{}, sql string, args ...interface{}) (int, error) {
+func (s *Schema) Select(db Querier, rows interface{}, sql string, args ...interface{}) (int, error) {
 	stmt, err := s.Prepare(rows, sql)
 	if err != nil {
 		return 0, err
@@ -155,7 +155,7 @@ func (s *Schema) Select(db DB, rows interface{}, sql string, args ...interface{}
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column, as long as
 // the SQL driver supports this functionality.
-func (s *Schema) Exec(db DB, row interface{}, sql string, args ...interface{}) (int, error) {
+func (s *Schema) Exec(db Querier, row interface{}, sql string, args ...interface{}) (int, error) {
 	stmt, err := s.Prepare(row, sql)
 	if err != nil {
 		return 0, err
