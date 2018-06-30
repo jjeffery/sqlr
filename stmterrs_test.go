@@ -3,6 +3,7 @@ package sqlr
 // tests for statement error conditions
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"testing"
@@ -24,6 +25,10 @@ func (db *FakeDB) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return db, nil
 }
 
+func (db *FakeDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return db.Exec(query, args...)
+}
+
 func (db *FakeDB) LastInsertId() (int64, error) {
 	return db.lastInsertId, db.lastInsertIdErr
 }
@@ -34,6 +39,10 @@ func (db *FakeDB) RowsAffected() (int64, error) {
 
 func (db *FakeDB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return nil, db.queryErr
+}
+
+func (db *FakeDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return db.Query(query, args...)
 }
 
 func TestSelectStmt1Errors(t *testing.T) {
@@ -85,6 +94,7 @@ func TestSelectStmt1Errors(t *testing.T) {
 
 	for i, tt := range tests {
 		schema := NewSchema()
+		ctx := context.Background()
 		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
@@ -100,7 +110,7 @@ func TestSelectStmt1Errors(t *testing.T) {
 		db := &FakeDB{}
 
 		if err == nil {
-			_, err = stmt.Select(db, tt.row)
+			_, err = stmt.Select(ctx, db, tt.row)
 			if err == nil || err.Error() != tt.errExec {
 				t.Errorf("test case %d:\nwant=%q\ngot=%q", i, tt.errExec, err)
 			}
@@ -172,6 +182,7 @@ func TestSelectStmt2Errors(t *testing.T) {
 
 	for i, tt := range tests {
 		schema := NewSchema()
+		ctx := context.Background()
 		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
@@ -190,7 +201,7 @@ func TestSelectStmt2Errors(t *testing.T) {
 
 		db := &FakeDB{queryErr: tt.queryErr}
 
-		_, err = stmt.Select(db, tt.dest, tt.args...)
+		_, err = stmt.Select(ctx, db, tt.dest, tt.args...)
 		if err == nil || err.Error() != tt.errText {
 			t.Errorf("%d: want=%q\ngot=%q", i, tt.errText, err)
 		}
@@ -245,6 +256,7 @@ func TestInsertRowStmtErrors(t *testing.T) {
 
 	for i, tt := range tests {
 		schema := NewSchema()
+		ctx := context.Background()
 		stmt, err := schema.Prepare(Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
@@ -265,7 +277,7 @@ func TestInsertRowStmtErrors(t *testing.T) {
 			lastInsertIdErr: tt.lastInsertIdErr,
 		}
 
-		_, err = stmt.Exec(db, tt.row)
+		_, err = stmt.Exec(ctx, db, tt.row)
 		if err == nil || err.Error() != tt.errText {
 			t.Errorf("expected=%q, actual=%v", tt.errText, err)
 		}
@@ -316,6 +328,7 @@ func TestExecRowStmtErrors(t *testing.T) {
 
 	for i, tt := range tests {
 		schema := NewSchema()
+		ctx := context.Background()
 		stmt, err := schema.Prepare(&Row{}, tt.sql)
 		if tt.errPrepare == "" {
 			if err != nil {
@@ -336,7 +349,7 @@ func TestExecRowStmtErrors(t *testing.T) {
 			rowsAffectedErr: tt.rowsAffectedErr,
 		}
 
-		_, err = stmt.Exec(db, tt.row)
+		_, err = stmt.Exec(ctx, db, tt.row)
 		if err == nil || err.Error() != tt.errText {
 			t.Errorf("%d: expected=%q, actual=%q", i, tt.errText, err)
 		}

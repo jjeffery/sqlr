@@ -1,6 +1,7 @@
 package sqlr
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -56,6 +57,7 @@ func ExampleStmt_Exec_insert() {
 	}
 
 	schema := NewSchema()
+	ctx := context.Background()
 
 	stmt, err := schema.Prepare(UserRow{}, `insert into users({}) values({})`)
 	if err != nil {
@@ -69,7 +71,7 @@ func ExampleStmt_Exec_insert() {
 		FamilyName: "Citizen",
 	}
 
-	_, err = stmt.Exec(db, row)
+	_, err = stmt.Exec(ctx, db, row)
 
 	if err != nil {
 		log.Fatal(err)
@@ -84,6 +86,7 @@ func ExampleStmt_Exec_update() {
 	}
 
 	schema := NewSchema()
+	ctx := context.Background()
 
 	stmt, err := schema.Prepare(UserRow{}, `update users set {} where {}`)
 	if err != nil {
@@ -98,7 +101,7 @@ func ExampleStmt_Exec_update() {
 		FamilyName: "Citizen",
 	}
 
-	_, err = stmt.Exec(db, row)
+	_, err = stmt.Exec(ctx, db, row)
 
 	if err != nil {
 		log.Fatal(err)
@@ -113,6 +116,7 @@ func ExampleStmt_Exec_delete() {
 	}
 
 	schema := NewSchema()
+	ctx := context.Background()
 
 	stmt, err := schema.Prepare(UserRow{}, `delete from users where {}`)
 	if err != nil {
@@ -127,7 +131,7 @@ func ExampleStmt_Exec_delete() {
 		FamilyName: "Citizen",
 	}
 
-	_, err = stmt.Exec(db, row)
+	_, err = stmt.Exec(ctx, db, row)
 
 	if err != nil {
 		log.Fatal(err)
@@ -142,6 +146,7 @@ func ExampleStmt_Select_oneRow() {
 	}
 
 	schema := NewSchema()
+	ctx := context.Background()
 
 	stmt, err := schema.Prepare(UserRow{}, `select {} from users where {}`)
 	if err != nil {
@@ -152,7 +157,7 @@ func ExampleStmt_Select_oneRow() {
 
 	// find user with ID=42
 	var row UserRow
-	n, err := stmt.Select(db, &row, 42)
+	n, err := stmt.Select(ctx, db, &row, 42)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -171,6 +176,7 @@ func ExampleStmt_Select_multipleRows() {
 	}
 
 	schema := NewSchema()
+	ctx := context.Background()
 
 	stmt, err := schema.Prepare(UserRow{}, `
 		select {alias u}
@@ -186,7 +192,7 @@ func ExampleStmt_Select_multipleRows() {
 
 	// find users with search terms
 	var rows []UserRow
-	n, err := stmt.Select(db, &rows, "smith%", 0, 100)
+	n, err := stmt.Select(ctx, db, &rows, "smith%", 0, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
