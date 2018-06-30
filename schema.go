@@ -1,6 +1,10 @@
 package sqlr
 
-import "github.com/jjeffery/sqlr/private/column"
+import (
+	"context"
+
+	"github.com/jjeffery/sqlr/private/column"
+)
 
 // Schema contains information about the database that is used
 // when generating SQL statements.
@@ -128,6 +132,9 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 }
 
 // Select executes a SELECT query and stores the result in rows.
+//
+// Deprecated: Use Session.Select instead.
+//
 // The argument passed to rows can be one of the following:
 //  A pointer to an array of structs; or
 //  a pointer to an array of struct pointers; or
@@ -146,11 +153,13 @@ func (s *Schema) Select(db Querier, rows interface{}, sql string, args ...interf
 	if err != nil {
 		return 0, err
 	}
-	return stmt.Select(db, rows, args...)
+	return stmt.Select(context.TODO(), db, rows, args...)
 }
 
 // Exec executes the query with the given row and optional arguments.
 // It returns the number of rows affected by the statement.
+//
+// Deprecated: use Session.Exec instead.
 //
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column, as long as
@@ -160,7 +169,7 @@ func (s *Schema) Exec(db Querier, row interface{}, sql string, args ...interface
 	if err != nil {
 		return 0, err
 	}
-	return stmt.Exec(db, row, args...)
+	return stmt.Exec(context.TODO(), db, row, args...)
 }
 
 // Key returns the key associated with the schema.

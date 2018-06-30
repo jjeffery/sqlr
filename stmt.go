@@ -2,6 +2,7 @@ package sqlr
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -126,7 +127,7 @@ func (stmt *Stmt) String() string {
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column as long as
 // the SQL driver supports this functionality.
-func (stmt *Stmt) Exec(db Querier, row interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Exec(ctx context.Context, db Querier, row interface{}, args ...interface{}) (int, error) {
 	if stmt.queryType == querySelect {
 		return 0, errors.New("attempt to call Exec on select statement")
 	}
@@ -149,7 +150,7 @@ func (stmt *Stmt) Exec(db Querier, row interface{}, args ...interface{}) (int, e
 	if err != nil {
 		return 0, err
 	}
-	result, err := db.Exec(expandedQuery, expandedArgs...)
+	result, err := db.ExecContext(ctx, expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
@@ -185,7 +186,7 @@ func (stmt *Stmt) Exec(db Querier, row interface{}, args ...interface{}) (int, e
 // is a pointer to a struct then that struct is filled with the result of the first
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
-func (stmt *Stmt) Select(db Querier, rows interface{}, args ...interface{}) (int, error) {
+func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args ...interface{}) (int, error) {
 	if rows == nil {
 		return 0, errors.New("nil pointer")
 	}
@@ -208,7 +209,7 @@ func (stmt *Stmt) Select(db Querier, rows interface{}, args ...interface{}) (int
 	destType := destValue.Type()
 	if destType == stmt.rowType {
 		// pointer to row struct, so only fetch one row
-		return stmt.selectOne(db, rows, destValue, args)
+		return stmt.selectOne(ctx, db, rows, destValue, args)
 	}
 
 	// if not a pointer to a struct, should be a pointer to a
@@ -231,7 +232,7 @@ func (stmt *Stmt) Select(db Querier, rows interface{}, args ...interface{}) (int
 	if err != nil {
 		return 0, err
 	}
-	sqlRows, err := db.Query(expandedQuery, expandedArgs...)
+	sqlRows, err := db.QueryContext(ctx, expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
@@ -297,12 +298,12 @@ func (stmt *Stmt) Select(db Querier, rows interface{}, args ...interface{}) (int
 
 // TODO(jpj): need to merge the common code in Select and selectOne
 
-func (stmt *Stmt) selectOne(db Querier, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
+func (stmt *Stmt) selectOne(ctx context.Context, db Querier, dest interface{}, rowValue reflect.Value, args []interface{}) (int, error) {
 	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
 	if err != nil {
 		return 0, err
 	}
-	rows, err := db.Query(expandedQuery, expandedArgs...)
+	rows, err := db.QueryContext(ctx, expandedQuery, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
