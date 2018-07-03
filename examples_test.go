@@ -464,7 +464,7 @@ func ExampleSchema_Select_multipleRows() {
 		from [Users] u
 		inner join [UserSearchTerms] t on t.UserID = u.ID
 		where t.SearchTerm like ?
-		limit ? offset ?`, "smith%", 0, 100)
+		limit ? offset ?`, "smith%", 100, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -476,4 +476,48 @@ func ExampleSchema_Select_multipleRows() {
 	} else {
 		log.Printf("not found")
 	}
+}
+
+func ExampleRowFunc_MakeQuery() {
+	schema := NewSchema()
+	ctx := context.Background()
+	tx := beginTransaction() // get a DB transaction, assumes no errors
+	defer tx.Commit()        // WARNING: no error handling here: example code only
+
+	type Row struct {
+		ID            int64 `sql:"primary key"`
+		Name          string
+		FavoriteColor string
+	}
+
+	// begin a request-scoped database session
+	sess := NewSession(ctx, tx, schema)
+
+	// data access object
+	var dao struct {
+		Get    func(id int64) (*Row, error)
+		Select func(query string, args ...interface{}) ([]*Row, error)
+	}
+
+	rowFunc := NewRowFunc(sess, &Row{}, TableName("rows"))
+	rowFunc.MakeQuery(&dao.Get, &dao.Select)
+
+	// can now use the type-safe data access functions
+	row42, err := dao.Get(42)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Row 42:", row42)
+
+	redRows, err := dao.Select("select {} from rows where favorite_color = ?", "red")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, row := range redRows {
+		log.Println("Likes red:", row)
+	}
+}
+
+func beginTransaction() *sql.Tx {
+	return nil
 }

@@ -1,8 +1,10 @@
 package sqlr
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -268,6 +270,9 @@ func TestNullable(t *testing.T) {
 	if _, err := db.Exec(`drop table if exists nullable_types;`); err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		_, _ = db.Exec(`drop table if exists nullable_types`)
+	}()
 	if _, err = db.Exec(`
 		create table nullable_types(
 			id integer not null primary key,
@@ -403,5 +408,109 @@ func TestNullable(t *testing.T) {
 	}
 	if got, want := n, 2; got != want {
 		t.Errorf("want=%v, got=%v", want, got)
+	}
+}
+
+func TestQuery(t *testing.T) {
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec(`drop table if exists widgets;`); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		// _, _ = db.Exec(`drop table if exists widgets`)
+	}()
+	if _, err = db.Exec(`
+		create table widgets(
+			id integer not null primary key,
+			name text not null
+		);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	schema := NewSchema(ForDB(db))
+	sess := NewSession(context.Background(), db, schema)
+
+	type Widget struct {
+		Id   int    `sql:"primary key"`
+		Name string `sql:"natural key"`
+	}
+
+	const rowCount = 6
+	var widget Widget
+
+	for i := 0; i < rowCount; i++ {
+		widget.Id = i
+		widget.Name = fmt.Sprintf("Widget %d", i)
+		if _, err := sess.Exec(widget, `insert widgets`); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var dao struct {
+		get        func(id int) (*Widget, error)
+		getMany    func(ids ...int) ([]*Widget, error)
+		selectRow  func(query string, args ...interface{}) (*Widget, error)
+		selectRows func(query string, args ...interface{}) ([]*Widget, error)
+	}
+
+	builder := NewRowFunc(sess, &Widget{}, TableName("widgets"))
+	builder.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows)
+
+	for i := 0; i < rowCount; i++ {
+		w, err := dao.get(i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		ids := make([]int, rowCount)
+		for i := 0; i < rowCount; i++ {
+			ids[i] = i
+		}
+		widgets, err := dao.getMany(ids...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sort.Slice(widgets, func(i, j int) bool {
+			return widgets[i].Id < widgets[j].Id
+		})
+		for i, w := range widgets {
+			if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
+		}
+	}
+
+	{
+		widgets, err := dao.selectRows("select {} from widgets order by id")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, w := range widgets {
+			if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
+		}
+	}
+
+	for i := 0; i < rowCount; i++ {
+		pattern := fmt.Sprintf("%%%d", i)
+		w, err := dao.selectRow(`select {} from widgets where name like ?`, pattern)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
 	}
 }
