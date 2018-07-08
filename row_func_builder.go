@@ -22,6 +22,7 @@ func (b *rowFuncBuilder) makeQuery(funcType reflect.Type) (func(*Session) reflec
 		b.selectFunc,
 		b.getOneFunc,
 		b.getManyFunc,
+		b.loadOneFunc,
 	} {
 		f, err := maker(funcType)
 		if err != nil {
@@ -116,14 +117,10 @@ func (b *rowFuncBuilder) makeSelectRowFunc(funcType reflect.Type) func(*Session)
 				)
 				rowPtrValue = reflect.Zero(reflect.PtrTo(b.rowType))
 			}
-			errValue := reflect.ValueOf(err)
-			if err == nil {
-				errValue = reflect.Zero(wellKnownTypes.errorType)
-			}
 
 			return []reflect.Value{
 				rowPtrValue,
-				errValue,
+				errorValueFor(err),
 			}
 		})
 	}
@@ -177,14 +174,11 @@ func (b *rowFuncBuilder) makeGetOneFunc(funcType reflect.Type) func(*Session) re
 					"query", query,
 					"args", queryArgs,
 				)
-			}
-			errValue := reflect.ValueOf(err)
-			if err == nil {
-				errValue = reflect.Zero(wellKnownTypes.errorType)
+				rowPtrValue = reflect.Zero(reflect.PtrTo(b.rowType))
 			}
 			return []reflect.Value{
 				rowPtrValue,
-				errValue,
+				errorValueFor(err),
 			}
 		})
 	}
@@ -249,14 +243,71 @@ func (b *rowFuncBuilder) makeGetManyFunc(funcType reflect.Type, pkColName string
 				}
 			}
 			rowsValue := rowsPtrValue.Elem()
-			errValue := reflect.ValueOf(err)
-			if err == nil {
-				errValue = reflect.Zero(wellKnownTypes.errorType)
-			}
 			return []reflect.Value{
 				rowsValue,
-				errValue,
+				errorValueFor(err),
 			}
+		})
+	}
+}
+
+func (b *rowFuncBuilder) loadOneFunc(funcType reflect.Type) (func(*Session) reflect.Value, error) {
+	if funcType.NumIn() != 1 {
+		return nil, nil
+	}
+	if funcType.NumOut() != 1 {
+		return nil, nil
+	}
+	if funcType.In(0).Kind() == reflect.Slice {
+		return nil, nil
+	}
+
+	thunkType := funcType.Out(0)
+	if thunkType.Kind() != reflect.Func {
+		return nil, newError("looks like a load function, but does not return a thunk (function): %s", funcType.String())
+	}
+	if thunkType.NumIn() != 0 {
+		return nil, newError("thunk function cannot accept arguments: %s", funcType.String())
+	}
+	invalidOutputsErr := newError("expect thunk to return (*%s error)", b.rowTypeName())
+	if thunkType.NumOut() != 2 {
+		return nil, invalidOutputsErr
+	}
+	if thunkType.Out(1) != wellKnownTypes.errorType {
+		return nil, invalidOutputsErr
+	}
+	if thunkType.Out(0) != reflect.PtrTo(b.rowType) {
+		return nil, invalidOutputsErr
+	}
+
+	pkCol, err := b.getPKCol()
+	if err != nil {
+		return nil, err
+	}
+	if pkCol == nil {
+		return nil, newError("looks like a load func, but no primary key defined for %s", b.rowTypeName())
+	}
+
+	inType := funcType.In(0)
+	if inType != pkCol.Field.Type {
+		return nil, newError("looks like a load func, but %s has primary key type of %s", b.rowTypeName(), pkCol.Field.Type.String())
+	}
+
+	return b.makeLoadOneFunc(funcType, pkCol), nil
+}
+
+func (b *rowFuncBuilder) makeLoadOneFunc(funcType reflect.Type, pkCol *column.Info) func(*Session) reflect.Value {
+	thunkType := funcType.Out(0)
+	return func(sess *Session) reflect.Value {
+		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
+			thunkValue := reflect.MakeFunc(thunkType, func([]reflect.Value) []reflect.Value {
+				// TODO: need to implement this
+				rowPtrValue := reflect.Zero(reflect.PtrTo(b.rowType))
+				err := errors.New("not implemented")
+				return []reflect.Value{rowPtrValue, errorValueFor(err)}
+			})
+
+			return []reflect.Value{thunkValue}
 		})
 	}
 }

@@ -437,15 +437,16 @@ func TestQuery(t *testing.T) {
 	sess := NewSession(context.Background(), db, schema)
 
 	type Widget struct {
-		Id   int    `sql:"primary key"`
+		ID   int    `sql:"primary key"`
 		Name string `sql:"natural key"`
 	}
+	type WidgetThunk func() (*Widget, error)
 
 	const rowCount = 6
 	var widget Widget
 
 	for i := 0; i < rowCount; i++ {
-		widget.Id = i
+		widget.ID = i
 		widget.Name = fmt.Sprintf("Widget %d", i)
 		if _, err := sess.Exec(widget, `insert widgets`); err != nil {
 			t.Fatal(err)
@@ -454,13 +455,14 @@ func TestQuery(t *testing.T) {
 
 	var dao struct {
 		get        func(id int) (*Widget, error)
+		load       func(id int) WidgetThunk
 		getMany    func(ids ...int) ([]*Widget, error)
 		selectRow  func(query string, args ...interface{}) (*Widget, error)
 		selectRows func(query string, args ...interface{}) ([]*Widget, error)
 	}
 
 	builder := NewRowFunc(sess, &Widget{}, TableName("widgets"))
-	builder.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows)
+	builder.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
 
 	for i := 0; i < rowCount; i++ {
 		w, err := dao.get(i)
@@ -482,7 +484,7 @@ func TestQuery(t *testing.T) {
 			t.Fatal(err)
 		}
 		sort.Slice(widgets, func(i, j int) bool {
-			return widgets[i].Id < widgets[j].Id
+			return widgets[i].ID < widgets[j].ID
 		})
 		for i, w := range widgets {
 			if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
@@ -511,6 +513,24 @@ func TestQuery(t *testing.T) {
 		}
 		if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
 			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		thunks := make([]WidgetThunk, rowCount)
+		for i := 0; i < rowCount; i++ {
+			thunks[i] = dao.load(i)
+		}
+
+		for i := 0; i < rowCount; i++ {
+			w, err := thunks[i]()
+			if err != nil {
+				t.Logf("not implemented yet: want=no error, got=%v", err)
+				continue
+			}
+			if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
 		}
 	}
 }
