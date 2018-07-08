@@ -5,26 +5,16 @@ import (
 	"reflect"
 
 	"github.com/jjeffery/errors"
-	"github.com/jjeffery/sqlr/private/column"
 )
 
-// rowFuncBuilder knows how to build row-based data access functions.
-type rowFuncBuilder struct {
-	schema    *Schema
-	rowType   reflect.Type
-	tableName string
-	singular  string
-	plural    string
-}
-
-func (b *rowFuncBuilder) makeQuery(funcType reflect.Type) (func(*Session) reflect.Value, error) {
-	for _, maker := range []func(reflect.Type) (func(*Session) reflect.Value, error){
-		b.selectFunc,
-		b.getOneFunc,
-		b.getManyFunc,
-		b.loadOneFunc,
+func makeQuery(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
+	for _, maker := range []func(reflect.Type, *Schema) (func(*Session) reflect.Value, error){
+		selectFunc,
+		getOneFunc,
+		getManyFunc,
+		loadOneFunc,
 	} {
-		f, err := maker(funcType)
+		f, err := maker(funcType, schema)
 		if err != nil {
 			return nil, err
 		}
@@ -33,8 +23,7 @@ func (b *rowFuncBuilder) makeQuery(funcType reflect.Type) (func(*Session) reflec
 		}
 	}
 
-	// TODO(jpj): need to be able to print a function type
-	return nil, newError("cannot recognize function")
+	return nil, newError("cannot recognize function: %v", funcType.String())
 }
 
 // selectFunc returns a func implementation if the func is a select func.
@@ -45,10 +34,12 @@ func (b *rowFuncBuilder) makeQuery(funcType reflect.Type) (func(*Session) reflec
 //   (*Row, error)
 // Returns nil if not a match, returns error if the function looks like a query
 // but is not quite conformant.
-func (b *rowFuncBuilder) selectFunc(funcType reflect.Type) (func(*Session) reflect.Value, error) {
+func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
+	if funcType.NumIn() < 1 {
+		return nil, nil // not a select function
+	}
 	if funcType.In(0) != wellKnownTypes.stringType {
-		// not a select function
-		return nil, nil
+		return nil, nil // not a select function
 	}
 	const invalidInputsMsg = "expect query function inputs to be like (query string, args ...interface{})"
 	if funcType.NumIn() != 2 {
@@ -57,35 +48,47 @@ func (b *rowFuncBuilder) selectFunc(funcType reflect.Type) (func(*Session) refle
 	if funcType.In(1) != wellKnownTypes.sliceOfInterfaceType {
 		return nil, newError(invalidInputsMsg)
 	}
-	rowTypeName := b.rowTypeName()
+
+	rowTypeName := "Row" // don't know the type yet
 	invalidOutputsMsg := fmt.Sprintf("MakeQuery: expect query function outputs to be like ([]*%s, error) or (*%s, error)", rowTypeName, rowTypeName)
 	if funcType.NumOut() != 2 {
 		return nil, newError(invalidOutputsMsg)
 	}
+	rowType := funcType.Out(0)
+	if rowType.Kind() == reflect.Slice {
+		rowType = rowType.Elem()
+	}
+	if rowType.Kind() == reflect.Ptr {
+		rowType = rowType.Elem()
+	}
+	if rowType.Kind() != reflect.Struct {
+		return nil, newError("expected struct type, got %v", rowType.String())
+	}
+	tbl := schema.TableFor(rowType)
 	if funcType.Out(1) != wellKnownTypes.errorType {
 		return nil, newError(invalidOutputsMsg)
 	}
-	rowPtrType := reflect.PtrTo(b.rowType)
+	rowPtrType := reflect.PtrTo(rowType)
 	if funcType.Out(0) == rowPtrType {
-		return b.makeSelectRowFunc(funcType), nil
+		return makeSelectRowFunc(funcType, tbl), nil
 	}
 	sliceOfRowPtrType := reflect.SliceOf(rowPtrType)
 	if funcType.Out(0) == sliceOfRowPtrType {
-		return b.makeSelectRowsFunc(funcType), nil
+		return makeSelectRowsFunc(funcType, tbl), nil
 	}
 
 	return nil, newError(invalidOutputsMsg)
 }
 
-func (b *rowFuncBuilder) makeSelectRowsFunc(funcType reflect.Type) func(*Session) reflect.Value {
+func makeSelectRowsFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
 	return func(sess *Session) reflect.Value {
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-			rowsPtrValue := reflect.New(reflect.SliceOf(reflect.PtrTo(b.rowType)))
+			rowsPtrValue := reflect.New(reflect.SliceOf(reflect.PtrTo(tbl.RowType())))
 			query := args[0].Interface().(string)
 			queryArgs := args[1].Interface().([]interface{})
 			_, err := sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, fmt.Sprintf("cannot query %s", b.plural)).With(
+				err = errors.Wrap(err, fmt.Sprintf("cannot query %s", tbl.plural())).With(
 					"query", query,
 					"args", queryArgs,
 				)
@@ -103,19 +106,19 @@ func (b *rowFuncBuilder) makeSelectRowsFunc(funcType reflect.Type) func(*Session
 	}
 }
 
-func (b *rowFuncBuilder) makeSelectRowFunc(funcType reflect.Type) func(*Session) reflect.Value {
+func makeSelectRowFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
 	return func(sess *Session) reflect.Value {
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-			rowPtrValue := reflect.New(b.rowType)
+			rowPtrValue := reflect.New(tbl.RowType())
 			query := args[0].Interface().(string)
 			queryArgs := args[1].Interface().([]interface{})
 			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, fmt.Sprintf("cannot query one %s", b.singular)).With(
+				err = errors.Wrap(err, fmt.Sprintf("cannot query one %s", tbl.singular())).With(
 					"query", query,
 					"args", queryArgs,
 				)
-				rowPtrValue = reflect.Zero(reflect.PtrTo(b.rowType))
+				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
 			}
 
 			return []reflect.Value{
@@ -126,7 +129,7 @@ func (b *rowFuncBuilder) makeSelectRowFunc(funcType reflect.Type) func(*Session)
 	}
 }
 
-func (b *rowFuncBuilder) getOneFunc(funcType reflect.Type) (func(*Session) reflect.Value, error) {
+func getOneFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
 	if funcType.NumIn() != 1 {
 		return nil, nil
 	}
@@ -139,42 +142,45 @@ func (b *rowFuncBuilder) getOneFunc(funcType reflect.Type) (func(*Session) refle
 	if funcType.Out(1) != wellKnownTypes.errorType {
 		return nil, newError("expecting second return arg to be error")
 	}
-	if funcType.Out(0) == b.rowType {
-		return nil, newError("expecting function to return (*%s, error) not (%s, error)", b.rowTypeName(), b.rowTypeName())
+	rowType := funcType.Out(0)
+	if rowType.Kind() != reflect.Ptr {
+		return nil, newError("expecting first return arg to be a pointer to struct")
 	}
-	if funcType.Out(0) != reflect.PtrTo(b.rowType) {
-		return nil, newError("expecting function to return (*%s, error)", b.rowTypeName())
+	rowType = rowType.Elem()
+	if rowType.Kind() != reflect.Struct {
+		return nil, newError("expecting first return arg to be a pointer to struct")
+	}
+	tbl := schema.TableFor(rowType)
+	if len(tbl.PrimaryKey()) == 0 {
+
 	}
 
-	pkCol, err := b.getPKCol()
+	pkCol, err := getPKCol(tbl)
 	if err != nil {
 		return nil, err
 	}
-	if pkCol == nil {
-		return nil, newError("looks like a get func, but no primary key defined for %s", b.rowTypeName())
-	}
 
 	inType := funcType.In(0)
-	if inType != pkCol.Field.Type {
-		return nil, newError("looks like a get func, but %s has primary key type of %s", b.rowTypeName(), pkCol.Field.Type.Name())
+	if inType != pkCol.info.Field.Type {
+		return nil, newError("looks like a get func, but %s has primary key type of %s", tbl.RowType().String(), pkCol.info.Field.Type.String())
 	}
 
-	return b.makeGetOneFunc(funcType), nil
+	return makeGetOneFunc(funcType, tbl), nil
 }
 
-func (b *rowFuncBuilder) makeGetOneFunc(funcType reflect.Type) func(*Session) reflect.Value {
+func makeGetOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
 	return func(sess *Session) reflect.Value {
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-			rowPtrValue := reflect.New(b.rowType)
-			query := fmt.Sprintf("select {} from %s where {}", b.tableName)
+			rowPtrValue := reflect.New(tbl.RowType())
+			query := fmt.Sprintf("select {} from %s where {}", tbl.Name())
 			queryArgs := []interface{}{args[0].Interface()}
 			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, "cannot get one %s", b.singular).With(
+				err = errors.Wrap(err, fmt.Sprintf("cannot get one %s", tbl.singular())).With(
 					"query", query,
 					"args", queryArgs,
 				)
-				rowPtrValue = reflect.Zero(reflect.PtrTo(b.rowType))
+				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
 			}
 			return []reflect.Value{
 				rowPtrValue,
@@ -184,7 +190,7 @@ func (b *rowFuncBuilder) makeGetOneFunc(funcType reflect.Type) func(*Session) re
 	}
 }
 
-func (b *rowFuncBuilder) getManyFunc(funcType reflect.Type) (func(*Session) reflect.Value, error) {
+func getManyFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
 	if funcType.NumIn() != 1 {
 		return nil, nil
 	}
@@ -197,46 +203,47 @@ func (b *rowFuncBuilder) getManyFunc(funcType reflect.Type) (func(*Session) refl
 	if funcType.Out(1) != wellKnownTypes.errorType {
 		return nil, newError("expecting second return arg to be error")
 	}
-	if funcType.Out(0) == b.rowType {
-		return nil, newError("expecting function to return ([]*%s, error) not (%s, error)", b.rowTypeName(), b.rowTypeName())
+	rowType := funcType.Out(0)
+	if rowType.Kind() != reflect.Slice {
+		return nil, newError("expecting first return arg to be a slice of pointer to struct")
 	}
-	if funcType.Out(0) == reflect.SliceOf(b.rowType) {
-		return nil, newError("expecting function to return ([]*%s, error) not ([]%s, error)", b.rowTypeName(), b.rowTypeName())
+	rowType = rowType.Elem()
+	if rowType.Kind() != reflect.Ptr {
+		return nil, newError("expecting first return arg to be a slice of pointer to struct")
 	}
-	if funcType.Out(0) != reflect.SliceOf(reflect.PtrTo(b.rowType)) {
-		return nil, newError("expecting function to return ([]*%s, error)", b.rowTypeName())
+	rowType = rowType.Elem()
+	if rowType.Kind() != reflect.Struct {
+		return nil, newError("expecting first return arg to be a slice of pointer to struct")
 	}
-
-	pkCol, err := b.getPKCol()
+	tbl := schema.TableFor(rowType)
+	pkCol, err := getPKCol(tbl)
 	if err != nil {
 		return nil, err
 	}
-	if pkCol == nil {
-		return nil, newError("looks like a get func, but no primary key defined for %s", b.rowTypeName())
-	}
 
 	inType := funcType.In(0)
-	if inType != reflect.SliceOf(pkCol.Field.Type) {
-		return nil, newError("looks like a get func, but %s has primary key type of %s", b.rowTypeName(), pkCol.Field.Type.Name())
+	if inType != reflect.SliceOf(pkCol.info.Field.Type) {
+		return nil, newError("looks like a get func, but %s has primary key type of %s", tbl.RowType().String(), pkCol.info.Field.Type.String())
 	}
 
-	return b.makeGetManyFunc(funcType, b.schema.columnNamer().ColumnName(pkCol)), nil
+	return makeGetManyFunc(funcType, tbl), nil
 }
 
-func (b *rowFuncBuilder) makeGetManyFunc(funcType reflect.Type, pkColName string) func(*Session) reflect.Value {
+func makeGetManyFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
 	return func(sess *Session) reflect.Value {
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
 			var err error
-			rowsPtrValue := reflect.New(reflect.SliceOf(reflect.PtrTo(b.rowType)))
+			rowsPtrValue := reflect.New(reflect.SliceOf(reflect.PtrTo(tbl.RowType())))
 			if len(args) > 0 {
-				query := fmt.Sprintf("select {} from %s where `%s` in (?)", b.tableName, pkColName)
+				pkColName := tbl.PrimaryKey()[0].Name()
+				query := fmt.Sprintf("select {} from %s where `%s` in (?)", tbl.Name(), pkColName)
 				queryArgs := make([]interface{}, len(args))
 				for i, arg := range args {
 					queryArgs[i] = arg.Interface()
 				}
 				_, err = sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 				if err != nil {
-					err = errors.Wrap(err, "cannot get one %s", b.singular).With(
+					err = errors.Wrap(err, "cannot get one %s", tbl.singular()).With(
 						"query", query,
 						"args", queryArgs,
 					)
@@ -251,7 +258,7 @@ func (b *rowFuncBuilder) makeGetManyFunc(funcType reflect.Type, pkColName string
 	}
 }
 
-func (b *rowFuncBuilder) loadOneFunc(funcType reflect.Type) (func(*Session) reflect.Value, error) {
+func loadOneFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
 	if funcType.NumIn() != 1 {
 		return nil, nil
 	}
@@ -269,40 +276,43 @@ func (b *rowFuncBuilder) loadOneFunc(funcType reflect.Type) (func(*Session) refl
 	if thunkType.NumIn() != 0 {
 		return nil, newError("thunk function cannot accept arguments: %s", funcType.String())
 	}
-	invalidOutputsErr := newError("expect thunk to return (*%s error)", b.rowTypeName())
+	invalidOutputsErr := newError("expect thunk to return a pointer to struct and an error)")
 	if thunkType.NumOut() != 2 {
 		return nil, invalidOutputsErr
 	}
 	if thunkType.Out(1) != wellKnownTypes.errorType {
 		return nil, invalidOutputsErr
 	}
-	if thunkType.Out(0) != reflect.PtrTo(b.rowType) {
+	rowType := thunkType.Out(0)
+	if rowType.Kind() != reflect.Ptr {
 		return nil, invalidOutputsErr
 	}
+	rowType = rowType.Elem()
+	if rowType.Kind() != reflect.Struct {
+		return nil, invalidOutputsErr
+	}
+	tbl := schema.TableFor(rowType)
 
-	pkCol, err := b.getPKCol()
+	pkCol, err := getPKCol(tbl)
 	if err != nil {
 		return nil, err
 	}
-	if pkCol == nil {
-		return nil, newError("looks like a load func, but no primary key defined for %s", b.rowTypeName())
-	}
 
 	inType := funcType.In(0)
-	if inType != pkCol.Field.Type {
-		return nil, newError("looks like a load func, but %s has primary key type of %s", b.rowTypeName(), pkCol.Field.Type.String())
+	if inType != pkCol.info.Field.Type {
+		return nil, newError("looks like a load func, but %s has primary key type of %s", tbl.RowType().String(), pkCol.info.Field.Type.String())
 	}
 
-	return b.makeLoadOneFunc(funcType, pkCol), nil
+	return makeLoadOneFunc(funcType, tbl), nil
 }
 
-func (b *rowFuncBuilder) makeLoadOneFunc(funcType reflect.Type, pkCol *column.Info) func(*Session) reflect.Value {
+func makeLoadOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
 	thunkType := funcType.Out(0)
 	return func(sess *Session) reflect.Value {
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
 			thunkValue := reflect.MakeFunc(thunkType, func([]reflect.Value) []reflect.Value {
 				// TODO: need to implement this
-				rowPtrValue := reflect.Zero(reflect.PtrTo(b.rowType))
+				rowPtrValue := reflect.Zero(reflect.PtrTo(tbl.RowType()))
 				err := errors.New("not implemented")
 				return []reflect.Value{rowPtrValue, errorValueFor(err)}
 			})
@@ -312,22 +322,15 @@ func (b *rowFuncBuilder) makeLoadOneFunc(funcType reflect.Type, pkCol *column.In
 	}
 }
 
-func (b *rowFuncBuilder) getPKCol() (*column.Info, error) {
-	var pkCol *column.Info
-	cols := column.ListForType(b.rowType)
-	for _, col := range cols {
-		if col.Tag.PrimaryKey {
-			if pkCol != nil {
-				return nil, newError("composite primary key not supported %s", b.rowType.Name())
-			}
-			pkCol = col
-		}
+func getPKCol(tbl *Table) (*Column, error) {
+	pkCols := tbl.PrimaryKey()
+	if len(pkCols) > 1 {
+		return nil, newError("compositeprimary key not supported: %s", tbl.RowType().String())
 	}
-	return pkCol, nil
-}
-
-func (b *rowFuncBuilder) rowTypeName() string {
-	return b.rowType.String()
+	if len(pkCols) == 0 {
+		return nil, newError("no primary key defined for %s (table %s)", tbl.RowType().String(), tbl.Name())
+	}
+	return pkCols[0], nil
 }
 
 type rowFuncError string

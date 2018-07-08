@@ -2,6 +2,8 @@ package sqlr
 
 import (
 	"context"
+	"errors"
+	"reflect"
 )
 
 // A Session is a request-scoped database session. It can execute
@@ -84,4 +86,68 @@ func (sess *Session) Context() context.Context {
 // Schema returns the schema used for this session.
 func (sess *Session) Schema() *Schema {
 	return sess.schema
+}
+
+// MakeQuery makes one or more functions that can be used to query in a type-safe manner.
+// Each funcPtr is a pointer to a function that will be created by this function.
+//
+// If "Row" is the row type, and "RowID" is the primary key type for Row objects, then the
+// function can be any one of the following signatures:
+//  // Get one row based on its ID
+//  func(id RowID) (*Row, error)
+//
+//  // Get multiple rows given multiple IDs
+//  func(ids []RowID) ([]*Row, error)
+//  func(ids ...RowID) ([]*Row, error)
+//
+//  // Get one row returning a thunk: batches multiple requests into
+//  // one query using the dataloader pattern
+//  func(id RowID) func() (*Row, error)
+//
+//  // Execute a query that will return multiple Row objects
+//  func(query string, args ...interface{}) ([]*Row, error)
+//
+//  // Execute a query that will return a single Row object.
+//  func(query string, args ...interface{}) (*Row, error)
+//
+// If any of the funcPtr arguments are not pointers to a function, or do not fit
+// one of the known function prototypes, then this function will panic. The reasoning
+// here is that if MakeQuery succeeds in a unit test, then it will always succeed
+// in production.
+func (sess *Session) MakeQuery(funcPtr ...interface{}) error {
+	for _, fp := range funcPtr {
+		if err := sess.makeQueryFunc(fp); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MustMakeQuery does the same thing as MakeQuery, but panics if an error is
+// encountered.
+func (sess *Session) MustMakeQuery(funcPtr ...interface{}) {
+	if err := sess.MakeQuery(funcPtr...); err != nil {
+		panic(err)
+	}
+}
+
+func (sess *Session) makeQueryFunc(funcPtr interface{}) error {
+	funcPtrValue := reflect.ValueOf(funcPtr)
+	if funcPtrValue.Type().Kind() != reflect.Ptr {
+		return errors.New("expected pointer to function")
+	}
+	funcValue := funcPtrValue.Elem()
+	funcType := funcValue.Type()
+	if funcType.Kind() != reflect.Func {
+		return errors.New("expected pointer to function")
+	}
+
+	queryFuncFactory, err := makeQuery(funcType, sess.schema)
+	if err != nil {
+		return err
+	}
+
+	queryFunc := queryFuncFactory(sess)
+	funcValue.Set(queryFunc)
+	return nil
 }

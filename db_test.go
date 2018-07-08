@@ -421,11 +421,14 @@ func TestQuery(t *testing.T) {
 	if _, err := db.Exec(`drop table if exists widgets;`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`drop table if exists widget;`); err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
-		// _, _ = db.Exec(`drop table if exists widgets`)
+		_, _ = db.Exec(`drop table if exists widget`)
 	}()
 	if _, err = db.Exec(`
-		create table widgets(
+		create table widget(
 			id integer not null primary key,
 			name text not null
 		);
@@ -448,7 +451,7 @@ func TestQuery(t *testing.T) {
 	for i := 0; i < rowCount; i++ {
 		widget.ID = i
 		widget.Name = fmt.Sprintf("Widget %d", i)
-		if _, err := sess.Exec(widget, `insert widgets`); err != nil {
+		if _, err := sess.Exec(widget, `insert widget`); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -461,8 +464,7 @@ func TestQuery(t *testing.T) {
 		selectRows func(query string, args ...interface{}) ([]*Widget, error)
 	}
 
-	builder := NewRowFunc(sess, &Widget{}, TableName("widgets"))
-	builder.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
+	sess.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
 
 	for i := 0; i < rowCount; i++ {
 		w, err := dao.get(i)
@@ -494,7 +496,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	{
-		widgets, err := dao.selectRows("select {} from widgets order by id")
+		widgets, err := dao.selectRows("select {} from widget order by id")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -507,7 +509,7 @@ func TestQuery(t *testing.T) {
 
 	for i := 0; i < rowCount; i++ {
 		pattern := fmt.Sprintf("%%%d", i)
-		w, err := dao.selectRow(`select {} from widgets where name like ?`, pattern)
+		w, err := dao.selectRow(`select {} from widget where name like ?`, pattern)
 		if err != nil {
 			t.Fatal(err)
 		}

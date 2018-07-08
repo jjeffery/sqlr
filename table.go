@@ -59,6 +59,7 @@ func newTable(schema *Schema, rowType reflect.Type) *Table {
 		}
 		col := &Column{
 			columnName: columnNamer.ColumnName(colInfo),
+			info:       colInfo,
 		}
 
 		tbl.cols = append(tbl.cols, col)
@@ -103,6 +104,14 @@ func (tbl *Table) NaturalKey() []*Column {
 // Columns returns all columns defined for the table.
 func (tbl *Table) Columns() []*Column {
 	return columnSlice(tbl.cols)
+}
+
+func (tbl *Table) singular() string {
+	return tbl.rowType.Name()
+}
+
+func (tbl *Table) plural() string {
+	return tbl.singular() + "s"
 }
 
 // Column represents a table column.

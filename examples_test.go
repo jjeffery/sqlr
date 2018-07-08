@@ -499,8 +499,7 @@ func ExampleRowFunc_MakeQuery() {
 		Select func(query string, args ...interface{}) ([]*Row, error)
 	}
 
-	rowFunc := NewRowFunc(sess, &Row{}, TableName("rows"))
-	rowFunc.MakeQuery(&dao.Get, &dao.Select)
+	sess.MustMakeQuery(&dao.Get, &dao.Select)
 
 	// can now use the type-safe data access functions
 	row42, err := dao.Get(42)
