@@ -2,6 +2,7 @@ package sqlr
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/jjeffery/sqlr/private/column"
 )
@@ -66,6 +67,19 @@ func (s *Schema) columnNamer() columnNamer {
 		}
 		return col.Path.ColumnName(convention, s.key)
 	})
+}
+
+func (s *Schema) tableNamer() func(rowType reflect.Type) string {
+	// TODO(jpj): this is pretty lame, does not lookup exceptions
+	// or struct tag data. Just a basic implementation that mirrors
+	// columnNamer, that will probably be refactored later.
+	return func(rowType reflect.Type) string {
+		convention := s.convention
+		if convention == nil {
+			convention = defaultNamingConvention
+		}
+		return convention.Convert(rowType.Name())
+	}
 }
 
 // renameIdent implements the identRenamer interface.
