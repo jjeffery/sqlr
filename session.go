@@ -10,6 +10,7 @@ import (
 // queries and it can construct strongly-typed query functions.
 type Session struct {
 	context context.Context
+	cancel  func()
 	querier Querier
 	schema  *Schema
 }
@@ -30,11 +31,27 @@ func NewSession(ctx context.Context, querier Querier, schema *Schema) *Session {
 	if schema == nil {
 		panic("schema cannot be nil")
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	return &Session{
 		context: ctx,
+		cancel:  cancel,
 		querier: querier,
 		schema:  schema,
 	}
+}
+
+// Close releases resources associated with the session. Any attempt to
+// query using the session will fail after Close has been called.
+//
+// Because a session is request-scoped, it should never be used once
+// a request has completed. Calling a session's Close method at the end
+// of a request is an effective way to release resources associated with
+// the session and to ensure that it can no longer be used.
+//
+// Close implements the io.Closer interface. It always returns nil.
+func (sess *Session) Close() error {
+	sess.cancel()
+	return nil
 }
 
 // Exec executes the query with the given row and optional arguments.
