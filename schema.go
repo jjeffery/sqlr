@@ -78,7 +78,7 @@ func (s *Schema) tableNamer() func(rowType reflect.Type) string {
 		if convention == nil {
 			convention = defaultNamingConvention
 		}
-		return convention.Convert(rowType.Name())
+		return convention.TableName(rowType.Name())
 	}
 }
 
