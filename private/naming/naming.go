@@ -40,6 +40,11 @@ func (sc SnakeCaseConvention) Join(names []string) string {
 	return strings.Join(names, "_")
 }
 
+// TableName converts a type name into a table name.
+func (sc SnakeCaseConvention) TableName(typeName string) string {
+	return sc.Convert(typeName)
+}
+
 // LowerCaseConvention implements NamingConvention, by converting to lower case.
 type LowerCaseConvention struct{}
 
@@ -53,15 +58,25 @@ func (lc LowerCaseConvention) Join(names []string) string {
 	return strings.Join(names, "")
 }
 
+// TableName converts a type name into a table name.
+func (lc LowerCaseConvention) TableName(typeName string) string {
+	return lc.Convert(typeName)
+}
+
 // SameCaseConvention implements NamingConvention. It does not alter field names.
 type SameCaseConvention struct{}
 
 // Convert returns fieldName unchanged.
-func (lc SameCaseConvention) Convert(fieldName string) string {
+func (sc SameCaseConvention) Convert(fieldName string) string {
 	return fieldName
 }
 
 // Join joins together the names with no separating characters between them.
-func (lc SameCaseConvention) Join(names []string) string {
+func (sc SameCaseConvention) Join(names []string) string {
 	return strings.Join(names, "")
+}
+
+// TableName converts a type name into a table name.
+func (sc SameCaseConvention) TableName(typeName string) string {
+	return sc.Convert(typeName)
 }
