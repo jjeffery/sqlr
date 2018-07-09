@@ -527,7 +527,7 @@ func TestQuery(t *testing.T) {
 		for i := 0; i < rowCount; i++ {
 			w, err := thunks[i]()
 			if err != nil {
-				t.Logf("not implemented yet: want=no error, got=%v", err)
+				t.Errorf("want=no error, got=%v", err)
 				continue
 			}
 			if got, want := w.Name, fmt.Sprintf("Widget %d", i); got != want {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/jjeffery/dataloader"
 	"github.com/jjeffery/errors"
 )
 
@@ -307,18 +308,26 @@ func loadOneFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.
 }
 
 func makeLoadOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {
-	thunkType := funcType.Out(0)
 	return func(sess *Session) reflect.Value {
-		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
-			thunkValue := reflect.MakeFunc(thunkType, func([]reflect.Value) []reflect.Value {
-				// TODO: need to implement this
-				rowPtrValue := reflect.Zero(reflect.PtrTo(tbl.RowType()))
-				err := errors.New("not implemented")
-				return []reflect.Value{rowPtrValue, errorValueFor(err)}
-			})
+		pkCol := tbl.PrimaryKey()[0]
+		queryFuncIn := []reflect.Type{reflect.SliceOf(pkCol.fieldType())}
+		queryFuncOut := []reflect.Type{reflect.SliceOf(reflect.PtrTo(tbl.RowType())), wellKnownTypes.errorType}
+		queryFuncType := reflect.FuncOf(queryFuncIn, queryFuncOut, false)
+		queryFuncValue := makeGetManyFunc(queryFuncType, tbl)(sess)
 
-			return []reflect.Value{thunkValue}
+		keyFuncIn := []reflect.Type{reflect.PtrTo(tbl.RowType())}
+		keyFuncOut := []reflect.Type{pkCol.fieldType()}
+		keyFuncType := reflect.FuncOf(keyFuncIn, keyFuncOut, false)
+		keyFuncValue := reflect.MakeFunc(keyFuncType, func(args []reflect.Value) []reflect.Value {
+			rowPtrValue := args[0]
+			rowValue := rowPtrValue.Elem()
+			keyValue := rowValue.FieldByIndex([]int(pkCol.fieldIndex()))
+			return []reflect.Value{keyValue}
 		})
+
+		loadFuncPtrValue := reflect.New(funcType)
+		dataloader.Make(loadFuncPtrValue.Interface(), queryFuncValue.Interface(), keyFuncValue.Interface())
+		return loadFuncPtrValue.Elem()
 	}
 }
 

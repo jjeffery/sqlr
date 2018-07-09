@@ -125,6 +125,16 @@ func (col *Column) Name() string {
 	return col.columnName
 }
 
+// fieldType returns the type of the field associated with the column.
+func (col *Column) fieldType() reflect.Type {
+	return col.info.Field.Type
+}
+
+// fieldIndex returns the index sequence for Type.FieldByIndex
+func (col *Column) fieldIndex() []int {
+	return []int(col.info.Index)
+}
+
 // PrimaryKey returns true if this column is the primary key,
 // or forms part of the primary key.
 func (col *Column) PrimaryKey() bool {
