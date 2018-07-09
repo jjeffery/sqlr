@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/jjeffery/dataloader"
 	"github.com/jjeffery/errors"
+	"github.com/jjeffery/sqlr/dataloader"
 )
 
 func makeQuery(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
