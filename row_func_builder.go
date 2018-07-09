@@ -95,10 +95,7 @@ func makeSelectRowsFunc(funcType reflect.Type, tbl *Table) func(*Session) reflec
 				)
 			}
 			rowsValue := rowsPtrValue.Elem()
-			errValue := reflect.ValueOf(err)
-			if err == nil {
-				errValue = reflect.Zero(wellKnownTypes.errorType)
-			}
+			errValue := errorValueFor(err)
 			return []reflect.Value{
 				rowsValue,
 				errValue,
