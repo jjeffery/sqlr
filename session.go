@@ -2,7 +2,6 @@ package sqlr
 
 import (
 	"context"
-	"errors"
 	"reflect"
 )
 
@@ -128,9 +127,7 @@ func (sess *Session) Schema() *Schema {
 //  func(query string, args ...interface{}) (*Row, error)
 //
 // If any of the funcPtr arguments are not pointers to a function, or do not fit
-// one of the known function prototypes, then this function will panic. The reasoning
-// here is that if MakeQuery succeeds in a unit test, then it will always succeed
-// in production.
+// one of the known function prototypes, then this function will return an error.
 func (sess *Session) MakeQuery(funcPtr ...interface{}) error {
 	for _, fp := range funcPtr {
 		if err := sess.makeQueryFunc(fp); err != nil {
@@ -150,13 +147,14 @@ func (sess *Session) MustMakeQuery(funcPtr ...interface{}) {
 
 func (sess *Session) makeQueryFunc(funcPtr interface{}) error {
 	funcPtrValue := reflect.ValueOf(funcPtr)
+	funcPtrType := funcPtrValue.Type()
 	if funcPtrValue.Type().Kind() != reflect.Ptr {
-		return errors.New("expected pointer to function")
+		return newError("expected pointer to function, got %s", funcPtrType.String())
 	}
 	funcValue := funcPtrValue.Elem()
 	funcType := funcValue.Type()
 	if funcType.Kind() != reflect.Func {
-		return errors.New("expected pointer to function")
+		return newError("expected pointer to function, got %s", funcPtrType.String())
 	}
 
 	queryFuncFactory, err := makeQuery(funcType, sess.schema)
