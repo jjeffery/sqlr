@@ -3,6 +3,7 @@ package sqlr
 import (
 	"database/sql"
 	"database/sql/driver"
+	"sync"
 
 	"github.com/jjeffery/sqlr/private/dialect"
 )
@@ -38,9 +39,35 @@ var (
 //
 // Many programs only load one database driver, and in this case the default
 // dialect should be the correct choice.
-var DefaultDialect Dialect // Depends on the DB driver loaded.
+func DefaultDialect() Dialect {
+	defaultDialectOnce.Do(func() {
+		defaultDialect = ANSISQL
 
-var allDialects []Dialect
+		// If one or more drivers have been loaded, choose the default dialect
+		// based on the first driver in the list. If there are multiple drivers
+		// the first driver is going to be the first alphabetically, as the driver
+		// names are sorted.
+		if drivers := sql.Drivers(); len(drivers) > 0 {
+			switch drivers[0] {
+			case "postgres":
+				defaultDialect = Postgres
+			case "mysql":
+				defaultDialect = MySQL
+			case "sqlite", "sqlite3":
+				defaultDialect = SQLite
+			case "mssql":
+				defaultDialect = MSSQL
+			}
+		}
+	})
+	return defaultDialect
+}
+
+var (
+	allDialects        []Dialect
+	defaultDialect     Dialect
+	defaultDialectOnce sync.Once
+)
 
 func init() {
 	Postgres = dialect.Postgres
@@ -49,25 +76,6 @@ func init() {
 	SQLite = dialect.SQLite
 	ANSISQL = dialect.ANSI
 	allDialects = []Dialect{Postgres, MySQL, MSSQL, SQLite, ANSISQL}
-
-	DefaultDialect = ANSISQL
-
-	// If one or more drivers have been loaded, choose the default dialect
-	// based on the first driver in the list. If there are multiple drivers
-	// the first driver is going to be the first alphabetically, as the driver
-	// names are sorted.
-	if drivers := sql.Drivers(); len(drivers) > 0 {
-		switch drivers[0] {
-		case "postgres":
-			DefaultDialect = Postgres
-		case "mysql":
-			DefaultDialect = MySQL
-		case "sqlite", "sqlite3":
-			DefaultDialect = SQLite
-		case "mssql":
-			DefaultDialect = MSSQL
-		}
-	}
 }
 
 func dialectFor(db *sql.DB) Dialect {
@@ -85,5 +93,5 @@ func dialectFor(db *sql.DB) Dialect {
 		}
 	}
 	// dialect not found for driver, use default
-	return DefaultDialect
+	return DefaultDialect()
 }

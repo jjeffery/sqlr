@@ -91,13 +91,13 @@ func (s *Schema) renameIdent(ident string) (string, bool) {
 }
 
 // getDialect returns the dialect for the schema. The aim is to make
-// and empty Schema usable, so this method is necessary to ensure that
+// an empty Schema usable, so this method is necessary to ensure that
 // a non-nil dialect is always available.
 func (s *Schema) getDialect() Dialect {
 	if s.dialect != nil {
 		return s.dialect
 	}
-	return DefaultDialect
+	return DefaultDialect()
 }
 
 // Clone creates a copy of the schema, with options applied.
