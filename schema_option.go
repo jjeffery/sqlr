@@ -4,6 +4,8 @@ import "database/sql"
 
 // A SchemaOption provides optional configuration and is supplied when
 // creating a new Schema, or cloning a Schema.
+//
+// Deprecated: SchemaOption is being replaced by SchemaConfig.
 type SchemaOption func(schema *Schema)
 
 // ForDB creates an option that sets the dialect for the open DB handle.

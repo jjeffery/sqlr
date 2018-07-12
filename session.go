@@ -2,6 +2,8 @@ package sqlr
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"reflect"
 )
 
@@ -14,12 +16,10 @@ type Session struct {
 	schema  *Schema
 }
 
-// NewSession creates a new, request-scoped session for performing queries.
-func (s *Schema) NewSession(ctx context.Context, querier Querier) *Session {
-	return NewSession(ctx, querier, s)
-}
-
 // NewSession returns a new, request-scoped session.
+//
+// Although it is not mandatory, it is a good practice to
+// call a session's Close method at the end of a request.
 func NewSession(ctx context.Context, querier Querier, schema *Schema) *Session {
 	if ctx == nil {
 		ctx = context.Background()
@@ -53,18 +53,52 @@ func (sess *Session) Close() error {
 	return nil
 }
 
-// Exec executes the query with the given row and optional arguments.
-// It returns the number of rows affected by the statement.
+// Exec executes a query on a row without returning any rows. The args are for any placeholder parameters in the query.
 //
-// If the statement is an INSERT statement and the row has an auto-increment field,
-// then the row is updated with the value of the auto-increment column, as long as
-// the SQL driver supports this functionality.
-func (sess *Session) Exec(row interface{}, query string, args ...interface{}) (int, error) {
+// Exec is a general-purpose row-based query function. For simple insert and update operations, consider
+// using the InsertRow and UpdateRow methods respectively.
+func (sess *Session) Exec(row interface{}, query string, args ...interface{}) (sql.Result, error) {
 	stmt, err := sess.schema.Prepare(row, query)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return stmt.Exec(sess.context, sess.querier, row, args...)
+	return stmt.exec(sess.context, sess.querier, row, args...)
+}
+
+// InsertRow inserts one row into the database.
+//
+// If the row has an auto-increment field, then that field is updated
+// with the value of the auto-increment column.
+func (sess *Session) InsertRow(row interface{}) error {
+	return errors.New("not implemented yet")
+}
+
+// UpdateRow updates one row in the database. It returns the number
+// of rows updated, which should be zero or one.
+//
+// If the row has a version field, then that field is incremented
+// during the update. If the row being updated does not match the
+// original value of the version field, then an OptimisticLockingError
+// will be returned.
+func (sess *Session) UpdateRow(row interface{}) (int, error) {
+	return 0, errors.New("not implemented yet")
+}
+
+// OptimisticLockingError is an error generated during an Update
+// or Upsert operation, where the value of the row struct version
+// field does not match the value of the corresponding row in the
+// database.
+type OptimisticLockingError struct {
+	Schema          *Schema
+	Row             interface{}
+	PrimaryKey      []interface{}
+	NaturalKey      []interface{}
+	ExpectedVersion int64
+	ActualVersion   int64
+}
+
+func (e *OptimisticLockingError) Error() string {
+	return "TODO: need to generate error message"
 }
 
 // Select executes a SELECT query and stores the result in rows.
@@ -128,6 +162,10 @@ func (sess *Session) Schema() *Schema {
 //
 // If any of the funcPtr arguments are not pointers to a function, or do not fit
 // one of the known function prototypes, then this function will return an error.
+// It is more common to call the MustMakeQuery method, which will panic if there
+// are any invalid funcPtr arguments.
+//
+// See MustMakeQuery for examples.
 func (sess *Session) MakeQuery(funcPtr ...interface{}) error {
 	for _, fp := range funcPtr {
 		if err := sess.makeQueryFunc(fp); err != nil {
@@ -139,6 +177,10 @@ func (sess *Session) MakeQuery(funcPtr ...interface{}) error {
 
 // MustMakeQuery does the same thing as MakeQuery, but panics if an error is
 // encountered.
+//
+// Calling MustMakeQuery is far more common than calling MakeQuery, because the
+// only reason for failure is if one or more of the funcPtr arguments are not
+// recognizable as query functions. This can easily be verified by automated tests.
 func (sess *Session) MustMakeQuery(funcPtr ...interface{}) {
 	if err := sess.MakeQuery(funcPtr...); err != nil {
 		panic(err)

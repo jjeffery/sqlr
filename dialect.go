@@ -33,6 +33,18 @@ var (
 	ANSISQL  Dialect // Quote: "column_name", Placeholders: ?, ?, ?
 )
 
+// DialectFromDriver returns the appropriate dialect for a
+// database driver.
+func DialectFromDriver(driver driver.Driver) Dialect {
+	panic("not implemented yet")
+}
+
+// DialectFromDB returns the appropriate dialect for a
+// database handle.
+func DialectFromDB(db *sql.DB) Dialect {
+	panic("not implemented yet")
+}
+
 // DefaultDialect is the dialect used by a schema if none is specified.
 // It is chosen from the first driver in the list of drivers returned by the
 // sql.Drivers() function.

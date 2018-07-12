@@ -17,6 +17,9 @@ import (
 )
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
+//
+// Deprecated: Use equivalent methods on Session instead. This type will be removed from
+// the public API shortly.
 type Stmt struct {
 	rowType     reflect.Type
 	queryType   queryType
@@ -124,6 +127,8 @@ func (stmt *Stmt) String() string {
 // Exec executes the prepared statement with the given row and optional arguments.
 // It returns the number of rows affected by the statement.
 //
+// Deprecated: Use Session.Exec, Session.Insert, Session.Update, or Session.Upsert instead.
+//
 // If the statement is an INSERT statement and the row has an auto-increment field,
 // then the row is updated with the value of the auto-increment column as long as
 // the SQL driver supports this functionality.
@@ -180,12 +185,31 @@ func (stmt *Stmt) Exec(ctx context.Context, db Querier, row interface{}, args ..
 	return int(rowsAffected), nil
 }
 
+func (stmt *Stmt) exec(ctx context.Context, db Querier, row interface{}, args ...interface{}) (sql.Result, error) {
+	args, err := stmt.getArgs(row, args)
+	if err != nil {
+		return nil, err
+	}
+	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
+	if err != nil {
+		return nil, err
+	}
+	result, err := db.ExecContext(ctx, expandedQuery, expandedArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // Select executes the prepared query statement with the given arguments and
 // returns the query results in rows. If rows is a pointer to a slice of structs
 // then one item is added to the slice for each row returned by the query. If row
 // is a pointer to a struct then that struct is filled with the result of the first
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
+//
+// Deprecated: Use Session.Select instead.
 func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args ...interface{}) (int, error) {
 	if rows == nil {
 		return 0, errors.New("nil pointer")

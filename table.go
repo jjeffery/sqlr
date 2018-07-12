@@ -7,8 +7,10 @@ import (
 	"github.com/jjeffery/sqlr/private/column"
 )
 
-// Table represents the information known about a database table
-// and its associated row struct type.
+// Table represents the information known about a database table.
+// The information known about a table is derived from the row
+// type (which must be a struct), and any configuration that was
+// provided via the SchemaConfig when the schema was created.
 type Table struct {
 	schema    *Schema
 	rowType   reflect.Type
@@ -152,7 +154,7 @@ func (col *Column) Version() bool {
 	return col.info.Tag.Version
 }
 
-// EmptyIsNull returns true if the empty value for the associated field type
+// EmptyNull returns true if the empty value for the associated field type
 // should be stored as NULL in the database, and if the NULL value in the
 // database should be stored in the associated field as the empty (or zero)
 // value.
@@ -160,14 +162,14 @@ func (col *Column) Version() bool {
 // This is commonly set for string values and time.Time values. It is common
 // for an empty string value or an empty time.Time value to be represented
 // as a database NULL.
-func (col *Column) EmptyIsNull() bool {
+func (col *Column) EmptyNull() bool {
 	return col.info.Tag.EmptyNull
 }
 
-// StoreAsJSON returns true if column's value is unmarshaled from JSON into
+// JSON returns true if column's value is unmarshaled from JSON into
 // the associated struct field, and if the struct field is marshaled into
 // JSON to be stored in the database column.
-func (col *Column) StoreAsJSON() bool {
+func (col *Column) JSON() bool {
 	return col.info.Tag.JSON
 }
 

@@ -2,29 +2,26 @@ package sqlr
 
 import (
 	"context"
+	"errors"
 	"reflect"
 
 	"github.com/jjeffery/sqlr/private/column"
 )
 
-// Schema contains information about the database that is used
+// Schema contains information known about the database schema and is used
 // when generating SQL statements.
 //
 // Information stored in the schema includes the SQL dialect,
 // and the naming convention used to convert Go struct field names
-// into database column names.
+// into database column names, and Go type names into database
+// table names.
 //
 // Although the zero value schema can be used and represents a database schema
-// with default values, it is more common to use the NewSchema function to
-// create a schema with one or more options.
+// with default values, it is also common to use the MustCreateSchema function to
+// create a schema from a SchemaConfig struct.
 //
 // A schema maintains an internal cache, which is used to store details of
 // frequently called SQL commands for improved performance.
-//
-// A schema can be inexpensively cloned to provide a deep copy.
-// This can occasionally be useful to define a common schema for a database,
-// and then create copies to handle naming rules that are specific to a particular
-// table, or a particular group of tables.
 type Schema struct {
 	dialect    Dialect
 	convention NamingConvention
@@ -35,6 +32,8 @@ type Schema struct {
 }
 
 // NewSchema creates a schema with options.
+//
+// Deprecated: Use MustCreateSchema (or CreateSchema) instead.
 func NewSchema(opts ...SchemaOption) *Schema {
 	schema := &Schema{}
 	for _, opt := range opts {
@@ -43,6 +42,25 @@ func NewSchema(opts ...SchemaOption) *Schema {
 		}
 	}
 	return schema
+}
+
+// MustCreateSchema creates a new schema based on the schema config. If the
+// schema config contains any inconsistencies, then this function will panic.
+func MustCreateSchema(config SchemaConfig) *Schema {
+	schema, err := CreateSchema(config)
+	if err != nil {
+		panic(err)
+	}
+	return schema
+}
+
+// CreateSchema creates a new schema based on the schema config. If the
+// schema config contains any inconsistencies, then an error is returned.
+//
+// It is more common for a program to call MustCreateSchema, which will
+// panic if there are any inconsistencies in the schema configuration.
+func CreateSchema(config SchemaConfig) (*Schema, error) {
+	return nil, errors.New("not implemented yet")
 }
 
 // columnNamer returns an object that implements the columnNamer interface
@@ -101,6 +119,10 @@ func (s *Schema) getDialect() Dialect {
 }
 
 // Clone creates a copy of the schema, with options applied.
+//
+// Deprecated: This method will be removed. If two similar
+// schemas are required, copy a SchemaConfig and make necessary
+// changes before calling CreateSchema/MustCreateSchema.
 func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 	clone := &Schema{
 		dialect:    s.dialect,
@@ -118,6 +140,9 @@ func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
+//
+// Deprecated: Use Session object and run queries directly using Session.Select,
+// Session.Exec, Session.Insert, Session.Update or Session.Upsert.
 func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	// determine row type to use for statement
 	rowType, err := inferRowType(row)
@@ -148,20 +173,6 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 // Select executes a SELECT query and stores the result in rows.
 //
 // Deprecated: Use Session.Select instead.
-//
-// The argument passed to rows can be one of the following:
-//  A pointer to an array of structs; or
-//  a pointer to an array of struct pointers; or
-//  a pointer to a struct.
-// When rows is a pointer to an array it is populated with
-// one item for each row returned by the SELECT query.
-//
-// When rows is a pointer to a struct, it is populated with
-// the first row returned from the query. This is a good
-// option when the query will only return one row.
-//
-// Select returns the number of rows returned by the SELECT
-// query.
 func (s *Schema) Select(db Querier, rows interface{}, sql string, args ...interface{}) (int, error) {
 	stmt, err := s.Prepare(rows, sql)
 	if err != nil {

@@ -37,22 +37,26 @@ rules include specifying the SQL dialect (eg MySQL, Postgres, SQLite) and the na
 used to convert Go struct field names into column names (eg "GivenName" => "given_name"). The schema
 is usually created during program initialization. Once created, a schema is immutable and can be
 called concurrently from multiple goroutines.
- schema := NewSchema(
-   WithDialect(MySQL),
-   WithNamingConvention(SnakeCase),
- )
-Once the schema has been defined and a database handle is available (eg *sql.DB, *sql.Tx), it is possible
-to create simple row insert/update/delete statements with minimal effort.
+ schema := MustCreateSchema(SchemaConfig{
+   Dialect: MySQL,
+   NamingConvention: SnakeCase,
+ })
+A session is created using a context, a database connection (eg *sql.DB, *sql.Tx, *sql.Conn), and a
+schema. The session is intended to last as long as a single request (which might be a HTTP request,
+in the case of a HTTP server).
+ sess := NewSession(ctx, tx, schema)
+Once a session has been created, it is possible to create simple row insert/update statements with
+minimal effort.
  var row User
  // ... populate row with data here and then ...
 
  // generates the correct SQL to insert a row into the users table
- rowsAffected, err := schema.Exec(db, row, "insert into users({}) values({})")
+ rowsAffected, err := sess.Exec(db, row, "insert into users({}) values({})")
 
  // ... and then later on ...
 
  // generates the correct SQL to update a the matching row in the users table
- rowsAffected, err := schema.Exec(db, row, "update users set {} where {}")
+ rowsAffected, err := sess.Exec(db, row, "update users set {} where {}")
 The Exec method parses the SQL query and replaces occurrences of "{}" with the column names
 or placeholders that make sense for the SQL clause in which they occur. In the example above,
 the insert and update statements would look like:
@@ -71,6 +75,10 @@ For example if the Postgres dialect was used the insert and update queries would
  update users set "given_name"=$1,"family_name"=$2,"dob"=$3,"ssn"=$4,"street"=$5,
  "locality"=$6,"postcode"=$7,"country"=$8,"phone"=$9,"mobile"=$10,"fax"=$11
  where "id"=$12
+Inserting and updating a single row are common enough operations that the session has methods
+that make it very simple:
+ sess.InsertRow(row)
+ sess.UpdateRow(row)
 Select queries are handled in a similar fashion:
  var rows []*User
 
@@ -119,23 +127,20 @@ structure will be updated.
  }
 
  row := &Row{Name: "some name"}
- _, err := schema.Exec(db, row, "insert into table_name({}) values({})")
+ _, err := sess.InsertRow(row)
  if err != nil {
    log.Fatal(err)
  }
 
  // row.ID will contain the auto-generated value
  fmt.Println(row.ID)
-This feature only works with database drivers that support autoincrement columns. The Postgres
-driver ("github.com/lib/pq"), in particular, does not support this feature.
 
 Null Columns
 
 Most SQL database tables have columns that are nullable, and it can be tiresome to always
 map to pointer types or special nullable types such as sql.NullString. In many cases it is
 acceptable to map a database NULL value to the empty value for the corresponding Go struct
-field. It is not always acceptable, but experience has shown that it is a common
-enough situation.
+field.
 
 Where it is acceptable to map a NULL value to an empty value and vice-versa, the Go struct
 field can be marked with the "null" keyword in the field's struct tag.
@@ -198,11 +203,11 @@ In the above example, the number of placeholders ("?") in the query will be incr
 match the number of values in the `ids` slice. The expansion logic can handle any mix of
 slice and scalar arguments.
 
-Code Generation
+Type-Safe Query Functions
 
-This package contains a code generation tool in the "./cmd/sqlr-gen" directory. It can
-be quite useful to reduce the amount of code required. Refer to the detailed documentation
-at https://jjeffery.github.io/sqlr for more information on this feature.
+A session can create type-safe query functions. This is a very powerful feature and makes
+it very easy to create type-safe data access. See the Session.MakeQuery and Session.MustMakeQuery
+functions for examples.
 
 Performance and Caching
 
@@ -215,6 +220,6 @@ package "database/sql" directly.
 
 Source Code
 
-More information about this package can be found at https://github.com/jjeffery/sqlr.
+The source code for this package is available at https://github.com/jjeffery/sqlr.
 */
 package sqlr

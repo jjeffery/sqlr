@@ -478,8 +478,8 @@ func ExampleSchema_Select_multipleRows() {
 	}
 }
 
-func ExampleRowFunc_MakeQuery() {
-	schema := NewSchema()
+func ExampleSession_MustMakeQuery() {
+	var schema Schema
 	ctx := context.Background()
 	tx := beginTransaction() // get a DB transaction, assumes no errors
 	defer tx.Commit()        // WARNING: no error handling here: example code only
@@ -491,7 +491,7 @@ func ExampleRowFunc_MakeQuery() {
 	}
 
 	// begin a request-scoped database session
-	sess := NewSession(ctx, tx, schema)
+	sess := NewSession(ctx, tx, &schema)
 
 	// data access object
 	var dao struct {
