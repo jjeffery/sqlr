@@ -16,13 +16,6 @@ type Info struct {
 	Path       Path
 	FieldNames string  // one or more field names, joined by periods
 	Tag        TagInfo // meta data from the struct field tag
-	/*
-		PrimaryKey    bool
-		AutoIncrement bool
-		Version       bool
-		JSON          bool
-		EmptyNull     bool
-	*/
 }
 
 func newInfo(field reflect.StructField) *Info {
