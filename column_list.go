@@ -5,21 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jjeffery/sqlr/private/column"
 	"github.com/jjeffery/sqlr/private/scanner"
 )
-
-// The columnNamer interface is used for naming columns.
-type columnNamer interface {
-	ColumnName(col *column.Info) string
-}
-
-// columnNamerFunc converts a function into a columnNamer.
-type columnNamerFunc func(*column.Info) string
-
-func (f columnNamerFunc) ColumnName(col *column.Info) string {
-	return f(col)
-}
 
 // columnList represents a list of columns for use in an SQL clause.
 //
@@ -27,13 +14,13 @@ func (f columnNamerFunc) ColumnName(col *column.Info) string {
 // For example a column list for the WHERE clause in a row update
 // statement will only contain the columns for the primary key.
 type columnList struct {
-	allColumns []*column.Info
-	filter     func(col *column.Info) bool
+	allColumns []*Column
+	filter     func(col *Column) bool
 	clause     sqlClause
 	alias      string
 }
 
-func newColumns(allColumns []*column.Info) columnList {
+func newColumns(allColumns []*Column) columnList {
 	return columnList{
 		allColumns: allColumns,
 		clause:     clauseSelectColumns,
@@ -85,11 +72,11 @@ func (cols columnList) Parse(clause sqlClause, text string) (columnList, error) 
 // String returns a string representation of the columns.
 // The string returned depends on the SQL clause in which the
 // columns appear.
-func (cols columnList) String(dialect Dialect, columnNamer columnNamer, counter func() int) string {
+func (cols columnList) String(dialect Dialect, counter func() int) string {
 	var buf bytes.Buffer
 
-	quotedColumnName := func(col *column.Info) string {
-		return dialect.Quote(columnNamer.ColumnName(col))
+	quotedColumnName := func(col *Column) string {
+		return dialect.Quote(col.Name())
 	}
 	placeholder := func() string {
 		return dialect.Placeholder(counter())
@@ -131,8 +118,8 @@ func (cols columnList) String(dialect Dialect, columnNamer columnNamer, counter 
 }
 
 // filtered returns the columns after the filter has been applied
-func (cols columnList) filtered() []*column.Info {
-	v := make([]*column.Info, 0, len(cols.allColumns))
+func (cols columnList) filtered() []*Column {
+	v := make([]*Column, 0, len(cols.allColumns))
 	for _, col := range cols.allColumns {
 		if cols.filter == nil || cols.filter(col) {
 			v = append(v, col)
@@ -142,23 +129,23 @@ func (cols columnList) filtered() []*column.Info {
 }
 
 // columnFilter is the filter for all columns
-func columnFilterAll(col *column.Info) bool {
+func columnFilterAll(col *Column) bool {
 	return true
 }
 
 // columnFilterPK is the filter for primary key columns only
-func columnFilterPK(col *column.Info) bool {
-	return col.Tag.PrimaryKey
+func columnFilterPK(col *Column) bool {
+	return col.PrimaryKey()
 }
 
 // columnFilterInsertable is the filter for all columns except the autoincrement
 // column (if it exists)
-func columnFilterInsertable(col *column.Info) bool {
-	return !col.Tag.AutoIncrement
+func columnFilterInsertable(col *Column) bool {
+	return !col.AutoIncrement()
 }
 
 // columnFitlerUpdateable is the filter for all columns not part of the primary key,
 // and not autoincrement
-func columnFilterUpdateable(col *column.Info) bool {
-	return !col.Tag.PrimaryKey && !col.Tag.AutoIncrement
+func columnFilterUpdateable(col *Column) bool {
+	return !col.PrimaryKey() && !col.AutoIncrement()
 }

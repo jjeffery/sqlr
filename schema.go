@@ -121,11 +121,21 @@ func (s *Schema) TableFor(row interface{}) *Table {
 	return s.tableMap.add(rowType, tbl)
 }
 
+// columnNamerFunc converts a function into a columnNamer.
+// It implements the columnNamer interface used in the column package.
+// TODO(jpj): this will be removed when fieldMap is removed, and the
+// functionality will be moved from the column package into this package.
+type columnNamerFunc func(*column.Info) string
+
+func (f columnNamerFunc) ColumnName(col *column.Info) string {
+	return f(col)
+}
+
 // columnNamer returns an object that implements the columnNamer interface
 // for the schema. The column namer returns the column name based on the
 // list of field name/column name mappings for the schema, and the naming
 // convention.
-func (s *Schema) columnNamer() columnNamer {
+func (s *Schema) columnNamer() columnNamerFunc {
 	return columnNamerFunc(func(col *column.Info) string {
 		if s.fieldMap != nil {
 			if columnName, ok := s.fieldMap.lookup(col.FieldNames); ok {
@@ -204,7 +214,8 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	stmt, ok := s.cache.lookup(rowType, query)
 	if !ok {
 		// build statement from scratch
-		stmt, err = newStmt(s.getDialect(), s.columnNamer(), s, rowType, query)
+		tbl := s.TableFor(rowType)
+		stmt, err = newStmt(s.getDialect(), s, tbl, query)
 		if err != nil {
 			return nil, err
 		}

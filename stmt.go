@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jjeffery/sqlr/private/column"
 	"github.com/jjeffery/sqlr/private/scanner"
 	"github.com/jjeffery/sqlr/private/wherein"
 )
@@ -21,19 +20,17 @@ import (
 // Deprecated: Use equivalent methods on Session instead. This type will be removed from
 // the public API shortly.
 type Stmt struct {
-	rowType     reflect.Type
-	queryType   queryType
-	query       string
-	dialect     Dialect
-	columnNamer columnNamer
-	columns     []*column.Info
-	inputs      []inputSource
-	argCount    int      // the number of args expected in addition to fields from the row
-	output      struct { // outputs from a select query are determined the first time it is run
+	tbl       *Table
+	queryType queryType
+	query     string
+	dialect   Dialect
+	inputs    []inputSource
+	argCount  int      // the number of args expected in addition to fields from the row
+	output    struct { // outputs from a select query are determined the first time it is run
 		mutex   sync.RWMutex
-		columns []*column.Info
+		columns []*Column
 	}
-	autoIncrColumn *column.Info
+	autoIncrColumn *Column
 }
 
 // inputSource describes where to source the input to an SQL query. (There is
@@ -45,7 +42,7 @@ type Stmt struct {
 // If col is nil, then argIndex is the index into the args array, and the
 // corresponding arg should be used as input.
 type inputSource struct {
-	col      *column.Info
+	col      *Column
 	argIndex int // used only if col == nil
 }
 
@@ -59,20 +56,18 @@ type identRenamer interface {
 
 // newStmt creates a new statement for the row type and query. Panics if rowType does not
 // refer to a struct type.
-func newStmt(dialect Dialect, colNamer columnNamer, renamer identRenamer, rowType reflect.Type, sql string) (*Stmt, error) {
+func newStmt(dialect Dialect, renamer identRenamer, tbl *Table, sql string) (*Stmt, error) {
 	stmt := &Stmt{
-		dialect:     dialect,
-		columnNamer: colNamer,
-		rowType:     rowType,
+		dialect: dialect,
+		tbl:     tbl,
 	}
-	stmt.columns = column.ListForType(stmt.rowType)
 	if err := stmt.scanSQL(sql, renamer); err != nil {
 		return nil, err
 	}
 
 	if stmt.queryType == queryInsert {
-		for _, col := range stmt.columns {
-			if col.Tag.AutoIncrement {
+		for _, col := range tbl.Columns() {
+			if col.AutoIncrement() {
 				stmt.autoIncrColumn = col
 				// TODO: return an error if col is not an integer type
 				break
@@ -117,7 +112,7 @@ func (stmt *Stmt) Exec(ctx context.Context, db Querier, row interface{}, args ..
 	var field reflect.Value
 	if stmt.autoIncrColumn != nil {
 		rowVal := reflect.ValueOf(row)
-		field = stmt.autoIncrColumn.Index.ValueRW(rowVal)
+		field = stmt.autoIncrColumn.info.Index.ValueRW(rowVal)
 		if !field.CanSet() {
 			return 0, fmt.Errorf("cannot set auto-increment value for type %s", rowVal.Type().Name())
 		}
@@ -207,7 +202,7 @@ func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args
 
 	destValue = reflect.Indirect(destValue)
 	destType := destValue.Type()
-	if destType == stmt.rowType {
+	if destType == stmt.tbl.RowType() {
 		// pointer to row struct, so only fetch one row
 		return stmt.selectOne(ctx, db, rows, destValue, args)
 	}
@@ -224,7 +219,7 @@ func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args
 	if isPtr {
 		rowType = rowType.Elem()
 	}
-	if rowType != stmt.rowType {
+	if rowType != stmt.tbl.RowType() {
 		return 0, errorPtrType()
 	}
 
@@ -243,7 +238,7 @@ func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args
 	}
 
 	var rowCount = 0
-	scanValues := make([]interface{}, len(stmt.columns))
+	scanValues := make([]interface{}, len(stmt.tbl.Columns()))
 
 	for sqlRows.Next() {
 		rowCount++
@@ -251,14 +246,14 @@ func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args
 		rowValue := reflect.Indirect(rowValuePtr)
 		var jsonCells []*jsonCell
 		for i, col := range outputs {
-			cellValue := col.Index.ValueRW(rowValue)
+			cellValue := col.info.Index.ValueRW(rowValue)
 			cellPtr := cellValue.Addr().Interface()
-			if col.Tag.JSON {
-				jc := newJSONCell(col.Field.Name, cellPtr)
+			if col.JSON() {
+				jc := newJSONCell(col.info.Field.Name, cellPtr)
 				jsonCells = append(jsonCells, jc)
 				scanValues[i] = jc.ScanValue()
-			} else if col.Tag.EmptyNull {
-				scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
+			} else if col.EmptyNull() {
+				scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 			} else {
 				scanValues[i] = cellPtr
 			}
@@ -325,14 +320,14 @@ func (stmt *Stmt) selectOne(ctx context.Context, db Querier, dest interface{}, r
 	rowCount := 1
 
 	for i, col := range outputs {
-		cellValue := col.Index.ValueRW(rowValue)
+		cellValue := col.info.Index.ValueRW(rowValue)
 		cellPtr := cellValue.Addr().Interface()
-		if col.Tag.JSON {
-			jc := newJSONCell(col.Field.Name, cellPtr)
+		if col.JSON() {
+			jc := newJSONCell(col.info.Field.Name, cellPtr)
 			jsonCells = append(jsonCells, jc)
 			scanValues[i] = jc.ScanValue()
-		} else if col.Tag.EmptyNull {
-			scanValues[i] = newNullCell(col.Field.Name, cellValue, cellPtr)
+		} else if col.EmptyNull() {
+			scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 		} else {
 			scanValues[i] = cellPtr
 		}
@@ -355,7 +350,7 @@ func (stmt *Stmt) selectOne(ctx context.Context, db Querier, dest interface{}, r
 	return rowCount, nil
 }
 
-func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
+func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*Column, error) {
 	stmt.output.mutex.RLock()
 	outputs := stmt.output.columns
 	stmt.output.mutex.RUnlock()
@@ -370,10 +365,9 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 		return stmt.output.columns, nil
 	}
 
-	columnMap := make(map[string]*column.Info)
-	for _, col := range stmt.columns {
-		columnName := stmt.columnNamer.ColumnName(col)
-		columnMap[columnName] = col
+	columnMap := make(map[string]*Column)
+	for _, col := range stmt.tbl.Columns() {
+		columnMap[col.Name()] = col
 	}
 
 	columnNames, err := rows.Columns()
@@ -381,7 +375,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 		return nil, err
 	}
 
-	outputs = make([]*column.Info, len(columnNames))
+	outputs = make([]*Column, len(columnNames))
 	var columnNotFound = false
 	for i, columnName := range columnNames {
 		col := columnMap[columnName]
@@ -399,7 +393,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 		// Build a map of lower-case column names for the remaining,
 		// unmatched columns and then try again.
 		var unknownColumnNames []string
-		lowerColumnMap := make(map[string]*column.Info)
+		lowerColumnMap := make(map[string]*Column)
 		for k, v := range columnMap {
 			lowerColumnMap[strings.ToLower(k)] = v
 		}
@@ -415,7 +409,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 			}
 			outputs[i] = col
 			delete(lowerColumnMap, columnNameLower)
-			delete(columnMap, stmt.columnNamer.ColumnName(col))
+			delete(columnMap, col.Name())
 		}
 
 		if len(unknownColumnNames) == 1 {
@@ -443,7 +437,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*column.Info, error) {
 func (stmt *Stmt) scanSQL(query string, renamer identRenamer) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
-	columns := newColumns(stmt.columns)
+	columns := newColumns(stmt.tbl.Columns())
 	var counter int
 	counterNext := func() int { counter++; return counter }
 	var insertColumns *columnList
@@ -491,14 +485,14 @@ func (stmt *Stmt) scanSQL(query string, renamer identRenamer) error {
 					// change the clause but keep the filter and generate string
 					cols := *insertColumns
 					cols.clause = clause
-					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counterNext))
+					buf.WriteString(cols.String(stmt.dialect, counterNext))
 					stmt.addInputColumns(cols)
 				} else {
 					cols, err := columns.Parse(clause, lit)
 					if err != nil {
 						return fmt.Errorf("cannot expand %q in %q clause: %v", lit, clause, err)
 					}
-					buf.WriteString(cols.String(stmt.dialect, stmt.columnNamer, counterNext))
+					buf.WriteString(cols.String(stmt.dialect, counterNext))
 					stmt.addInputColumns(cols)
 					if clause == clauseInsertColumns {
 						insertColumns = &cols
@@ -546,7 +540,7 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 	for rowVal.Type().Kind() == reflect.Ptr {
 		rowVal = rowVal.Elem()
 	}
-	if rowVal.Type() != stmt.rowType {
+	if rowVal.Type() != stmt.tbl.RowType() {
 		// should never happen, calling functions have already checked
 		expectedType := stmt.expectedTypeName()
 		return nil, fmt.Errorf("expected type %s or *(%s)", expectedType, expectedType)
@@ -554,8 +548,8 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 
 	for _, input := range stmt.inputs {
 		if input.col != nil {
-			colVal := input.col.Index.ValueRO(rowVal)
-			if input.col.Tag.JSON {
+			colVal := input.col.info.Index.ValueRO(rowVal)
+			if input.col.JSON() {
 				// marshal field contents into JSON and pass as a byte array
 				valueRO := colVal.Interface()
 				if valueRO == nil {
@@ -564,12 +558,12 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 					data, err := json.Marshal(valueRO)
 					if err != nil {
 						// TODO(jpj): if errors.Wrap makes it into the stdlib, use it here
-						err = fmt.Errorf("cannot marshal field %q: %v", input.col.Field.Name, err)
+						err = fmt.Errorf("cannot marshal field %q: %v", input.col.info.Field.Name, err)
 						return nil, err
 					}
 					args = append(args, data)
 				}
-			} else if input.col.Tag.EmptyNull {
+			} else if input.col.EmptyNull() {
 				// TODO: store zero value with the column
 				zero := reflect.Zero(colVal.Type()).Interface()
 				ival := colVal.Interface()
@@ -590,5 +584,6 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 }
 
 func (stmt *Stmt) expectedTypeName() string {
-	return fmt.Sprintf("%s.%s", stmt.rowType.PkgPath(), stmt.rowType.Name())
+	rowType := stmt.tbl.RowType()
+	return fmt.Sprintf("%s.%s", rowType.PkgPath(), rowType.Name())
 }

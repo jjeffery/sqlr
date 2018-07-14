@@ -3,8 +3,6 @@ package sqlr
 import (
 	"fmt"
 	"strings"
-
-	"github.com/jjeffery/sqlr/private/column"
 )
 
 // sqlClause represents a specific SQL clause. Column lists
@@ -105,7 +103,7 @@ func (c sqlClause) matchAny(clauses ...sqlClause) bool {
 	return false
 }
 
-func (c sqlClause) defaultFilter() func(col *column.Info) bool {
+func (c sqlClause) defaultFilter() func(col *Column) bool {
 	switch c {
 	case clauseSelectWhere, clauseSelectOrderBy, clauseUpdateWhere, clauseDeleteWhere:
 		return columnFilterPK
