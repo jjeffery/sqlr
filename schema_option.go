@@ -112,7 +112,10 @@ func WithKey(key string) SchemaOption {
 // one or more tables and their associated row types.
 func WithTables(tables TablesConfig) SchemaOption {
 	return func(schema *Schema) error {
-		// TODO(jpj): process tables config here
+		// Can't do much with this now, because we might not have
+		// the naming convention finalized yet, so just store it
+		// for processing later.
+		schema.init.tablesConfig = tables
 		return nil
 	}
 }

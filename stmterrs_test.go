@@ -375,7 +375,7 @@ func TestInvalidStmts(t *testing.T) {
 	}{
 		{
 			fn:   func() (int, error) { return schema.Exec(db, &notRow, "insert into rows({}) values({})") },
-			want: `expected arg to refer to a struct type`,
+			want: `expected row type to be a struct, found int`,
 		},
 		{
 			fn:   func() (int, error) { return schema.Exec(db, &row, "insert into xyz values({})") },
@@ -407,7 +407,7 @@ func TestInvalidStmts(t *testing.T) {
 		},
 		{
 			fn:   func() (int, error) { return schema.Select(db, &notRow, "select {} from rows") },
-			want: `expected arg to refer to a struct type`,
+			want: `expected row type to be a struct, found int`,
 		},
 	}
 
@@ -427,7 +427,7 @@ func TestInvalidPrepare(t *testing.T) {
 	schema := NewSchema(WithDialect(ANSISQL))
 	var notRow []int
 	_, err := schema.Prepare(notRow, "select {} from rows")
-	want := `expected arg to refer to a struct type`
+	want := `expected row type to be a struct, found int`
 	if err != nil {
 		if want != err.Error() {
 			t.Errorf("want %s, got %v", want, err)

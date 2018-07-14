@@ -20,11 +20,9 @@ type Table struct {
 	nk        []*Column
 }
 
-// TableFor returns the table information associated with
-// row, which should be an instance of a struct type
-// or a pointer to a struct type.
-// If row does not refer to a struct type then a panic results.
-func (s *Schema) TableFor(row interface{}) *Table {
+// getRowType converts a row instance into a row type.
+// Returns an error if row does not refer to a struct type.
+func getRowType(row interface{}) (reflect.Type, error) {
 	var rowType reflect.Type
 	if t, ok := row.(reflect.Type); ok {
 		rowType = t
@@ -37,44 +35,135 @@ func (s *Schema) TableFor(row interface{}) *Table {
 			rowType = rowType.Elem()
 			break
 		default:
-			err := fmt.Errorf("exected rowType to be a struct, found %v", rowType.String())
-			panic(err)
+			err := fmt.Errorf("expected row type to be a struct, found %v", rowType.String())
+			return nil, err
 		}
 	}
-	// TODO(jpj): lookup cache, schema based.
-	return newTable(s, rowType)
+	return rowType, nil
 }
 
-func newTable(schema *Schema, rowType reflect.Type) *Table {
+// newTable returns a new Table value for the row type. If cfg is non-nil,
+// then it must have already been checked for any inconsistencies.
+func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 	columnNamer := schema.columnNamer()
-	tableNamer := schema.tableNamer()
+
+	var tableName string
+	if cfg != nil && cfg.TableName != "" {
+		tableName = cfg.TableName
+	} else if rowTypeName := rowType.Name(); rowTypeName != "" {
+		convention := schema.convention
+		if convention == nil {
+			convention = defaultNamingConvention
+		}
+		tableName = convention.TableName(rowTypeName)
+	} else {
+		// TODO(jpj): this will happen for anonymous types.
+		// Need a mechanism to specify table name using struct tags.
+		// eg
+		//  TableName sqlr.Name `sql:"table_name_here"`
+		//
+		// or
+		//  ID int64 `sql:"primary key" table:"table_name_here"`
+		tableName = "__unknown_table_name__"
+	}
 
 	tbl := &Table{
 		schema:    schema,
 		rowType:   rowType,
-		tableName: tableNamer(rowType),
+		tableName: tableName,
 	}
 
 	for _, colInfo := range column.ListForType(rowType) {
 		if colInfo.Tag.Ignore {
 			continue
 		}
+		var colConfig ColumnConfig
+		var hasColConfig bool
+		if cfg != nil {
+			colConfig, hasColConfig = cfg.Columns[colInfo.FieldNames]
+		}
+		if colConfig.Ignore {
+			continue
+		}
+
 		col := &Column{
-			columnName: columnNamer.ColumnName(colInfo),
-			info:       colInfo,
+			columnName:    columnNamer.ColumnName(colInfo),
+			info:          colInfo,
+			primaryKey:    colInfo.Tag.PrimaryKey,
+			autoIncrement: colInfo.Tag.AutoIncrement,
+			emptyNull:     colInfo.Tag.EmptyNull,
+			json:          colInfo.Tag.JSON,
+			naturalKey:    colInfo.Tag.NaturalKey,
+		}
+
+		if hasColConfig {
+			if colConfig.ColumnName != "" {
+				col.columnName = colConfig.ColumnName
+			}
+			if colConfig.OverrideStructTag {
+				col.primaryKey = colConfig.PrimaryKey
+				col.autoIncrement = colConfig.AutoIncrement
+				col.emptyNull = colConfig.EmptyNull
+				col.json = colConfig.JSON
+				col.naturalKey = colConfig.NaturalKey
+			} else {
+				col.primaryKey = col.primaryKey || colConfig.PrimaryKey
+				col.autoIncrement = col.autoIncrement || colConfig.AutoIncrement
+				col.emptyNull = col.emptyNull || colConfig.EmptyNull
+				col.json = col.json || colConfig.JSON
+				col.naturalKey = col.naturalKey || colConfig.NaturalKey
+			}
 		}
 
 		tbl.cols = append(tbl.cols, col)
 
-		if colInfo.Tag.PrimaryKey {
+		if col.primaryKey {
 			tbl.pk = append(tbl.pk, col)
 		}
-		if colInfo.Tag.NaturalKey {
+		if col.naturalKey {
 			tbl.nk = append(tbl.nk, col)
 		}
 	}
 
 	return tbl
+}
+
+func newTableWithConfig(schema *Schema, rowType reflect.Type, config *TableConfig) (*Table, error) {
+	// check that all of the field names in the config match field names in the row type
+	if len(config.Columns) > 0 {
+		fieldPaths := make(map[string]bool)
+		for _, colInfo := range column.ListForType(rowType) {
+			fieldPaths[colInfo.FieldNames] = true
+		}
+
+		for fieldPath := range config.Columns {
+			if !fieldPaths[fieldPath] {
+				return nil, fmt.Errorf("field %s not found in type %s", fieldPath, rowType)
+			}
+		}
+	}
+
+	tbl := newTable(schema, rowType, config)
+
+	var versionCols []string
+	var autoIncrementCols []string
+	for _, col := range tbl.Columns() {
+		if col.AutoIncrement() {
+			autoIncrementCols = append(autoIncrementCols, col.Name())
+		}
+		if col.Version() {
+			versionCols = append(versionCols, col.Name())
+		}
+	}
+
+	if len(versionCols) > 1 {
+		return nil, fmt.Errorf("%s: multiple version columns not permitted (%v)", rowType, versionCols)
+	}
+	if len(autoIncrementCols) > 1 {
+		return nil, fmt.Errorf("%s: multiple autoincrement columns not permitted (%v)", rowType, versionCols)
+	}
+
+	return tbl, nil
 }
 
 // Name returns the name of the table.
@@ -118,8 +207,15 @@ func (tbl *Table) plural() string {
 
 // Column represents a table column.
 type Column struct {
-	columnName string
-	info       *column.Info
+	columnName    string
+	primaryKey    bool
+	autoIncrement bool
+	version       bool
+	json          bool
+	naturalKey    bool
+	emptyNull     bool
+
+	info *column.Info
 }
 
 // Name returns the name of the database column.
@@ -140,18 +236,18 @@ func (col *Column) fieldIndex() []int {
 // PrimaryKey returns true if this column is the primary key,
 // or forms part of the primary key.
 func (col *Column) PrimaryKey() bool {
-	return col.info.Tag.PrimaryKey
+	return col.primaryKey
 }
 
 // AutoIncrement returns true if this column is an auto-increment
 // column.
 func (col *Column) AutoIncrement() bool {
-	return col.info.Tag.AutoIncrement
+	return col.autoIncrement
 }
 
 // Version returns true if this  column is an optimistic locking version column.
 func (col *Column) Version() bool {
-	return col.info.Tag.Version
+	return col.version
 }
 
 // EmptyNull returns true if the empty value for the associated field type
@@ -163,14 +259,14 @@ func (col *Column) Version() bool {
 // for an empty string value or an empty time.Time value to be represented
 // as a database NULL.
 func (col *Column) EmptyNull() bool {
-	return col.info.Tag.EmptyNull
+	return col.emptyNull
 }
 
 // JSON returns true if column's value is unmarshaled from JSON into
 // the associated struct field, and if the struct field is marshaled into
 // JSON to be stored in the database column.
 func (col *Column) JSON() bool {
-	return col.info.Tag.JSON
+	return col.json
 }
 
 func columnSlice(src []*Column) []*Column {

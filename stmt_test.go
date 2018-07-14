@@ -34,7 +34,7 @@ func TestInferRowType(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		rowType, err := inferRowType(tt.row)
+		rowType, err := getRowType(tt.row)
 		if err != nil {
 			if got, want := err.Error(), tt.errText; got != want {
 				t.Errorf("%d: want=%q, got=%q", i, want, got)

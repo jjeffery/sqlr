@@ -90,7 +90,7 @@ func TestWithNamingConvention(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		rowType, err := inferRowType(tt.row)
+		rowType, err := getRowType(tt.row)
 		if err != nil {
 			t.Errorf("%d: %v", i, err)
 			continue

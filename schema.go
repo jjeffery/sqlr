@@ -2,7 +2,6 @@ package sqlr
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/jjeffery/sqlr/private/column"
 )
@@ -17,7 +16,7 @@ import (
 //
 // Although the zero value schema can be used and represents a database schema
 // with default values, it is also common to use the MustCreateSchema function to
-// create a schema from a SchemaConfig struct.
+// create a schema with options.
 //
 // A schema maintains an internal cache, which is used to store details of
 // frequently called SQL commands for improved performance.
@@ -27,11 +26,22 @@ type Schema struct {
 	cache      stmtCache
 	fieldMap   *fieldMap
 	identMap   *identMap
+	tableMap   tableMap
 	key        string
+
+	init *schemaInit // only used during initialization
+}
+
+// schemaInit contains info that is only used during initialization
+// of the schema. It contains data that has been collected from the
+// schema options that needs to be processed once all options have
+// been collected.
+type schemaInit struct {
+	tablesConfig TablesConfig
 }
 
 // NewSchema creates a schema with options.
-// If the schema any inconsistencies, then this function will panic.
+// If the schema has any inconsistencies, then this function will panic.
 //
 // Deprecated: Use MustCreateSchema (or CreateSchema) instead.
 func NewSchema(opts ...SchemaOption) *Schema {
@@ -39,7 +49,7 @@ func NewSchema(opts ...SchemaOption) *Schema {
 }
 
 // MustCreateSchema creates a new schema with options. If the
-// schema any inconsistencies, then this function will panic.
+// schema has any inconsistencies, then this function will panic.
 func MustCreateSchema(opts ...SchemaOption) *Schema {
 	schema, err := CreateSchema(opts...)
 	if err != nil {
@@ -55,7 +65,10 @@ func MustCreateSchema(opts ...SchemaOption) *Schema {
 // it is more common for a program to call MustCreateSchema, which will
 // panic if there are any inconsistencies in the schema configuration.
 func CreateSchema(opts ...SchemaOption) (*Schema, error) {
-	schema := &Schema{}
+	schema := &Schema{
+		init: &schemaInit{},
+	}
+
 	for _, opt := range opts {
 		if opt != nil {
 			if err := opt(schema); err != nil {
@@ -63,8 +76,49 @@ func CreateSchema(opts ...SchemaOption) (*Schema, error) {
 			}
 		}
 	}
-	// TODO(jpj): need to perform consistency check here
+
+	// configure any tables specified at initialization
+	if schema.init.tablesConfig != nil {
+		for row, cfg := range schema.init.tablesConfig {
+			rowType, err := getRowType(row)
+			if err != nil {
+				return nil, err
+			}
+			tbl, err := newTableWithConfig(schema, rowType, &cfg)
+			if err != nil {
+				return nil, err
+			}
+			schema.tableMap.add(rowType, tbl)
+		}
+	}
+
+	// remove stuff only needed during initialization
+	schema.init = nil
+
 	return schema, nil
+}
+
+// TableFor returns the table information associated with
+// row, which should be an instance of a struct type
+// or a pointer to a struct type.
+// If row does not refer to a struct type then a panic results.
+func (s *Schema) TableFor(row interface{}) *Table {
+	rowType, err := getRowType(row)
+	if err != nil {
+		panic(err)
+	}
+	tbl := s.tableMap.lookup(rowType)
+	if tbl != nil {
+		return tbl
+	}
+	// If we get here, then the table/row type mapping was
+	// not supplied when the schema was created. Create the
+	// table info for the row and add to the table map. Note
+	// that the *Table returned from tableMap.add might be different
+	// to tbl created by this function if another goroutine
+	// has beaten us to creating an entry in the tableMap.
+	tbl = newTable(s, rowType, nil)
+	return s.tableMap.add(rowType, tbl)
 }
 
 // columnNamer returns an object that implements the columnNamer interface
@@ -91,19 +145,6 @@ func (s *Schema) columnNamer() columnNamer {
 	})
 }
 
-func (s *Schema) tableNamer() func(rowType reflect.Type) string {
-	// TODO(jpj): this is pretty lame, does not lookup exceptions
-	// or struct tag data. Just a basic implementation that mirrors
-	// columnNamer, that will probably be refactored later.
-	return func(rowType reflect.Type) string {
-		convention := s.convention
-		if convention == nil {
-			convention = defaultNamingConvention
-		}
-		return convention.TableName(rowType.Name())
-	}
-}
-
 // renameIdent implements the identRenamer interface.
 func (s *Schema) renameIdent(ident string) (string, bool) {
 	if s.identMap == nil {
@@ -125,8 +166,8 @@ func (s *Schema) getDialect() Dialect {
 // Clone creates a copy of the schema, with options applied.
 //
 // Deprecated: This method will be removed. If two similar
-// schemas are required, copy a SchemaConfig and make necessary
-// changes before calling CreateSchema/MustCreateSchema.
+// schemas are required, they will need to be created separately.
+// This is a seldom-used feature that introduces complexity.
 func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 	clone := &Schema{
 		dialect:    s.dialect,
@@ -149,7 +190,7 @@ func (s *Schema) Clone(opts ...SchemaOption) *Schema {
 // Session.Exec, Session.Insert, Session.Update or Session.Upsert.
 func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	// determine row type to use for statement
-	rowType, err := inferRowType(row)
+	rowType, err := getRowType(row)
 	if err != nil {
 		return nil, err
 	}

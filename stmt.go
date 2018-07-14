@@ -57,26 +57,6 @@ type identRenamer interface {
 // TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
 // based on these types.
 
-// inferRowType returns the type for the row parameter. It returns an
-// error if row is not a struct, or a pointer to struct, or a slice of
-// structs.
-func inferRowType(row interface{}) (reflect.Type, error) {
-	rowType := reflect.TypeOf(row)
-	if rowType.Kind() == reflect.Ptr {
-		rowType = rowType.Elem()
-	}
-	if rowType.Kind() == reflect.Slice {
-		rowType = rowType.Elem()
-		if rowType.Kind() == reflect.Ptr {
-			rowType = rowType.Elem()
-		}
-	}
-	if rowType.Kind() != reflect.Struct {
-		return nil, errors.New("expected arg to refer to a struct type")
-	}
-	return rowType, nil
-}
-
 // newStmt creates a new statement for the row type and query. Panics if rowType does not
 // refer to a struct type.
 func newStmt(dialect Dialect, colNamer columnNamer, renamer identRenamer, rowType reflect.Type, sql string) (*Stmt, error) {
@@ -84,10 +64,6 @@ func newStmt(dialect Dialect, colNamer columnNamer, renamer identRenamer, rowTyp
 		dialect:     dialect,
 		columnNamer: colNamer,
 		rowType:     rowType,
-	}
-	if stmt.rowType.Kind() != reflect.Struct {
-		// should never happen, calls inferRowType before calling this function
-		panic("not a struct")
 	}
 	stmt.columns = column.ListForType(stmt.rowType)
 	if err := stmt.scanSQL(sql, renamer); err != nil {

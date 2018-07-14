@@ -1,13 +1,13 @@
 package sqlr
 
-// identifierMap is used to lookup identifiers that need to be replaced.
+// identMap is used to lookup identifiers that need to be replaced.
 // There is no mutex because once a schema has been initialized, its
 // identifier map should be immutable.
 //
-// When a schema is cloned from another schema, its identifierMap points to
-// the identifierMap of the previous schema.
+// When a schema is cloned from another schema, its identMap points to
+// the identMap of the previous schema.
 type identMap struct {
-	prev        *identMap // points to the identifierMap for the previous
+	prev        *identMap // points to the identMap for the previous schema
 	identifiers map[string]string
 }
 
