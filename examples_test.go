@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 )
 
 var db *sql.DB
@@ -519,4 +520,112 @@ func ExampleSession_MustMakeQuery() {
 
 func beginTransaction() *sql.Tx {
 	return nil
+}
+
+func ExampleMustCreateSchema() {
+	type UserRow struct {
+		ID   int64 `sql:"primary key"`
+		Name string
+	}
+
+	type PostRow struct {
+		ID        int64 `sql:"primary key"`
+		UserID    int64
+		CreatedAt time.Time
+		Title     string
+		Content   string
+	}
+
+	schema := MustCreateSchema(
+		WithNamingConvention(SnakeCase),
+		WithTables(TablesConfig{
+			(*UserRow)(nil): {
+				TableName: "users_table", // override naming convention for table
+			},
+			(*PostRow)(nil): {
+				Columns: ColumnsConfig{
+					"CreatedAt": {
+						ColumnName: "create_timestamp", // override naming convention
+						EmptyNull:  true,               // store empty string as null
+					},
+				},
+			},
+		}),
+	)
+
+	doSomethingWith(schema)
+}
+
+func ExampleColumnConfig() {
+	type Address struct {
+		Street   string
+		Locality string
+		City     string
+		State    string
+		Country  string
+	}
+
+	type PersonRow struct {
+		ID      int64 `sql:"primary key"`
+		Name    string
+		DOB     time.Time
+		Address Address
+	}
+
+	schema := MustCreateSchema(
+		WithTables(TablesConfig{
+			(*PersonRow)(nil): {
+				Columns: ColumnsConfig{
+					"Address.Locality": {
+						ColumnName: "address_suburb",
+					},
+					"DOB": {
+						ColumnName: "date_of_birth",
+						EmptyNull:  true,
+					},
+				},
+			},
+		}),
+	)
+
+	doSomethingWith(schema)
+}
+
+func ExampleColumnsConfig() {
+	type Address struct {
+		Street   string
+		Locality string
+		City     string
+		State    string
+		Country  string
+	}
+
+	type PersonRow struct {
+		ID      int64 `sql:"primary key"`
+		Name    string
+		DOB     time.Time
+		Address Address
+	}
+
+	schema := MustCreateSchema(
+		WithTables(TablesConfig{
+			(*PersonRow)(nil): {
+				Columns: ColumnsConfig{
+					"Address.Locality": {
+						ColumnName: "address_suburb",
+					},
+					"DOB": {
+						ColumnName: "date_of_birth",
+						EmptyNull:  true,
+					},
+				},
+			},
+		}),
+	)
+
+	doSomethingWith(schema)
+}
+
+func doSomethingWith(v interface{}) {
+
 }

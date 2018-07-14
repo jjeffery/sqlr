@@ -2,7 +2,6 @@ package sqlr
 
 import (
 	"context"
-	"errors"
 	"reflect"
 
 	"github.com/jjeffery/sqlr/private/column"
@@ -32,35 +31,40 @@ type Schema struct {
 }
 
 // NewSchema creates a schema with options.
+// If the schema any inconsistencies, then this function will panic.
 //
 // Deprecated: Use MustCreateSchema (or CreateSchema) instead.
 func NewSchema(opts ...SchemaOption) *Schema {
-	schema := &Schema{}
-	for _, opt := range opts {
-		if opt != nil {
-			opt(schema)
-		}
-	}
-	return schema
+	return MustCreateSchema(opts...)
 }
 
-// MustCreateSchema creates a new schema based on the schema config. If the
-// schema config contains any inconsistencies, then this function will panic.
-func MustCreateSchema(config SchemaConfig) *Schema {
-	schema, err := CreateSchema(config)
+// MustCreateSchema creates a new schema with options. If the
+// schema any inconsistencies, then this function will panic.
+func MustCreateSchema(opts ...SchemaOption) *Schema {
+	schema, err := CreateSchema(opts...)
 	if err != nil {
 		panic(err)
 	}
 	return schema
 }
 
-// CreateSchema creates a new schema based on the schema config. If the
-// schema config contains any inconsistencies, then an error is returned.
+// CreateSchema creates a new schema with options. If the schema
+// contains any inconsistencies, then an error is returned.
 //
-// It is more common for a program to call MustCreateSchema, which will
+// Because a schema is usually created during program initialization,
+// it is more common for a program to call MustCreateSchema, which will
 // panic if there are any inconsistencies in the schema configuration.
-func CreateSchema(config SchemaConfig) (*Schema, error) {
-	return nil, errors.New("not implemented yet")
+func CreateSchema(opts ...SchemaOption) (*Schema, error) {
+	schema := &Schema{}
+	for _, opt := range opts {
+		if opt != nil {
+			if err := opt(schema); err != nil {
+				return nil, err
+			}
+		}
+	}
+	// TODO(jpj): need to perform consistency check here
+	return schema, nil
 }
 
 // columnNamer returns an object that implements the columnNamer interface

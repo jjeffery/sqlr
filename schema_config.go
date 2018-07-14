@@ -1,5 +1,15 @@
 package sqlr
 
+/*
+SchemaConfig was a possible replacement for the SchemaOptions. The thinking
+was to replace the function-as-option pattern with a SchemaConfig, on the
+basis that it would be more obvious. After a bit of experimentation, v0.6
+will stick with the SchemaOptions, and just add WithTables to apply a
+TablesConfig struct.
+
+Keeping this code commented out, because it just might get used in v0.7 if
+use in v0.6 suggests it is a better way to go.
+
 // SchemaConfig contains optional configuration information about a schema.
 type SchemaConfig struct {
 	// NamingConvention is the naming convention used to convert
@@ -26,18 +36,16 @@ type SchemaConfig struct {
 	// applies do not need to be included in this list.
 	Tables TablesConfig
 }
+*/
 
-// TablesConfig is a list of individual table configurations.
-type TablesConfig []TableConfig
+// TablesConfig is a map of table configurations, keyed by the row type
+// that represents the table.
+type TablesConfig map[interface{}]TableConfig
 
 // TableConfig contains configuration for an individual
 // database table. It is not necessary to specify configuration
 // for a table if the default settings apply.
 type TableConfig struct {
-	// RowType is an instance of the row type, or a pointer
-	// to an instance of the row type. It must be specified.
-	RowType interface{}
-
 	// TableName optionally specifies the name of the database
 	// table associated with the row type.
 	TableName string
@@ -48,8 +56,22 @@ type TableConfig struct {
 	Columns ColumnsConfig
 }
 
-// ColumnsConfig is a list of individual column configurations.
-type ColumnsConfig []ColumnsConfig
+// ColumnsConfig is a map of individual column configurations, keyed
+// by the field path to the field.
+//
+// The field path is the the field name when the field is a simple,
+// scalar type. When the row type contains embedded struct
+// fields, then the field path is all of the field names required
+// to navigate to the field separated by a period.
+//
+//  type Row struct {
+//      Name string         // field path = "Name"
+//      Address struct {
+//          Street   string // field path = "Address.Street"
+//          Locality string	// field path = "Address.Locality"
+//      }
+//  }
+type ColumnsConfig map[string]ColumnConfig
 
 // ColumnConfig contains configuration for an individual
 // database column.
@@ -58,12 +80,6 @@ type ColumnsConfig []ColumnsConfig
 // of the relevant struct field, so it is not usually necessary
 // to specify column configuration using this structure.
 type ColumnConfig struct {
-	// FieldPath is the the field name when the field is a simple,
-	// scalar type. When the row type contains embedded, struct
-	// fields, then the field path is all of the field names
-	// separated by a period.
-	FieldPath string
-
 	// ColumnName optionally specifies the database column
 	// associated with the field.
 	ColumnName string
