@@ -21,6 +21,10 @@ func TestPathString(t *testing.T) {
 			path: NewPath("A", "").Append("B", ""),
 			text: "A.B",
 		},
+		{
+			path: NewPath("A", `sql:"a"`).Append("B", `sql:"b"`),
+			text: "A.B",
+		},
 	}
 
 	for _, tt := range tests {
