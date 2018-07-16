@@ -2,8 +2,6 @@ package sqlr
 
 import (
 	"testing"
-
-	"github.com/jjeffery/sqlr/private/column"
 )
 
 func TestWithNamingConvention(t *testing.T) {
@@ -95,14 +93,12 @@ func TestWithNamingConvention(t *testing.T) {
 			t.Errorf("%d: %v", i, err)
 			continue
 		}
-		cols := column.ListForType(rowType)
-		columnNamer := tt.schema.columnNamer()
-		for j, col := range cols {
-			if got, want := columnNamer.ColumnName(col), tt.columnNames[j]; got != want {
+		tbl := tt.schema.TableFor(rowType)
+		for j, col := range tbl.Columns() {
+			if got, want := col.Name(), tt.columnNames[j]; got != want {
 				t.Errorf("%d: %d: want=%q, got=%q", i, j, want, got)
 			}
 		}
-
 	}
 }
 
