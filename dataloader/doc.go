@@ -40,6 +40,20 @@ or any custom type that is based on a string or integral type:
 
  var loader func(id RowID) RowThunk
 
+The loader examples so far return a pointer to a struct (*Row), and
+this is a common use case. There are other common use cases, however:
+ // loader returns an array of Rows associated with a foreign key, OtherID
+ type OtherID int
+ type RowsThunk func() ([]*Row, error)
+
+ var loader func(otherID OtherID) RowsThunk
+and
+ // loader returns an aggregate (eg count) of rows with the foreign key, OtherID
+ type OtherID int
+ type CountThunk func() (int, error)
+
+ var loader func(otherID OtherID) CountThunk
+
 Query Functions and Key Functions
 
 A loader function is created using the "Make" function, and it
@@ -58,6 +72,18 @@ the key associated with the row. The key function is usually
 very simple and looks like:
  func getKey(row *Row) RowID {
 	 return row.ID
+ }
+If the loader function is returning a thunk that returns an
+array of rows, then the key function will be returning a
+foreign key instead of  the primary key:
+ func getKey(row *Row) OtherID {
+	 return row.OtherID
+ }
+In the case where the loader function returns an aggregate,
+for example a count, then the key function returns two values:
+the key and the value.
+ func getKey(row *Row) (OtherID, int) {
+	 return row.OtherID, row.Count
  }
 */
 package dataloader

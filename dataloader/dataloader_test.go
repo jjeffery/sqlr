@@ -55,6 +55,64 @@ func TestLoader(t *testing.T) {
 	}
 }
 
+// Tests when a query returns an aggregate (for example, count of rows)
+// In this case the key function returns two values.
+func TestLoaderAggregate(t *testing.T) {
+	// Row is an example of a result where the query returns
+	// a row for ID, and count of rows containing ID.
+	type Row struct {
+		ID    int
+		Count int
+	}
+
+	// The thunk is expected to return an int, which is the
+	// value of the Count field in the associated row.
+	type RowThunk func() (int, error)
+
+	queryFunc := func(ids []int) ([]*Row, error) {
+		var result []*Row
+
+		for _, id := range ids {
+			result = append(result, &Row{
+				ID:    id,
+				Count: id + 1, // arbitrary for the test
+			})
+		}
+
+		return result, nil
+	}
+
+	// keyFunc returns two values: the key for the row and the
+	// value to be returned by the thunk.
+	keyFunc := func(t *Row) (int, int) {
+		return t.ID, t.Count
+	}
+
+	var loader func(id int) RowThunk
+
+	Make(&loader, queryFunc, keyFunc)
+
+	var thunks []RowThunk
+	ids := []int{19, 29, 4739}
+
+	for _, id := range ids {
+		thunks = append(thunks, loader(id))
+	}
+
+	for i, id := range ids {
+		got, err := thunks[i]()
+		if err != nil {
+			t.Errorf("got err=%v, want err=nil", err)
+			continue
+		}
+		want := id + 1
+		if got != want {
+			t.Errorf("got %v, want %v", got, want)
+			continue
+		}
+	}
+}
+
 func TestLoaderMultiples(t *testing.T) {
 	type Row struct {
 		ID      int

@@ -187,7 +187,7 @@ func init() {
 }
 
 // Make a data loader function given a query function and a key function.
-// TODO(jpj): need a much better description here.
+// See the package description and the examples for more detail.
 func Make(loaderFuncPtr interface{}, queryFunc interface{}, keyFunc interface{}) {
 	loader := dataLoader{
 		thunks:  make(map[interface{}]*thunkT),
@@ -316,6 +316,9 @@ func processLoaderFuncPtr(loader *dataLoader, loaderFuncPtr interface{}) {
 
 func isKeyType(t reflect.Type) bool {
 	switch t.Kind() {
+	case reflect.Array:
+		// arrays are acceptable key types, for example [16]byte
+		return isKeyType(t.Elem())
 	case reflect.String, reflect.Int:
 		return true
 	case reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
