@@ -55,6 +55,61 @@ func TestLoader(t *testing.T) {
 	}
 }
 
+func TestLoaderMultiples(t *testing.T) {
+	type Row struct {
+		ID      int
+		Name    string
+		OtherID int
+	}
+
+	type RowsThunk func() ([]*Row, error)
+
+	queryFunc := func(otherIDs []int) ([]*Row, error) {
+		var result []*Row
+
+		for _, otherID := range otherIDs {
+			for id := otherID * 10; id < otherID*10+3; id++ {
+				result = append(result, &Row{
+					ID:      id,
+					Name:    fmt.Sprintf("ID %d", id),
+					OtherID: otherID,
+				})
+			}
+		}
+
+		return result, nil
+	}
+
+	keyFunc := func(t *Row) int {
+		return t.OtherID
+	}
+
+	var loader func(otherID int) RowsThunk
+
+	Make(&loader, queryFunc, keyFunc)
+
+	var thunks []RowsThunk
+	otherIDs := []int{23, 31, 47}
+
+	for _, otherID := range otherIDs {
+		thunks = append(thunks, loader(otherID))
+	}
+
+	for i, otherID := range otherIDs {
+		got, err := thunks[i]()
+		if err != nil {
+			t.Errorf("want no error, got=%v", err)
+			continue
+		}
+		for j := 0; j < 3; j++ {
+			want := fmt.Sprintf("ID %d", otherID*10+j)
+			if got[j].Name != want {
+				t.Errorf("%d-%d: want=%v, got=%v", i, j, want, got)
+			}
+		}
+	}
+}
+
 func TestKnownTypes(t *testing.T) {
 	if got, want := knownTypes.nilErrorValue.IsNil(), true; got != want {
 		t.Errorf("got=%v, want=%v", got, want)

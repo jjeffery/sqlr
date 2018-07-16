@@ -126,7 +126,24 @@ func (loader *dataLoader) performQuery(calledThunk *thunkT) {
 	} else {
 		if loader.thunkElemType == loader.queryRowType {
 			// keyFunc returns one value
-			panic("not implemented")
+			resultValueMap := make(map[interface{}]reflect.Value)
+			for i := 0; i < sliceValue.Len(); i++ {
+				rowValue := sliceValue.Index(i)
+				keyFuncResult := loader.keyFuncValue.Call([]reflect.Value{rowValue})
+				keyValue := keyFuncResult[0]
+				key := keyValue.Interface()
+				resultSliceValue, ok := resultValueMap[key]
+				if !ok {
+					resultSliceValue = reflect.MakeSlice(reflect.SliceOf(loader.queryRowType), 0, 4)
+				}
+				resultSliceValue = reflect.Append(resultSliceValue, rowValue)
+				resultValueMap[key] = resultSliceValue
+			}
+			for key, resultValue := range resultValueMap {
+				if thunk, ok := thunks[key]; ok {
+					thunk.resultValue = []reflect.Value{resultValue, knownTypes.nilErrorValue}
+				}
+			}
 		} else {
 			// keyFunc must return two values
 			panic("not implemented")
