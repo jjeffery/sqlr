@@ -536,3 +536,230 @@ func TestQuery(t *testing.T) {
 		}
 	}
 }
+
+func TestInsertRow_NoAutoIncr(t *testing.T) {
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists no_auto_incr;`)
+	defer mustExec(t, db, `drop table if exists no_auto_incr;`)
+	mustExec(t, db, `
+		create table no_auto_incr(
+			id int primary key not null, 
+			name text, 
+			created_at timestamp with time zone, 
+			updated_at timestamp with time zone
+		)`,
+	)
+
+	type NoAutoIncr struct {
+		ID        int `sql:"primary key"`
+		Name      string
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	schema := MustCreateSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []NoAutoIncr{
+		NoAutoIncr{
+			ID:   1,
+			Name: "row 1",
+		},
+	}
+
+	for _, row := range rows {
+
+		started := time.Now()
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row.CreatedAt.Before(started) {
+			t.Errorf("wanted created_at < started, got %v", row.CreatedAt)
+		}
+		if !row.UpdatedAt.Equal(row.CreatedAt) {
+			t.Errorf("wanted updated_at = created_at, got %v", row.UpdatedAt)
+		}
+
+		var getRow func(id int) (*NoAutoIncr, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(1)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.CreatedAt.Format(time.RFC3339), row.CreatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.UpdatedAt.Format(time.RFC3339), row.UpdatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+}
+
+func TestInsertRow_Serial(t *testing.T) {
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists auto_incr;`)
+	defer mustExec(t, db, `drop table if exists auto_incr;`)
+	mustExec(t, db, `
+		create table auto_incr(
+			id serial primary key not null, 
+			name text, 
+			created_at timestamp with time zone, 
+			updated_at timestamp with time zone
+		)`,
+	)
+
+	type AutoIncr struct {
+		ID        int `sql:"primary key autoincr"`
+		Name      string
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	schema := MustCreateSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []AutoIncr{
+		AutoIncr{
+			Name: "row 1",
+		},
+		AutoIncr{
+			Name: "row 2",
+		},
+	}
+
+	for i, row := range rows {
+
+		started := time.Now()
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row.CreatedAt.Before(started) {
+			t.Errorf("wanted created_at < started, got %v", row.CreatedAt)
+		}
+		if !row.UpdatedAt.Equal(row.CreatedAt) {
+			t.Errorf("wanted updated_at = created_at, got %v", row.UpdatedAt)
+		}
+
+		var getRow func(id int) (*AutoIncr, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(i + 1)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.CreatedAt.Format(time.RFC3339), row.CreatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.UpdatedAt.Format(time.RFC3339), row.UpdatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+}
+
+func TestInsertRow_AutoIncr(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists auto_incr;`)
+	defer mustExec(t, db, `drop table if exists auto_incr;`)
+	mustExec(t, db, `
+		create table auto_incr(
+			id integer primary key autoincrement, 
+			name text, 
+			created_at datetime, 
+			updated_at datetime
+		)`,
+	)
+
+	type AutoIncr struct {
+		ID        int `sql:"primary key autoincr"`
+		Name      string
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	schema := MustCreateSchema(WithDialect(SQLite))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []AutoIncr{
+		AutoIncr{
+			Name: "row 1",
+		},
+		AutoIncr{
+			Name: "row 2",
+		},
+	}
+
+	for i, row := range rows {
+
+		started := time.Now()
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row.CreatedAt.Before(started) {
+			t.Errorf("wanted created_at < started, got %v", row.CreatedAt)
+		}
+		if !row.UpdatedAt.Equal(row.CreatedAt) {
+			t.Errorf("wanted updated_at = created_at, got %v", row.UpdatedAt)
+		}
+
+		var getRow func(id int) (*AutoIncr, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(i + 1)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.CreatedAt.Format(time.RFC3339), row.CreatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.UpdatedAt.Format(time.RFC3339), row.UpdatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+}
+
+func mustExec(t *testing.T, db *sql.DB, query string) {
+	t.Helper()
+	if _, err := db.Exec(query); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -16,12 +16,17 @@ type Dialect struct {
 	placeholderFunc func(n int) string
 }
 
+// PostgresDialect is a dialect for PostgreSQL.
+type PostgresDialect struct {
+	Dialect
+}
+
 // Pre-defined dialects
 var (
 	ANSI     *Dialect
 	MSSQL    *Dialect
 	MySQL    *Dialect
-	Postgres *Dialect
+	Postgres *PostgresDialect
 	SQLite   *Dialect
 )
 
@@ -65,10 +70,12 @@ func init() {
 		quoteFunc:   quoteFunc("`", "`"),
 		driverTypes: []string{"*sqlite3.SQLiteDriver"},
 	}
-	Postgres = &Dialect{
-		quoteFunc:       quoteFunc(`"`, `"`),
-		placeholderFunc: placeholderFunc("$%d"),
-		driverTypes:     []string{"*pq.Driver"},
+	Postgres = &PostgresDialect{
+		Dialect{
+			quoteFunc:       quoteFunc(`"`, `"`),
+			placeholderFunc: placeholderFunc("$%d"),
+			driverTypes:     []string{"*pq.Driver"},
+		},
 	}
 }
 
@@ -89,3 +96,6 @@ func placeholderFunc(format string) func(n int) string {
 		return fmt.Sprintf(format, n)
 	}
 }
+
+// Postgres is a marker method that indicates the dialect is for PostgreSQL.
+func (d *PostgresDialect) Postgres() {}

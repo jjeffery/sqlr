@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/jjeffery/errors"
 	"github.com/jjeffery/sqlr/private/column"
 )
 
@@ -18,6 +19,9 @@ type Table struct {
 	cols      []*Column
 	pk        []*Column
 	nk        []*Column
+	autoincr  *Column
+	createdAt *Column
+	updatedAt *Column
 }
 
 // getRowType converts a row instance into a row type.
@@ -123,6 +127,15 @@ func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 		if col.naturalKey {
 			tbl.nk = append(tbl.nk, col)
 		}
+		if col.autoIncrement {
+			tbl.autoincr = col
+		}
+		if col.info.FieldNames == "CreatedAt" {
+			tbl.createdAt = col
+		}
+		if col.info.FieldNames == "UpdatedAt" {
+			tbl.updatedAt = col
+		}
 	}
 
 	return tbl
@@ -203,6 +216,48 @@ func (tbl *Table) singular() string {
 
 func (tbl *Table) plural() string {
 	return tbl.singular() + "s"
+}
+
+func (tbl *Table) getRowValue(row interface{}) (reflect.Value, error) {
+	rowValue := reflect.ValueOf(row)
+	for rowValue.Type().Kind() == reflect.Ptr {
+		rowValue = rowValue.Elem()
+	}
+	if rowValue.Type() != tbl.rowType {
+		return reflect.Value{}, errors.New("unexpected row type").With(
+			"want", tbl.rowType,
+			"got", rowValue.Type(),
+		)
+	}
+	return rowValue, nil
+}
+
+func (tbl *Table) mustGetRowValue(row interface{}) reflect.Value {
+	rowValue, err := tbl.getRowValue(row)
+	if err != nil {
+		panic(err)
+	}
+	return rowValue
+}
+
+func (tbl *Table) keyvals(row interface{}) []interface{} {
+	rowValue := tbl.mustGetRowValue(row)
+	var keyvals []interface{}
+	for _, col := range tbl.pk {
+		keyvals = append(keyvals, col.info.FieldNames)
+		keyvals = append(keyvals, col.info.Index.ValueRO(rowValue).Interface())
+	}
+	for _, col := range tbl.nk {
+		keyvals = append(keyvals, col.info.FieldNames)
+		keyvals = append(keyvals, col.info.Index.ValueRO(rowValue).Interface())
+	}
+	return keyvals
+}
+
+func (tbl *Table) wrapRowError(err error, row interface{}, prefix string) error {
+	msg := fmt.Sprintf("%s %s", prefix, tbl.singular())
+	keyvals := tbl.keyvals(row)
+	return errors.Wrap(err, msg).With(keyvals...)
 }
 
 // Column represents a table column.

@@ -40,3 +40,30 @@ func TestDialectFor(t *testing.T) {
 		t.Errorf("want=%v, got=%v", want, got)
 	}
 }
+
+func TestIsPostgres(t *testing.T) {
+	tests := []struct {
+		d          Dialect
+		isPostgres bool
+	}{
+		{
+			d:          Postgres,
+			isPostgres: true,
+		},
+		{
+			d: MySQL,
+		},
+		{
+			d: SQLite,
+		},
+		{
+			d: MSSQL,
+		},
+	}
+
+	for i, tt := range tests {
+		if got, want := isPostgres(tt.d), tt.isPostgres; got != want {
+			t.Logf("%d: got=%v, want=%v", i, got, want)
+		}
+	}
+}

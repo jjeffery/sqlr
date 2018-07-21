@@ -107,3 +107,10 @@ func dialectFor(db *sql.DB) Dialect {
 	// dialect not found for driver, use default
 	return DefaultDialect()
 }
+
+func isPostgres(dialect Dialect) bool {
+	if _, ok := dialect.(interface{ Postgres() }); ok {
+		return true
+	}
+	return false
+}

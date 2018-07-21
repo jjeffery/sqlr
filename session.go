@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
+	"time"
 )
 
 // A Session is a request-scoped database session. It can execute
@@ -70,7 +73,130 @@ func (sess *Session) Exec(row interface{}, query string, args ...interface{}) (s
 // If the row has an auto-increment field, then that field is updated
 // with the value of the auto-increment column.
 func (sess *Session) InsertRow(row interface{}) error {
-	return errors.New("not implemented yet")
+	tbl := sess.schema.TableFor(row)
+
+	// if we are going to update any fields, make sure we have a pointer
+	if tbl.createdAt != nil || tbl.updatedAt != nil || tbl.autoincr != nil {
+		// We will want to modify row, so check that it can be modified.
+		// Unfortunately this is a runtime check and cannot be determined at compile time.
+		// TODO(jpj): considered creating MakeInsert and MakeUpdate functions similar to
+		// MakeQuery, and these would have stricter type checking. The thinking is that would
+		// create too much additional work and ceremony. This API will probably work just fine.
+		rowValue := tbl.mustGetRowValue(row)
+		if !rowValue.CanAddr() {
+			var names []string
+			if tbl.autoincr != nil {
+				names = append(names, tbl.autoincr.info.FieldNames)
+			}
+			if tbl.createdAt != nil {
+				names = append(names, tbl.createdAt.info.FieldNames)
+			}
+			if tbl.updatedAt != nil {
+				names = append(names, tbl.updatedAt.info.FieldNames)
+			}
+			var msg string
+			if len(names) == 1 {
+				msg = fmt.Sprintf("InsertRow requires *%s to update field %s", tbl.rowType, names[0])
+			} else {
+				msg = fmt.Sprintf("InsertRow requires *%s to update fields %s", tbl.rowType, strings.Join(names, ", "))
+			}
+			return errors.New(msg)
+		}
+
+		// Set the CreatedAt, UpdatedAt values of the field.
+		// TODO(jpj): should probably put back to previous values if insert is unsuccessful
+		if tbl.createdAt != nil || tbl.updatedAt != nil {
+			now := time.Now()
+			nowValue := reflect.ValueOf(now)
+			if tbl.createdAt != nil {
+				createdAtValue := tbl.createdAt.info.Index.ValueRW(rowValue)
+				createdAtValue.Set(nowValue)
+			}
+			if tbl.updatedAt != nil {
+				updatedAtValue := tbl.updatedAt.info.Index.ValueRW(rowValue)
+				updatedAtValue.Set(nowValue)
+			}
+		}
+
+		if tbl.autoincr != nil {
+			if isPostgres(sess.schema.dialect) {
+				if err := sess.postgresInsertRow(row, tbl, rowValue); err != nil {
+					return err
+				}
+				// success = true
+				return nil
+			} else {
+				if err := sess.autoincrInsertRow(row, tbl, rowValue); err != nil {
+					return err
+				}
+				// success = true
+				return nil
+			}
+		}
+	}
+
+	// no autoincr column, so just a standard insert
+	query := fmt.Sprintf("insert into %s({}) values({})", sess.schema.dialect.Quote(tbl.tableName))
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.exec(sess.context, sess.querier, row)
+	if err != nil {
+		return tbl.wrapRowError(err, row, "cannot insert")
+	}
+	// success = true
+	return nil
+}
+
+func (sess *Session) autoincrInsertRow(row interface{}, tbl *Table, rowValue reflect.Value) error {
+	query := fmt.Sprintf("insert into %s({}) values({})", sess.schema.dialect.Quote(tbl.tableName))
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return err
+	}
+	result, err := stmt.exec(sess.context, sess.querier, row)
+	if err != nil {
+		return tbl.wrapRowError(err, row, "cannot insert")
+	}
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		return tbl.wrapRowError(err, row, "cannot retrieve last insert id for")
+	}
+	// already checked previously that this field can be set
+	field := tbl.autoincr.info.Index.ValueRW(rowValue)
+	field.SetInt(lastInsertID)
+	return nil
+}
+
+func (sess *Session) postgresInsertRow(row interface{}, tbl *Table, rowValue reflect.Value) error {
+	query := fmt.Sprintf(
+		"insert into %s({}) values({}) returning %s",
+		sess.schema.dialect.Quote(tbl.tableName),
+		sess.schema.dialect.Quote(tbl.autoincr.columnName),
+	)
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return err
+	}
+	args, err := stmt.getArgs(row, nil)
+	if err != nil {
+		return err
+	}
+	rows, err := sess.querier.QueryContext(sess.context, stmt.String(), args...)
+	if err != nil {
+		return tbl.wrapRowError(err, row, "cannot insert")
+	}
+	// expecting one row, one column
+	rows.Next()
+	var lastInsertID int64
+	if err := rows.Scan(&lastInsertID); err != nil {
+		return tbl.wrapRowError(err, row, "cannot retrieve id for")
+	}
+	// already checked previously that this field can be set
+	field := tbl.autoincr.info.Index.ValueRW(rowValue)
+	field.SetInt(lastInsertID)
+	return nil
 }
 
 // UpdateRow updates one row in the database. It returns the number
