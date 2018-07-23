@@ -723,6 +723,256 @@ func TestInsertRow_AutoIncr(t *testing.T) {
 	}
 }
 
+func TestUpdateRow_NoVersion_NoUpdatedAt(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists no_version_no_updated_at;`)
+	defer mustExec(t, db, `drop table if exists no_version_no_updated_at;`)
+	mustExec(t, db, `
+		create table no_version_no_updated_at(
+			id int primary key not null, 
+			name text,
+			counter int
+		)`,
+	)
+
+	type NoVersionNoUpdatedAt struct {
+		ID      int `sql:"primary key"`
+		Name    string
+		Counter int
+	}
+
+	schema := MustCreateSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []NoVersionNoUpdatedAt{
+		NoVersionNoUpdatedAt{
+			ID:   1,
+			Name: "row 1",
+		},
+	}
+
+	for _, row := range rows {
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		var getRow func(id int) (*NoVersionNoUpdatedAt, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(row.ID)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+
+		row2.Counter++
+		rowCount, err := sess.UpdateRow(row2)
+		if err != nil {
+			t.Fatalf("got=%v, want=nil", err)
+		}
+		if got, want := rowCount, 1; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+}
+
+func TestUpdateRow_NoVersion_UpdatedAt(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists no_version_updated_at;`)
+	defer mustExec(t, db, `drop table if exists no_version_updated_at;`)
+	mustExec(t, db, `
+		create table no_version_updated_at(
+			id int primary key not null, 
+			name text,
+			counter int,
+			created_at timestamp with time zone, 
+			updated_at timestamp with time zone
+		)`,
+	)
+
+	type NoVersionUpdatedAt struct {
+		ID        int `sql:"primary key"`
+		Name      string
+		Counter   int
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	schema := MustCreateSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []NoVersionUpdatedAt{
+		NoVersionUpdatedAt{
+			ID:   1,
+			Name: "row 1",
+		},
+	}
+
+	for _, row := range rows {
+
+		started := time.Now()
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row.CreatedAt.Before(started) {
+			t.Errorf("wanted created_at < started, got %v", row.CreatedAt)
+		}
+		if !row.UpdatedAt.Equal(row.CreatedAt) {
+			t.Errorf("wanted updated_at = created_at, got %v", row.UpdatedAt)
+		}
+
+		var getRow func(id int) (*NoVersionUpdatedAt, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(row.ID)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.CreatedAt.Format(time.RFC3339), row.CreatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.UpdatedAt.Format(time.RFC3339), row.UpdatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+
+		row2.Counter++
+		updated := time.Now()
+		rowCount, err := sess.UpdateRow(row2)
+		if err != nil {
+			t.Fatalf("got=%v, want=nil", err)
+		}
+		if got, want := rowCount, 1; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if row2.UpdatedAt.Before(updated) {
+			t.Errorf("wanted updated_at > %v, got %v", updated, row.UpdatedAt)
+		}
+	}
+}
+
+func TestUpdateRow_Version_UpdatedAt(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists version_updated_at;`)
+	defer mustExec(t, db, `drop table if exists version_updated_at;`)
+	mustExec(t, db, `
+		create table version_updated_at(
+			id int primary key not null, 
+			version int not null,
+			name text,
+			counter int,
+			created_at timestamp with time zone, 
+			updated_at timestamp with time zone
+		)`,
+	)
+
+	type VersionUpdatedAt struct {
+		ID        int   `sql:"primary key"`
+		Version   int64 `sql:"version"`
+		Name      string
+		Counter   int
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	schema := MustCreateSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	rows := []VersionUpdatedAt{
+		VersionUpdatedAt{
+			ID:   1,
+			Name: "row 1",
+		},
+	}
+
+	for _, row := range rows {
+
+		started := time.Now()
+		if err := sess.InsertRow(&row); err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row.CreatedAt.Before(started) {
+			t.Errorf("wanted created_at < started, got %v", row.CreatedAt)
+		}
+		if !row.UpdatedAt.Equal(row.CreatedAt) {
+			t.Errorf("wanted updated_at = created_at, got %v", row.UpdatedAt)
+		}
+
+		var getRow func(id int) (*VersionUpdatedAt, error)
+		sess.MustMakeQuery(&getRow)
+
+		row2, err := getRow(row.ID)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		if row2 == nil {
+			t.Fatalf("want non-nil, got nil")
+		}
+		if got, want := row2.Name, row.Name; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.CreatedAt.Format(time.RFC3339), row.CreatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.UpdatedAt.Format(time.RFC3339), row.UpdatedAt.Format(time.RFC3339); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if got, want := row2.Version, int64(1); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+
+		row2.Counter++
+		updated := time.Now()
+		rowCount, err := sess.UpdateRow(row2)
+		if err != nil {
+			t.Fatalf("got=%v, want=nil", err)
+		}
+		if got, want := rowCount, 1; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if row2.UpdatedAt.Before(updated) {
+			t.Errorf("wanted updated_at > %v, got %v", updated, row.UpdatedAt)
+		}
+		if got, want := row2.Version, int64(2); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+
+		// set the version to the wrong value
+		row2.Version = 1
+		rowCount, err = sess.UpdateRow(row2)
+		if got, want := rowCount, 0; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+		if err == nil {
+			t.Fatal("got=nil, want=non-nil error")
+		}
+		if got, want := err.Error(), `optimistic locking conflict rowType="sqlr.VersionUpdatedAt" ID=1 expectedVersion=1 actualVersion=2`; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+}
+
 // mustExec performs an SQL command, which must succeed or the test stops
 func mustExec(t *testing.T, db *sql.DB, query string) {
 	t.Helper()

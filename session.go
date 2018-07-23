@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/jjeffery/kv"
 )
 
 // A Session is a request-scoped database session. It can execute
@@ -76,7 +78,7 @@ func (sess *Session) InsertRow(row interface{}) error {
 	tbl := sess.schema.TableFor(row)
 
 	// if we are going to update any fields, make sure we have a pointer
-	if tbl.createdAt != nil || tbl.updatedAt != nil || tbl.autoincr != nil {
+	if tbl.createdAt != nil || tbl.updatedAt != nil || tbl.version != nil || tbl.autoincr != nil {
 		// We will want to modify row, so check that it can be modified.
 		// Unfortunately this is a runtime check and cannot be determined at compile time.
 		// TODO(jpj): considered creating MakeInsert and MakeUpdate functions similar to
@@ -93,6 +95,9 @@ func (sess *Session) InsertRow(row interface{}) error {
 			}
 			if tbl.updatedAt != nil {
 				names = append(names, tbl.updatedAt.info.FieldNames)
+			}
+			if tbl.version != nil {
+				names = append(names, tbl.version.info.FieldNames)
 			}
 			var msg string
 			if len(names) == 1 {
@@ -116,6 +121,11 @@ func (sess *Session) InsertRow(row interface{}) error {
 				updatedAtValue := tbl.updatedAt.info.Index.ValueRW(rowValue)
 				updatedAtValue.Set(nowValue)
 			}
+		}
+
+		if tbl.version != nil {
+			versionValue := tbl.version.info.Index.ValueRW(rowValue)
+			versionValue.SetInt(1)
 		}
 
 		if tbl.autoincr != nil {
@@ -143,7 +153,7 @@ func (sess *Session) InsertRow(row interface{}) error {
 	}
 	_, err = stmt.exec(sess.context, sess.querier, row)
 	if err != nil {
-		return tbl.wrapRowError(err, row, "cannot insert")
+		return tbl.wrapRowError(err, row, "cannot insert row")
 	}
 	// success = true
 	return nil
@@ -157,11 +167,11 @@ func (sess *Session) autoincrInsertRow(row interface{}, tbl *Table, rowValue ref
 	}
 	result, err := stmt.exec(sess.context, sess.querier, row)
 	if err != nil {
-		return tbl.wrapRowError(err, row, "cannot insert")
+		return tbl.wrapRowError(err, row, "cannot insert row")
 	}
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
-		return tbl.wrapRowError(err, row, "cannot retrieve last insert id for")
+		return tbl.wrapRowError(err, row, "cannot retrieve last insert id")
 	}
 	// already checked previously that this field can be set
 	field := tbl.autoincr.info.Index.ValueRW(rowValue)
@@ -185,13 +195,13 @@ func (sess *Session) postgresInsertRow(row interface{}, tbl *Table, rowValue ref
 	}
 	rows, err := sess.querier.QueryContext(sess.context, stmt.String(), args...)
 	if err != nil {
-		return tbl.wrapRowError(err, row, "cannot insert")
+		return tbl.wrapRowError(err, row, "cannot insert row")
 	}
 	// expecting one row, one column
 	rows.Next()
 	var lastInsertID int64
 	if err := rows.Scan(&lastInsertID); err != nil {
-		return tbl.wrapRowError(err, row, "cannot retrieve id for")
+		return tbl.wrapRowError(err, row, "cannot retrieve last insert id")
 	}
 	// already checked previously that this field can be set
 	field := tbl.autoincr.info.Index.ValueRW(rowValue)
@@ -207,7 +217,148 @@ func (sess *Session) postgresInsertRow(row interface{}, tbl *Table, rowValue ref
 // original value of the version field, then an OptimisticLockingError
 // will be returned.
 func (sess *Session) UpdateRow(row interface{}) (int, error) {
-	return 0, errors.New("not implemented yet")
+	tbl := sess.schema.TableFor(row)
+
+	// if we are going to update any fields, make sure we have a pointer
+	if tbl.updatedAt != nil || tbl.version != nil {
+		// We will want to modify row, so check that it can be modified.
+		// Unfortunately this is a runtime check and cannot be determined at compile time.
+		// TODO(jpj): considered creating MakeInsert and MakeUpdate functions similar to
+		// MakeQuery, and these would have stricter type checking. The thinking is that would
+		// create too much additional work and ceremony. This API will probably work just fine.
+		rowValue := tbl.mustGetRowValue(row)
+		if !rowValue.CanAddr() {
+			var names []string
+			if tbl.version != nil {
+				names = append(names, tbl.version.info.FieldNames)
+			}
+			if tbl.updatedAt != nil {
+				names = append(names, tbl.updatedAt.info.FieldNames)
+			}
+			var msg string
+			if len(names) == 1 {
+				msg = fmt.Sprintf("UpdateRow requires *%s to update field %s", tbl.rowType, names[0])
+			} else {
+				msg = fmt.Sprintf("UpdateRow requires *%s to update fields %s", tbl.rowType, strings.Join(names, ", "))
+			}
+			return 0, errors.New(msg)
+		}
+
+		if tbl.updatedAt != nil {
+			// Set the UpdatedAt value of the field.
+			// TODO(jpj): should probably put back to previous values if insert is unsuccessful
+			now := time.Now()
+			nowValue := reflect.ValueOf(now)
+			updatedAtValue := tbl.updatedAt.info.Index.ValueRW(rowValue)
+			updatedAtValue.Set(nowValue)
+		}
+
+		if tbl.version != nil {
+			n, err := sess.updateRowVersioned(row, tbl, rowValue)
+			if err != nil {
+				return 0, err
+			}
+			// success = true
+			return n, nil
+		}
+	}
+
+	// no version column, so just a standard update
+	query := fmt.Sprintf("update %s set {} where {}", sess.schema.dialect.Quote(tbl.tableName))
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return 0, err
+	}
+	result, err := stmt.exec(sess.context, sess.querier, row)
+	if err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot update row")
+	}
+	rowsUpdated, err := result.RowsAffected()
+	if err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot retrieve rows updated")
+	}
+	// success = true
+	return int(rowsUpdated), nil
+}
+
+func (sess *Session) updateRowVersioned(row interface{}, tbl *Table, rowValue reflect.Value) (int, error) {
+	versionValue := tbl.version.info.Index.ValueRW(rowValue)
+	oldVersion := versionValue.Int()
+	newVersion := oldVersion + 1
+	versionValue.SetInt(newVersion)
+	var success bool
+
+	// rollback to old version if not successful
+	defer func() {
+		if !success {
+			versionValue.SetInt(oldVersion)
+		}
+	}()
+
+	dialect := sess.schema.dialect
+	query := fmt.Sprintf(
+		"update %s set {} where {} and %s = ?",
+		dialect.Quote(tbl.tableName),
+		dialect.Quote(tbl.version.columnName),
+	)
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return 0, err
+	}
+
+	result, err := stmt.exec(sess.context, sess.querier, row, oldVersion)
+	if err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot update row")
+	}
+
+	rowsUpdated, err := result.RowsAffected()
+	if err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot get rows updated")
+	}
+
+	if rowsUpdated == 1 {
+		success = true
+		return 1, nil
+	}
+
+	if rowsUpdated > 1 {
+		return 0, tbl.wrapRowError(err, row, "unexpected rows updated count").With(
+			"rowsUpdated", rowsUpdated,
+		)
+	}
+
+	// At this point no rows were updated, which indicates an optimistic locking error.
+	query = fmt.Sprintf(
+		"select %s from %s",
+		dialect.Quote(tbl.version.columnName),
+		dialect.Quote(tbl.tableName),
+	)
+	var args []interface{}
+	for i, pkcol := range tbl.pk {
+		if i == 0 {
+			query += fmt.Sprintf(" where %s = %s", dialect.Quote(pkcol.columnName), dialect.Placeholder(i+1))
+		} else {
+			query += fmt.Sprintf(" and %s = %s", dialect.Quote(pkcol.columnName), dialect.Placeholder(i+1))
+		}
+		pkValue := pkcol.info.Index.ValueRO(rowValue)
+		args = append(args, pkValue.Interface())
+	}
+	rows, err := sess.querier.QueryContext(sess.context, query, args...)
+	if err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot obtain version")
+	}
+	var currentVersion int64
+	rows.Next()
+	if err := rows.Scan(&currentVersion); err != nil {
+		return 0, tbl.wrapRowError(err, row, "cannot scan version")
+	}
+
+	return 0, &OptimisticLockingError{
+		Table:           tbl,
+		Row:             row,
+		ExpectedVersion: oldVersion,
+		ActualVersion:   currentVersion,
+	}
 }
 
 // OptimisticLockingError is an error generated during an Update
@@ -215,16 +366,24 @@ func (sess *Session) UpdateRow(row interface{}) (int, error) {
 // field does not match the value of the corresponding row in the
 // database.
 type OptimisticLockingError struct {
-	Schema          *Schema
+	Table           *Table
 	Row             interface{}
-	PrimaryKey      []interface{}
-	NaturalKey      []interface{}
 	ExpectedVersion int64
 	ActualVersion   int64
 }
 
 func (e *OptimisticLockingError) Error() string {
-	return "TODO: need to generate error message"
+	var keyvals []interface{}
+	if e != nil {
+		if e.Table != nil && e.Row != nil {
+			keyvals = e.Table.keyvals(e.Row)
+		}
+		if e.ExpectedVersion != e.ActualVersion {
+			keyvals = append(keyvals, "expectedVersion", e.ExpectedVersion)
+			keyvals = append(keyvals, "actualVersion", e.ActualVersion)
+		}
+	}
+	return "optimistic locking conflict " + kv.List(keyvals).String()
 }
 
 // Select executes a SELECT query and stores the result in rows.

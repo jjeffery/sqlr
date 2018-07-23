@@ -22,6 +22,7 @@ type Table struct {
 	autoincr  *Column
 	createdAt *Column
 	updatedAt *Column
+	version   *Column
 }
 
 // getRowType converts a row instance into a row type.
@@ -98,6 +99,7 @@ func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 			emptyNull:     colInfo.Tag.EmptyNull,
 			json:          colInfo.Tag.JSON,
 			naturalKey:    colInfo.Tag.NaturalKey,
+			version:       colInfo.Tag.Version,
 		}
 
 		if hasColConfig {
@@ -130,6 +132,11 @@ func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 		if col.autoIncrement {
 			tbl.autoincr = col
 		}
+		if col.version {
+			tbl.version = col
+		}
+		// TODO(jpj): should we have another way to define these columns
+		// apart from their field names.
 		if col.info.FieldNames == "CreatedAt" {
 			tbl.createdAt = col
 		}
@@ -174,6 +181,13 @@ func newTableWithConfig(schema *Schema, rowType reflect.Type, config *TableConfi
 	}
 	if len(autoIncrementCols) > 1 {
 		return nil, fmt.Errorf("%s: multiple autoincrement columns not permitted (%v)", rowType, versionCols)
+	}
+
+	if tbl.version != nil {
+		kind := tbl.version.info.Field.Type.Kind()
+		if kind != reflect.Int && kind != reflect.Int32 && kind != reflect.Int64 {
+			return nil, fmt.Errorf("%s: version column should have kind Int, Int32 or Int64", rowType)
+		}
 	}
 
 	return tbl, nil
@@ -240,9 +254,14 @@ func (tbl *Table) mustGetRowValue(row interface{}) reflect.Value {
 	return rowValue
 }
 
+// keyvals returns a list of key/value pairs to include in any log message
+// or  error message concerning the row. The list includes the type of the
+// row, the primary key field(s), and any natural key field(s).
 func (tbl *Table) keyvals(row interface{}) []interface{} {
 	rowValue := tbl.mustGetRowValue(row)
-	var keyvals []interface{}
+	keyvals := []interface{}{
+		"rowType", rowValue.Type().String(),
+	}
 	for _, col := range tbl.pk {
 		keyvals = append(keyvals, col.info.FieldNames)
 		keyvals = append(keyvals, col.info.Index.ValueRO(rowValue).Interface())
@@ -254,8 +273,9 @@ func (tbl *Table) keyvals(row interface{}) []interface{} {
 	return keyvals
 }
 
-func (tbl *Table) wrapRowError(err error, row interface{}, prefix string) error {
-	msg := fmt.Sprintf("%s %s", prefix, tbl.singular())
+// wrapRowError wraps an error with a description and key/value pairs that identify the
+// row that was involved in the error condition.
+func (tbl *Table) wrapRowError(err error, row interface{}, msg string) errors.Error {
 	keyvals := tbl.keyvals(row)
 	return errors.Wrap(err, msg).With(keyvals...)
 }
