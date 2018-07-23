@@ -118,13 +118,10 @@ func TestDB1(t *testing.T) {
 }
 
 func TestJsonMarshaling(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := sqliteDB(t)
 	defer db.Close()
 
-	_, err = db.Exec(`
+	mustExec(t, db, `
 		create table test_table(
 			id integer primary key autoincrement,
 			name text,
@@ -151,8 +148,7 @@ func TestJsonMarshaling(t *testing.T) {
 
 	schema := NewSchema(ForDB(db))
 
-	_, err = schema.Exec(db, &row, "insert into test_table({}) values({})")
-	if err != nil {
+	if _, err := schema.Exec(db, &row, "insert into test_table({}) values({})"); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
@@ -193,23 +189,17 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := postgresDB(t)
 	defer db.Close()
 
-	_, err = db.Exec(`
+	mustExec(t, db, `
 		drop table if exists t1;
 		create table t1 (
 			id integer primary key,
 			name text
 		);
 	`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Exec(`drop table if exists t1`)
+	defer mustExec(t, db, `drop table if exists t1`)
 
 	type Row1 struct {
 		ID   int `sql:"primary key"`
@@ -261,10 +251,7 @@ func TestRace(t *testing.T) {
 }
 
 func TestNullable(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := postgresDB(t)
 	defer db.Close()
 
 	if _, err := db.Exec(`drop table if exists nullable_types;`); err != nil {
@@ -273,7 +260,7 @@ func TestNullable(t *testing.T) {
 	defer func() {
 		_, _ = db.Exec(`drop table if exists nullable_types`)
 	}()
-	if _, err = db.Exec(`
+	mustExec(t, db, `
 		create table nullable_types(
 			id integer not null primary key,
 			i integer null,
@@ -293,9 +280,7 @@ func TestNullable(t *testing.T) {
 			s text null,
 			t timestamp with time zone null
 		);
-	`); err != nil {
-		t.Fatal(err)
-	}
+	`)
 
 	schema := NewSchema(ForDB(db))
 
@@ -412,29 +397,19 @@ func TestNullable(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := postgresDB(t)
 	defer db.Close()
 
-	if _, err := db.Exec(`drop table if exists widgets;`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`drop table if exists widget;`); err != nil {
-		t.Fatal(err)
-	}
+	mustExec(t, db, `drop table if exists widget;`)
 	defer func() {
-		_, _ = db.Exec(`drop table if exists widget`)
+		mustExec(t, db, `drop table if exists widget`)
 	}()
-	if _, err = db.Exec(`
+	mustExec(t, db, `
 		create table widget(
 			id integer not null primary key,
 			name text not null
 		);
-	`); err != nil {
-		t.Fatal(err)
-	}
+	`)
 
 	schema := NewSchema(ForDB(db))
 	sess := NewSession(context.Background(), db, schema)
@@ -538,10 +513,7 @@ func TestQuery(t *testing.T) {
 }
 
 func TestInsertRow_NoAutoIncr(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := postgresDB(t)
 	defer db.Close()
 
 	mustExec(t, db, `drop table if exists no_auto_incr;`)
@@ -610,10 +582,7 @@ func TestInsertRow_NoAutoIncr(t *testing.T) {
 }
 
 func TestInsertRow_Serial(t *testing.T) {
-	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := postgresDB(t)
 	defer db.Close()
 
 	mustExec(t, db, `drop table if exists auto_incr;`)
@@ -684,10 +653,7 @@ func TestInsertRow_Serial(t *testing.T) {
 }
 
 func TestInsertRow_AutoIncr(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	db := sqliteDB(t)
 	defer db.Close()
 
 	mustExec(t, db, `drop table if exists auto_incr;`)
@@ -757,9 +723,30 @@ func TestInsertRow_AutoIncr(t *testing.T) {
 	}
 }
 
+// mustExec performs an SQL command, which must succeed or the test stops
 func mustExec(t *testing.T, db *sql.DB, query string) {
 	t.Helper()
 	if _, err := db.Exec(query); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// postgresDB returns a *sql.DB for accessing the test PostgreSQL database.
+func postgresDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := sql.Open("postgres", "postgres://sqlr_test:sqlr_test@localhost/sqlr_test?sslmode=disable")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	return db
+}
+
+// sqliteDB returns a *sql.DB for accessing a test SQLite database.
+func sqliteDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal("sql.Open:", err)
+	}
+	return db
 }
