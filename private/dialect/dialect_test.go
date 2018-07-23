@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 			expectedPlaceholder: "?",
 		},
 		{
-			dialect:             Postgres,
+			dialect:             &Postgres.Dialect,
 			expectedQuoted:      `"xxx"`,
 			expectedPlaceholder: "$2",
 		},
