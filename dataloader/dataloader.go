@@ -187,6 +187,14 @@ func init() {
 }
 
 // Make a data loader function given a query function and a key function.
+//
+// The loaderFuncPtr arg must be a pointer to a function variable which will
+// receive the created loader function.
+// The queryFunc and keyFunc args are the query function and the key function,
+// as described in the package description.
+// If any of the arguments are not supplied correctly, this function will
+// panic.
+//
 // See the package description and the examples for more detail.
 func Make(loaderFuncPtr interface{}, queryFunc interface{}, keyFunc interface{}) {
 	loader := dataLoader{

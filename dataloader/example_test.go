@@ -72,7 +72,8 @@ func ExampleMake_2() {
 
 	type GadgetsThunk func() ([]*Gadget, error)
 
-	doQuery := func(ids []WidgetID) ([]*Gadget, error) {
+	// queryFunc performs the database query
+	queryFunc := func(ids []WidgetID) ([]*Gadget, error) {
 		var result []*Gadget
 		query := `
 			select {}
@@ -91,14 +92,14 @@ func ExampleMake_2() {
 		return result, nil
 	}
 
-	// getKey is used to work out the WidgetID for each Gadget row.
-	getKey := func(gadget *Gadget) WidgetID {
+	// keyFunc is used to work out the WidgetID for each Gadget row.
+	keyFunc := func(gadget *Gadget) WidgetID {
 		return gadget.WidgetID
 	}
 
 	// now we can make the loader function
 	var loader func(widgetID WidgetID) GadgetsThunk
-	Make(&loader, doQuery, getKey)
+	Make(&loader, queryFunc, keyFunc)
 
 	// call the loader function a few times
 	thunk1 := loader(6)
