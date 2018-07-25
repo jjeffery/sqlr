@@ -37,13 +37,14 @@ rules include specifying the SQL dialect (eg MySQL, Postgres, SQLite) and the na
 used to convert Go struct field names into column names (eg "GivenName" => "given_name"). The schema
 is usually created during program initialization. Once created, a schema is immutable and can be
 called concurrently from multiple goroutines.
- schema := MustCreateSchema(SchemaConfig{
-   Dialect: MySQL,
-   NamingConvention: SnakeCase,
- })
+ schema := MustCreateSchema(
+   WithDialect(MySQL),
+   WithNamingConvention(SnakeCase),
+ )
 A session is created using a context, a database connection (eg *sql.DB, *sql.Tx, *sql.Conn), and a
-schema. The session is intended to last as long as a single request (which might be a HTTP request,
-in the case of a HTTP server).
+schema. A session is inexpensive to create, and is intended to last no longer than a single request
+(which might be a HTTP request, in the case of a HTTP server). A session is bounded by the lifetime
+of its context.
  sess := NewSession(ctx, tx, schema)
 Once a session has been created, it is possible to create simple row insert/update statements with
 minimal effort.
@@ -51,12 +52,12 @@ minimal effort.
  // ... populate row with data here and then ...
 
  // generates the correct SQL to insert a row into the users table
- rowsAffected, err := sess.Exec(db, row, "insert into users({}) values({})")
+ rowsAffected, err := sess.Exec(row, "insert into users({}) values({})")
 
  // ... and then later on ...
 
  // generates the correct SQL to update a the matching row in the users table
- rowsAffected, err := sess.Exec(db, row, "update users set {} where {}")
+ rowsAffected, err := sess.Exec(row, "update users set {} where {}")
 The Exec method parses the SQL query and replaces occurrences of "{}" with the column names
 or placeholders that make sense for the SQL clause in which they occur. In the example above,
 the insert and update statements would look like:
@@ -83,15 +84,15 @@ Select queries are handled in a similar fashion:
  var rows []*User
 
  // will populate rows slice with the results of the query
- rowCount, err := schema.Select(db, &rows, "select {} from users where postcode = ?", postcode)
+ rowCount, err := sess.Select(&rows, "select {} from users where postcode = ?", postcode)
 
  var row User
 
  // will populate row with the first row returned by the query
- rowCount, err = schema.Select(db, &row, "select {} from users where {}", userID)
+ rowCount, err = sess.Select(&row, "select {} from users where {}", userID)
 
  // more complex query involving joins and aliases
- rowCount, err = schema.Select(db, &rows, `
+ rowCount, err = sess.Select(&rows, `
      select {alias u}
      from users u
      inner join user_search_terms ust on ust.user_id = u.id
@@ -134,6 +135,8 @@ structure will be updated.
 
  // row.ID will contain the auto-generated value
  fmt.Println(row.ID)
+Autoincrement column values work for all supported databases (PostgreSQL, MySQL,
+Microsoft SQL Server and SQLite).
 
 Null Columns
 
@@ -191,9 +194,9 @@ the number of placeholders in the query with args.
 This package simplifies queries with a variable number of arguments. When processing
 an SQL query, it detects if any of the arguments are slices:
  // GetWidgets returns all the widgets associated with the supplied IDs.
- func GetWidgets(db *sql.DB, ids ...int) ([]*Widget, error) {
+ func GetWidgets(sess *sqlr.Session, ids ...int) ([]*Widget, error) {
      var rows []*Widget
-     _, err := schema.Select(db, &rows, `select {} from widgets where id in (?)`, ids)
+     _, err := sess.Select(&rows, `select {} from widgets where id in (?)`, ids)
      if err != nil {
        return nil, err
      }
