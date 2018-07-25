@@ -1,4 +1,5 @@
-# sqlr:  SQL API for Go
+# sqlr: SQL API for Go
+
 [![GoDoc](https://godoc.org/github.com/jjeffery/sqlr?status.svg)](https://godoc.org/github.com/jjeffery/sqlr)
 [![Documentation](https://img.shields.io/badge/documentation-reference-blue.svg)](https://jjeffery.github.io/sqlr)
 [![License](http://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://raw.githubusercontent.com/jjeffery/sqlr/master/LICENSE.md)
@@ -22,7 +23,6 @@ This README provides an overview of how to use this package. For
 more detailed documentation, see https://jjeffery.github.io/sqlr, or consult
 the [GoDoc documentation](https://godoc.org/github.com/jjeffery/sqlr).
 
-
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -33,11 +33,10 @@ the [GoDoc documentation](https://godoc.org/github.com/jjeffery/sqlr).
 - [Null Columns](#null-columns)
 - [JSON Columns](#json-columns)
 - [WHERE IN Clauses with Multiple Values](#where-in-clauses-with-multiple-values)
-- [Code Generation](#code-generation)
+- [Type-Safe Query Functions](#type-safe-query-functions)
 - [Performance and Caching](#performance-and-caching)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 
 ## Obtaining the package
 
@@ -45,7 +44,7 @@ the [GoDoc documentation](https://godoc.org/github.com/jjeffery/sqlr).
 go get github.com/jjeffery/sqlr
 ```
 
-Note that if you are interested in running the tests, you will need to 
+Note that if you are interested in running the tests, you will need to
 get additional database driver packages and setup a test database. See
 the [detailed documentation](https://jjeffery.github.io/sqlr) for more
 information.
@@ -56,12 +55,15 @@ Preparing SQL queries with many placeholder arguments is tedious and error-prone
 insert query has a dozen placeholders, and it is difficult to match up the columns with the
 placeholders. It is not uncommon to have tables with many more columns than this example, and the
 level of difficulty increases with the number of columns in the table.
+
 ```sql
 insert into users(id,given_name,family_name,dob,ssn,street,locality,postcode,country,phone,mobile,fax)
 values(?,?,?,?,?,?,?,?,?,?,?,?)
 ```
+
 This package uses reflection to simplify the construction of SQL queries. Supplementary information
 about each database column is stored in the structure tag of the associated field.
+
 ```go
 type User struct {
     ID          int       `sql:"primary key"`
@@ -78,11 +80,13 @@ type User struct {
     Facsimile   string    `sql:"fax"` // "fax" overrides the column name
 }
 ```
+
 The calling program creates a schema, which describes rules for generating SQL statements. These
 rules include specifying the SQL dialect (eg MySQL, Postgres, SQLite) and the naming convention
 used to convert Go struct field names into column names (eg "GivenName" => "given_name"). The schema
 is usually created during program initialization. Once created, a schema is immutable and can be
 called concurrently from multiple goroutines.
+
 ```go
 schema := NewSchema(
   WithDialect(MySQL),
@@ -90,23 +94,34 @@ schema := NewSchema(
 )
 ```
 
-Once the schema has been defined and a database handle is available (eg `*sql.DB`, `*sql.Tx`), it is possible
-to create simple row insert/update/delete statements with minimal effort.
+A session is created using a context, a database connection (eg `*sql.DB`, `*sql.Tx`, `*sql.Conn`),
+and a schema. A session is inexpensive to create, and is intended to last no longer than a single
+request (which might be a HTTP request, in the case of a HTTP server). A session is bounded by the
+lifetime of its context.
+
+```go
+sess := NewSession(ctx, tx, schema)
+```
+
+With a session, it is possible to createsimple row insert/update/delete statements with minimal effort.
+
 ```go
  var row User
  // ... populate row with data here and then ...
 
  // generates the correct SQL to insert a row into the users table
- rowsAffected, err := schema.Exec(db, row, "insert into users({}) values({})")
+ result, err := sess.Exec(row, "insert into users({}) values({})")
 
  // ... and then later on ...
 
  // generates the correct SQL to update a the matching row in the users table
- rowsAffected, err := schema.Exec(db, row, "update users set {} where {}")
+ result, err := sess.Exec(row, "update users set {} where {}")
 ```
+
 The Exec method parses the SQL query and replaces occurrences of `{}` with the column names
 or placeholders that make sense for the SQL clause in which they occur. In the example above,
 the insert and update statements would look like:
+
 ```sql
  insert into users(`id`,`given_name`,`family_name`,`dob`,`ssn`,`street`,`locality`,`postcode`,
  `country`,`phone`,`mobile`,`fax`) values(?,?,?,?,?,?,?,?,?,?,?,?)
@@ -114,8 +129,10 @@ the insert and update statements would look like:
  update users set `given_name`=?,`family_name`=?,`dob`=?,`ssn`=?,`street`=?,`locality`=?,
  `postcode`=?,`country`=?,`phone`=?,`mobile`=?,`fax`=? where `id`=?
 ```
+
 If the schema is created with a different dialect then the generated SQL will be different.
 For example if the Postgres dialect was used the insert and update queries would look more like:
+
 ```sql
  insert into users("id","given_name","family_name","dob","ssn","street","locality","postcode",
  "country","phone","mobile","fax") values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
@@ -123,27 +140,39 @@ For example if the Postgres dialect was used the insert and update queries would
  update users set "given_name"=$1,"family_name"=$2,"dob"=$3,"ssn"=$4,"street"=$5,"locality"=$6,
  "postcode"=$7,"country"=$8,"phone"=$9,"mobile"=$10,"fax"=$11 where "id"=$12
 ```
+
+Inserting and updating a single row are common enough operations that the session has methods
+that make it very simple:
+
+```go
+sess.InsertRow(row)
+sess.UpdateRow(row)
+```
+
 Select queries are handled in a similar fashion:
+
 ```go
  var rows []*User
 
  // will populate rows slice with the results of the query
- rowCount, err := schema.Select(db, &rows, "select {} from users where postcode = ?", postcode)
+ rowCount, err := sess.Select(&rows, "select {} from users where postcode = ?", postcode)
 
  var row User
 
  // will populate row with the first row returned by the query
- rowCount, err = schema.Select(db, &row, "select {} from users where {}", userID)
+ rowCount, err = sess.Select(&row, "select {} from users where {}", userID)
 
  // more complex query involving joins and aliases
- rowCount, err = schema.Select(db, &rows, `
+ rowCount, err = sess.Select(&rows, `
      select {alias u}
      from users u
      inner join user_search_terms ust on ust.user_id = u.id
      where ust.search_term like ?
      order by {alias u}`, searchTermText)
 ```
+
 The SQL queries prepared in the above example would look like the following:
+
 ```go
  select `id`,`given_name`,`family_name`,`dob`,`ssn`,`street`,`locality`,`postcode`,
  `country`,`phone`,`mobile`,`fax` from users where postcode=?
@@ -158,6 +187,7 @@ The SQL queries prepared in the above example would look like the following:
 
 The examples are using a MySQL dialect. If the schema had been setup for, say, a Postgres
 dialect, a generated query would look more like:
+
 ```go
  select "id","given_name","family_name","dob","ssn","street","locality","postcode","country",
  "phone","mobile","fax" from users where postcode=$1
@@ -174,6 +204,7 @@ For more information on preparing queries, see [the detailed documentation](http
 When inserting rows, if a column is defined as an autoincrement column, then the generated
 value will be retrieved from the database server, and the corresponding field in the row
 structure will be updated.
+
 ```go
  type Row {
    ID   int    `sql:"primary key autoincrement"`
@@ -181,7 +212,7 @@ structure will be updated.
  }
 
  row := &Row{Name: "some name"}
- _, err := schema.Exec(db, row, "insert into table_name({}) values({})")
+ _, err := sess.InsertRow(row)
  if err != nil {
    log.Fatal(err)
  }
@@ -189,9 +220,6 @@ structure will be updated.
  // row.ID will contain the auto-generated value
  fmt.Println(row.ID)
 ```
-
-This feature only works with database drivers that support autoincrement columns. 
-The [Postgres driver](https://github.com/lib/pq), in particular, does not support this feature.
 
 ## Null Columns
 
@@ -203,6 +231,7 @@ enough situation.
 
 Where it is acceptable to map a NULL value to an empty value and vice-versa, the Go struct
 field can be marked with the "null" keyword in the field's struct tag.
+
 ```go
  type Employee struct {
      ID        int     `sql:"primary key"`
@@ -211,6 +240,7 @@ field can be marked with the "null" keyword in the field's struct tag.
      Phone     string  `sql:"null"`
  }
 ```
+
 In the above example the `manager_id` column can be null, but if all valid IDs are non-zero,
 it is unambiguous to map a database NULL to the zero value. Similarly, if the `phone` column
 is null it will be mapped to an empty string. An empty string in the Go struct field will
@@ -227,6 +257,7 @@ Native support for JSON is available in some database servers: in partcular Post
 excellent support for JSON.
 
 It is straightforward to use this package to serialize a structure field to JSON:
+
 ```go
  type SomethingComplex struct {
      Name       string
@@ -241,6 +272,7 @@ It is straightforward to use this package to serialize a structure field to JSON
      Cmplx *SomethingComplex  `sql:"json"`
  }
 ```
+
 In the example above the `Cmplx` field will be marshaled as JSON text when
 writing to the database, and unmarshaled into the struct when reading from
 the database.
@@ -253,27 +285,46 @@ the number of placeholders in the query with args.
 
 This package simplifies queries with a variable number of arguments. When processing
 an SQL query, it detects if any of the arguments are slices:
+
 ```go
  // GetWidgets returns all the widgets associated with the supplied IDs.
- func GetWidgets(db *sql.DB, ids ...int) ([]*Widget, error) {
+ func GetWidgets(sess *sqlr.Session, ids ...int) ([]*Widget, error) {
      var rows []*Widget
-     _, err := schema.Select(db, &rows, `select {} from widgets where id in (?)`, ids)
+     _, err := sess.Select(&rows, `select {} from widgets where id in (?)`, ids)
      if err != nil {
        return nil, err
      }
      return widgets, nil
  }
 ```
+
 In the above example, the number of placeholders ("?") in the query will be increased to
 match the number of values in the `ids` slice. The expansion logic can handle any mix of
 slice and scalar arguments.
 
-## Code Generation
+## Type-Safe Query Functions
 
-This package contains a code generation tool in the "./cmd/sqlr-gen" directory. It can
-be quite useful to reduce the amount of code required. Refer to the 
-[detailed documentation](https://jjeffery.github.io/sqlr) 
-for more information on this feature.
+A session can create type-safe query functions. This is a very powerful feature and makes
+it very easy to create type-safe data access objects.
+
+```go
+var getWidget func(id int64) (*Widget, error)
+
+// a session can make a typesafe function to retrieve an individual widget
+sess.MakeQuery(&getWidget)
+
+// now use the created function
+widget, err := getWidget(42)
+if err != nil {
+    return err
+}
+
+// ... now use the widget ...
+```
+
+See the [Session.MakeQuery](https://godoc.org/github.com/jjeffery/sqlr/#Session.MakeQuery) and
+[Session.MustMakeQuery](https://godoc.org/github.com/jjeffery/sqlr/#Session.MustMakeQuery) functions
+in the [GoDoc](https://godoc.org/github.com/jjeffery/sqlr) for examples.
 
 ## Performance and Caching
 
