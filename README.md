@@ -26,7 +26,6 @@ the [GoDoc documentation](https://godoc.org/github.com/jjeffery/sqlr).
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Obtaining the package](#obtaining-the-package)
 - [Prepare SQL queries based on row structures](#prepare-sql-queries-based-on-row-structures)
 - [Autoincrement Column Values](#autoincrement-column-values)
@@ -103,7 +102,7 @@ lifetime of its context.
 sess := NewSession(ctx, tx, schema)
 ```
 
-With a session, it is possible to createsimple row insert/update/delete statements with minimal effort.
+With a session, it is possible to create row insert/update/delete statements with minimal effort.
 
 ```go
  var row User
