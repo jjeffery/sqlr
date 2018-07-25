@@ -475,7 +475,7 @@ func (sess *Session) MustMakeQuery(funcPtr ...interface{}) {
 func (sess *Session) makeQueryFunc(funcPtr interface{}) error {
 	funcPtrValue := reflect.ValueOf(funcPtr)
 	funcPtrType := funcPtrValue.Type()
-	if funcPtrValue.Type().Kind() != reflect.Ptr {
+	if funcPtrType.Kind() != reflect.Ptr {
 		return newError("expected pointer to function, got %s", funcPtrType.String())
 	}
 	funcValue := funcPtrValue.Elem()
