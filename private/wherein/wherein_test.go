@@ -6,6 +6,7 @@ import (
 )
 
 func TestFlatten(t *testing.T) {
+	type intType int
 	tests := []struct {
 		sql      string
 		args     []interface{}
@@ -52,6 +53,12 @@ func TestFlatten(t *testing.T) {
 			args:     []interface{}{[]int{1, 2, 3}},
 			wantSQL:  "select * from tbl where id in (?,?,?)",
 			wantArgs: []interface{}{1, 2, 3},
+		},
+		{
+			sql:      "select * from tbl where id in (?)",
+			args:     []interface{}{[]intType{1, 2, 3}},
+			wantSQL:  "select * from tbl where id in (?,?,?)",
+			wantArgs: []interface{}{intType(1), intType(2), intType(3)},
 		},
 		{
 			sql:      "select * from tbl where id in ($1)",

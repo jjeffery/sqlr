@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jjeffery/kv"
+	"github.com/jjeffery/sqlr/private/wherein"
 )
 
 // A Session is a request-scoped database session. It can execute
@@ -492,4 +493,24 @@ func (sess *Session) makeQueryFunc(funcPtr interface{}) error {
 	queryFunc := queryFuncFactory(sess)
 	funcValue.Set(queryFunc)
 	return nil
+}
+
+// Query performs a query that is not row-based. The query placeholders
+// are converted to the format suitable for the SQL dialect, and any
+// args that are slices are expanded (eg for WHERE IN (...) clauses).
+func (sess *Session) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	var row struct{}
+	stmt, err := sess.schema.Prepare(row, query)
+	if err != nil {
+		return nil, err
+	}
+	args, err = stmt.getArgs(row, args)
+	if err != nil {
+		return nil, err
+	}
+	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
+	if err != nil {
+		return nil, err
+	}
+	return sess.querier.QueryContext(sess.context, expandedQuery, expandedArgs...)
 }

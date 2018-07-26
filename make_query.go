@@ -100,7 +100,7 @@ func makeSelectIntFunc(funcType reflect.Type) func(*Session) reflect.Value {
 			intPtrValue := reflect.New(intType)
 			query := args[0].Interface().(string)
 			queryArgs := args[1].Interface().([]interface{})
-			rows, err := sess.Querier().QueryContext(sess.Context(), query, queryArgs...)
+			rows, err := sess.Query(query, queryArgs...)
 			if err != nil {
 				err = errors.Wrap(err, "cannot query").With(
 					"query", query,
