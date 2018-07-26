@@ -1,6 +1,7 @@
 package sqlr
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 
@@ -37,6 +38,8 @@ func makeQuery(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Va
 // output args alternatives:
 //   ([]*Row, error)
 //   (*Row, error)
+//   (int, error)
+//   (int64, error)
 // Returns nil if not a match, returns error if the function looks like a query
 // but is not quite conformant.
 func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
@@ -59,7 +62,15 @@ func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.V
 	if funcType.NumOut() != 2 {
 		return nil, newError(invalidOutputsMsg)
 	}
+	if funcType.Out(1) != wellKnownTypes.errorType {
+		return nil, newError(invalidOutputsMsg)
+	}
 	rowType := funcType.Out(0)
+	switch rowType.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return makeSelectIntFunc(funcType), nil
+	}
 	if rowType.Kind() == reflect.Slice {
 		rowType = rowType.Elem()
 	}
@@ -70,9 +81,6 @@ func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.V
 		return nil, newError("expected struct type, got %v", rowType.String())
 	}
 	tbl := schema.TableFor(rowType)
-	if funcType.Out(1) != wellKnownTypes.errorType {
-		return nil, newError(invalidOutputsMsg)
-	}
 	rowPtrType := reflect.PtrTo(rowType)
 	if funcType.Out(0) == rowPtrType {
 		return makeSelectRowFunc(funcType, tbl), nil
@@ -83,6 +91,51 @@ func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.V
 	}
 
 	return nil, newError(invalidOutputsMsg)
+}
+
+func makeSelectIntFunc(funcType reflect.Type) func(*Session) reflect.Value {
+	return func(sess *Session) reflect.Value {
+		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
+			intType := funcType.Out(0)
+			intPtrValue := reflect.New(intType)
+			query := args[0].Interface().(string)
+			queryArgs := args[1].Interface().([]interface{})
+			rows, err := sess.Querier().QueryContext(sess.Context(), query, queryArgs...)
+			if err != nil {
+				err = errors.Wrap(err, "cannot query").With(
+					"query", query,
+					"args", queryArgs,
+				)
+				return []reflect.Value{
+					intPtrValue.Elem(),
+					errorValueFor(err),
+				}
+			}
+			defer rows.Close()
+			if !rows.Next() {
+				return []reflect.Value{
+					intPtrValue.Elem(),
+					errorValueFor(sql.ErrNoRows),
+				}
+			}
+			if err := rows.Scan(intPtrValue.Interface()); err != nil {
+				return []reflect.Value{
+					intPtrValue.Elem(),
+					errorValueFor(err),
+				}
+			}
+			if err := rows.Err(); err != nil {
+				return []reflect.Value{
+					intPtrValue.Elem(),
+					errorValueFor(err),
+				}
+			}
+			return []reflect.Value{
+				intPtrValue.Elem(),
+				wellKnownTypes.nilErrorValue,
+			}
+		})
+	}
 }
 
 func makeSelectRowsFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Value {

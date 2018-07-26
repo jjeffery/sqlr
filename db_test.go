@@ -396,6 +396,33 @@ func TestNullable(t *testing.T) {
 	}
 }
 
+func TestScalarQuery(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists numbers`)
+	defer mustExec(t, db, `drop table if exists numbers`)
+	mustExec(t, db, `create table numbers(number int)`)
+	const rowCount = 6
+	for i := 0; i < rowCount; i++ {
+		mustExec(t, db, fmt.Sprintf("insert into numbers(number) values(%d)", i))
+	}
+
+	schema := NewSchema(ForDB(db))
+	sess := NewSession(context.Background(), db, schema)
+
+	var q func(query string, args ...interface{}) (int, error)
+	sess.MakeQuery(&q)
+
+	count, err := q("select count(*) from numbers")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if got, want := count, rowCount; got != want {
+		t.Fatalf("got=%v, want=%v", got, want)
+	}
+}
+
 func TestQuery(t *testing.T) {
 	db := postgresDB(t)
 	defer db.Close()
