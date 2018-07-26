@@ -24,6 +24,7 @@ type Schema struct {
 	dialect    Dialect
 	convention NamingConvention
 	cache      stmtCache
+	funcMap    funcMap
 	fieldMap   *fieldMap
 	identMap   *identMap
 	tableMap   tableMap

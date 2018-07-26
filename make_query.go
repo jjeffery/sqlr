@@ -9,6 +9,9 @@ import (
 )
 
 func makeQuery(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Value, error) {
+	if f := schema.funcMap.lookup(funcType); f != nil {
+		return f, nil
+	}
 	for _, maker := range []func(reflect.Type, *Schema) (func(*Session) reflect.Value, error){
 		selectFunc,
 		getOneFunc,
@@ -20,6 +23,7 @@ func makeQuery(funcType reflect.Type, schema *Schema) (func(*Session) reflect.Va
 			return nil, err
 		}
 		if f != nil {
+			f = schema.funcMap.add(funcType, f)
 			return f, nil
 		}
 	}
