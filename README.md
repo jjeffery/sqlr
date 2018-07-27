@@ -200,9 +200,9 @@ For more information on preparing queries, see [the detailed documentation](http
 
 ## Autoincrement Column Values
 
-When inserting rows, if a column is defined as an autoincrement column, then the generated
-value will be retrieved from the database server, and the corresponding field in the row
-structure will be updated.
+When inserting rows using [InsertRow](https://godoc.org/github.com/jjeffery/sqlr#Session.InsertRow),
+if a column is defined as an autoincrement column, then the generated value will be retrieved from
+the database server, and the corresponding field in the row structure will be updated.
 
 ```go
  type Row {
