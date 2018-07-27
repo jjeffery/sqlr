@@ -446,6 +446,11 @@ func (sess *Session) Schema() *Schema {
 //  // Execute a query that will return a single Row object.
 //  func(query string, args ...interface{}) (*Row, error)
 //
+//  // Execute a query that will return a single integer value.
+//  // Useful for select count(*) queries.
+//  func(query string, args ...interface{}) (int, error)
+//  func(query string, args ...interface{}) (int64, error)
+//
 // If any of the funcPtr arguments are not pointers to a function, or do not fit
 // one of the known function prototypes, then this function will return an error.
 // It is more common to call the MustMakeQuery method, which will panic if there
