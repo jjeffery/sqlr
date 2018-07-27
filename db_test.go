@@ -411,15 +411,82 @@ func TestScalarQuery(t *testing.T) {
 	schema := NewSchema(ForDB(db))
 	sess := NewSession(context.Background(), db, schema)
 
-	var q func(query string, args ...interface{}) (int, error)
-	sess.MakeQuery(&q)
+	{
+		var q func(query string, args ...interface{}) (int, error)
+		sess.MakeQuery(&q)
 
-	count, err := q("select count(*) from numbers")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, rowCount; got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
 	}
-	if got, want := count, rowCount; got != want {
-		t.Fatalf("got=%v, want=%v", got, want)
+
+	{
+		var q func(query string, args ...interface{}) (int32, error)
+		sess.MakeQuery(&q)
+
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, int32(rowCount); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		var q func(query string, args ...interface{}) (int64, error)
+		sess.MakeQuery(&q)
+
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, int64(rowCount); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		var q func(query string, args ...interface{}) (uint, error)
+		sess.MakeQuery(&q)
+
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, uint(rowCount); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		var q func(query string, args ...interface{}) (uint32, error)
+		sess.MakeQuery(&q)
+
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, uint32(rowCount); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		var q func(query string, args ...interface{}) (uint64, error)
+		sess.MakeQuery(&q)
+
+		count, err := q("select count(*) from numbers")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if got, want := count, uint64(rowCount); got != want {
+			t.Fatalf("got=%v, want=%v", got, want)
+		}
 	}
 }
 
