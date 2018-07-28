@@ -20,6 +20,9 @@ type Session struct {
 	cancel  func()
 	querier Querier
 	schema  *Schema
+
+	// cache of query functions for this session
+	queryFuncs map[reflect.Type]reflect.Value
 }
 
 // NewSession returns a new, request-scoped session.
@@ -56,6 +59,7 @@ func NewSession(ctx context.Context, querier Querier, schema *Schema) *Session {
 // Close implements the io.Closer interface. It always returns nil.
 func (sess *Session) Close() error {
 	sess.cancel()
+	sess.queryFuncs = nil
 	return nil
 }
 
@@ -490,12 +494,19 @@ func (sess *Session) makeQueryFunc(funcPtr interface{}) error {
 		return newError("expected pointer to function, got %s", funcPtrType.String())
 	}
 
-	queryFuncFactory, err := makeQuery(funcType, sess.schema)
-	if err != nil {
-		return err
+	// lookup the cache, and if a miss then create func and add to cache
+	queryFunc, ok := sess.queryFuncs[funcType]
+	if !ok {
+		queryFuncFactory, err := makeQuery(funcType, sess.schema)
+		if err != nil {
+			return err
+		}
+		queryFunc = queryFuncFactory(sess)
+		if sess.queryFuncs == nil {
+			sess.queryFuncs = make(map[reflect.Type]reflect.Value)
+		}
+		sess.queryFuncs[funcType] = queryFunc
 	}
-
-	queryFunc := queryFuncFactory(sess)
 	funcValue.Set(queryFunc)
 	return nil
 }
