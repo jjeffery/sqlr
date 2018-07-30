@@ -479,7 +479,7 @@ func ExampleSchema_Select_multipleRows() {
 	}
 }
 
-func ExampleSession_MustMakeQuery() {
+func ExampleSession_MakeQuery() {
 	var schema Schema
 	ctx := context.Background()
 	tx := beginTransaction() // get a DB transaction, assumes no errors
@@ -500,7 +500,7 @@ func ExampleSession_MustMakeQuery() {
 		Select func(query string, args ...interface{}) ([]*Row, error)
 	}
 
-	sess.MustMakeQuery(&dao.Get, &dao.Select)
+	sess.MakeQuery(&dao.Get, &dao.Select)
 
 	// can now use the type-safe data access functions
 	row42, err := dao.Get(42)

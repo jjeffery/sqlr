@@ -7,6 +7,10 @@
 sqlr -- SQL package
 ===================
 
+NOTE: This documentation is for v0.5. The latest version is v0.6,
+and introduces a number of significant changes. This documenation
+will be updated for v0.6 shortly.
+
 +--------------------+--------------------------------------------+
 | GoDoc Documenation | https://godoc.org/github.com/jjeffery/sqlr |
 +--------------------+--------------------------------------------+

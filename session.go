@@ -456,30 +456,20 @@ func (sess *Session) Schema() *Schema {
 //  func(query string, args ...interface{}) (int64, error)
 //
 // If any of the funcPtr arguments are not pointers to a function, or do not fit
-// one of the known function prototypes, then this function will return an error.
-// It is more common to call the MustMakeQuery method, which will panic if there
-// are any invalid funcPtr arguments.
-//
-// See MustMakeQuery for examples.
-func (sess *Session) MakeQuery(funcPtr ...interface{}) error {
+// one of the known function prototypes, then this function will panic.
+func (sess *Session) MakeQuery(funcPtr ...interface{}) {
+	if err := sess.makeQueries(funcPtr...); err != nil {
+		panic(err)
+	}
+}
+
+func (sess *Session) makeQueries(funcPtr ...interface{}) error {
 	for _, fp := range funcPtr {
 		if err := sess.makeQueryFunc(fp); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// MustMakeQuery does the same thing as MakeQuery, but panics if an error is
-// encountered.
-//
-// Calling MustMakeQuery is far more common than calling MakeQuery, because the
-// only reason for failure is if one or more of the funcPtr arguments are not
-// recognizable as query functions. This can easily be verified by automated tests.
-func (sess *Session) MustMakeQuery(funcPtr ...interface{}) {
-	if err := sess.MakeQuery(funcPtr...); err != nil {
-		panic(err)
-	}
 }
 
 func (sess *Session) makeQueryFunc(funcPtr interface{}) error {

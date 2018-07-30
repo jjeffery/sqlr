@@ -533,7 +533,7 @@ func TestQuery(t *testing.T) {
 		selectRows func(query string, args ...interface{}) ([]*Widget, error)
 	}
 
-	sess.MustMakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
+	sess.MakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
 
 	for i := 0; i < rowCount; i++ {
 		w, err := dao.get(i)
@@ -653,7 +653,7 @@ func TestInsertRow_NoAutoIncr(t *testing.T) {
 		}
 
 		var getRow func(id int) (*NoAutoIncr, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(1)
 		if err != nil {
@@ -724,7 +724,7 @@ func TestInsertRow_Serial(t *testing.T) {
 		}
 
 		var getRow func(id int) (*AutoIncr, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(i + 1)
 		if err != nil {
@@ -795,7 +795,7 @@ func TestInsertRow_AutoIncr(t *testing.T) {
 		}
 
 		var getRow func(id int) (*AutoIncr, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(i + 1)
 		if err != nil {
@@ -853,7 +853,7 @@ func TestUpdateRow_NoVersion_NoUpdatedAt(t *testing.T) {
 		}
 
 		var getRow func(id int) (*NoVersionNoUpdatedAt, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(row.ID)
 		if err != nil {
@@ -927,7 +927,7 @@ func TestUpdateRow_NoVersion_UpdatedAt(t *testing.T) {
 		}
 
 		var getRow func(id int) (*NoVersionUpdatedAt, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(row.ID)
 		if err != nil {
@@ -1013,7 +1013,7 @@ func TestUpdateRow_Version_UpdatedAt(t *testing.T) {
 		}
 
 		var getRow func(id int) (*VersionUpdatedAt, error)
-		sess.MustMakeQuery(&getRow)
+		sess.MakeQuery(&getRow)
 
 		row2, err := getRow(row.ID)
 		if err != nil {

@@ -209,8 +209,7 @@ slice and scalar arguments.
 Type-Safe Query Functions
 
 A session can create type-safe query functions. This is a very powerful feature and makes
-it very easy to create type-safe data access. See the Session.MakeQuery and Session.MustMakeQuery
-functions for examples.
+it very easy to create type-safe data access. See the Session.MakeQuery function for examples.
 
 Performance and Caching
 
