@@ -24,27 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="Performing Queries" href="queries.html"/>
-        <link rel="prev" title="sqlr – SQL package" href="index.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Performing Queries" href="queries.html" />
+    <link rel="prev" title="sqlr – SQL package" href="index.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -116,7 +108,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -124,9 +116,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -176,10 +169,10 @@ who are comfortable with writing SQL, but would like assistance with the
 sometimes tedious process of preparing SQL queries for tables that have a
 large number of columns, or have a variable number of input parameters.</p>
 <p>This package is designed to work seamlessly with the standard library
-&#8220;database/sql&#8221; package. It does not provide any layer on top of <cite>*sql.DB</cite>
+“database/sql” package. It does not provide any layer on top of <cite>*sql.DB</cite>
 or <cite>*sql.Tx</cite>. If the calling program has a need to execute queries independently
-of this package, it can use &#8220;database/sql&#8221; directly, or make use of any other
-third party package that uses &#8220;database/sql&#8221;.</p>
+of this package, it can use “database/sql” directly, or make use of any other
+third party package that uses “database/sql”.</p>
 <p>The following features are provided to simplify writing SQL database queries:</p>
 <dl class="docutils">
 <dt>Prepare SQL from row structures</dt>
@@ -187,7 +180,7 @@ third party package that uses &#8220;database/sql&#8221;.</p>
 names and placeholder variables. Package sqlr provides a way to map column lists
 in the SQL with a Go language structure. The result is a way to write concise
 SQL queries even for tables with large number of columns:</p>
-<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;insert into table_name({}) values({})&quot;</span><span class="p">)</span>
+<div class="last highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;insert into table_name({}) values({})&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd>
@@ -195,7 +188,7 @@ SQL queries even for tables with large number of columns:</p>
 <dd><p class="first">When inserting rows, if a column is defined as an autoincrement column, then the
 generated value will be retrieved from the database server, and the corresponding
 field in the row structure will be updated:</p>
-<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="last highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Id</span>         <span class="kt">int</span>     <span class="s">`sql:&quot;primary key autoincrement&quot;`</span>
     <span class="nx">GivenName</span>  <span class="kt">string</span>
     <span class="nx">FamilyName</span> <span class="kt">string</span>
@@ -209,7 +202,7 @@ the equivalent empty value in the Go struct field, for example mapping NULL to z
 for integer values, or NULL to the empty string for string values. This is not always
 applicable as NULL and the empty string are not necessarily the same thing, but in many
 cases there is no ambiguity, and the result is simpler, smaller code:</p>
-<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="last highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="c1">// ... lots of other fields and then ...</span>
 
     <span class="nx">PhoneNumber</span> <span class="kt">string</span>  <span class="s">`sql:&quot;null&quot;`</span> <span class="c1">// stores NULL for empty string</span>
@@ -222,7 +215,7 @@ cases there is no ambiguity, and the result is simpler, smaller code:</p>
 <dt>JSON columns</dt>
 <dd><p class="first">A convenient mechanism for marshaling complex objects as JSON text for storage in
 an SQL database is supported:</p>
-<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="last highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Row</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="c1">// ... lots of other fields and then ...</span>
 
     <span class="nx">Cmplx</span>  <span class="o">*</span><span class="nx">MyComplexDataStructure</span> <span class="s">`sql:&quot;json&quot;`</span> <span class="c1">// will be stored as JSON text</span>
@@ -236,7 +229,7 @@ manipulation to match the number of placeholders in the query with args.
 This package simplifies queries with a variable number of arguments: when processing
 an SQL query, it detects if any of the arguments are slices and adjusts the query
 accordingly:</p>
-<div class="last highlight-go"><div class="highlight"><pre><span></span><span class="nx">id</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">}</span>
+<div class="last highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">id</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">9</span><span class="p">}</span>
 <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Select</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rows</span><span class="p">,</span> <span class="s">`select {} from widgets where id in (?)`</span><span class="p">,</span> <span class="nx">ids</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -246,8 +239,8 @@ accordingly:</p>
 </dl>
 <div class="section" id="installing">
 <h2>Installing<a class="headerlink" href="#installing" title="Permalink to this headline">¶</a></h2>
-<p>To obtain a copy of the <cite>sqlr</cite> package, use <code class="docutils literal"><span class="pre">go</span> <span class="pre">get</span></code>:</p>
-<div class="highlight-sh"><div class="highlight"><pre><span></span>go get github.com/jjeffery/sqlr
+<p>To obtain a copy of the <cite>sqlr</cite> package, use <code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span></code>:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>go get github.com/jjeffery/sqlr
 </pre></div>
 </div>
 <p>Note that additional setup is required if you wish to run the tests
@@ -261,9 +254,7 @@ against database servers. The setup required is discussed in <a class="reference
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -285,7 +276,7 @@ against database servers. The setup required is discussed in <a class="reference
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -304,6 +295,7 @@ against database servers. The setup required is discussed in <a class="reference
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'1.0',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -316,19 +308,13 @@ against database servers. The setup required is discussed in <a class="reference
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>
