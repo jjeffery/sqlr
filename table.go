@@ -224,14 +224,6 @@ func (tbl *Table) Columns() []*Column {
 	return columnSlice(tbl.cols)
 }
 
-func (tbl *Table) singular() string {
-	return tbl.rowType.Name()
-}
-
-func (tbl *Table) plural() string {
-	return tbl.singular() + "s"
-}
-
 func (tbl *Table) getRowValue(row interface{}) (reflect.Value, error) {
 	rowValue := reflect.ValueOf(row)
 	for rowValue.Type().Kind() == reflect.Ptr {

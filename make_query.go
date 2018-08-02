@@ -146,7 +146,8 @@ func makeSelectRowsFunc(funcType reflect.Type, tbl *Table) func(*Session) reflec
 			queryArgs := args[1].Interface().([]interface{})
 			_, err := sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, fmt.Sprintf("cannot query %s", tbl.plural())).With(
+				err = errors.Wrap(err, "cannot query rows").With(
+					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
 				)
@@ -169,7 +170,8 @@ func makeSelectRowFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect
 			queryArgs := args[1].Interface().([]interface{})
 			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, fmt.Sprintf("cannot query one %s", tbl.singular())).With(
+				err = errors.Wrap(err, "cannot query one row").With(
+					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
 				)
@@ -231,7 +233,8 @@ func makeGetOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Va
 			queryArgs := []interface{}{args[0].Interface()}
 			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, fmt.Sprintf("cannot get one %s", tbl.singular())).With(
+				err = errors.Wrap(err, "cannot get one row").With(
+					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
 				)
@@ -298,7 +301,8 @@ func makeGetManyFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.V
 				}
 				_, err = sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 				if err != nil {
-					err = errors.Wrap(err, "cannot get one %s", tbl.singular()).With(
+					err = errors.Wrap(err, "cannot get one row").With(
+						"rowType", tbl.RowType(),
 						"query", query,
 						"args", queryArgs,
 					)
