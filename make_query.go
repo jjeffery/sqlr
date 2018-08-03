@@ -301,7 +301,7 @@ func makeGetManyFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.V
 				}
 				_, err = sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 				if err != nil {
-					err = errors.Wrap(err, "cannot get one row").With(
+					err = errors.Wrap(err, "cannot get rows").With(
 						"rowType", tbl.RowType(),
 						"query", query,
 						"args", queryArgs,
