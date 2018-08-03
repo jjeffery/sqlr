@@ -16,6 +16,9 @@ var (
 // such that a SQL NULL value means to store an empty value for the type.
 // These fields should have a backing field type of int, uint, bool, float, string or time.Time.
 func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) interface{} {
+	if scanner, ok := cellPtr.(sql.Scanner); ok {
+		return &nullScannerCell{colname: colname, cellValue: cellValue, scanner: scanner}
+	}
 	switch cellValue.Kind() {
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
 		return &nullIntCell{colname: colname, cellValue: cellValue}
@@ -37,6 +40,31 @@ func newNullCell(colname string, cellValue reflect.Value, cellPtr interface{}) i
 		// can handle a null value without resorting to reflection
 		return cellPtr
 	}
+}
+
+type nullScannerCell struct {
+	colname   string
+	cellValue reflect.Value
+	scanner   sql.Scanner
+}
+
+func (nc *nullScannerCell) Scan(v interface{}) (err error) {
+	defer func() {
+		// handle panic if Set fails
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot scan column %q: %v", nc.colname, r)
+		}
+	}()
+
+	// attempt to scan, because the Scan implementation may handle
+	// nil values correctly
+	err = nc.scanner.Scan(v)
+	if err != nil && v == nil {
+		// scan failed for nil value, so set the zero value
+		nc.cellValue.Set(reflect.Zero(nc.cellValue.Type()))
+		err = nil
+	}
+	return err
 }
 
 type nullIntCell struct {
