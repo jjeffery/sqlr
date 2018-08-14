@@ -49,6 +49,9 @@ func selectFunc(funcType reflect.Type, schema *Schema) (func(*Session) reflect.V
 	if funcType.In(0) != wellKnownTypes.stringType {
 		return nil, nil // not a select function
 	}
+	if funcType.NumIn() == 1 {
+		return nil, nil
+	}
 	const invalidInputsMsg = "expect query function inputs to be like (query string, args ...interface{})"
 	if funcType.NumIn() != 2 {
 		return nil, newError(invalidInputsMsg)
