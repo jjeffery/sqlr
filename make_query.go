@@ -171,13 +171,17 @@ func makeSelectRowFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect
 			rowPtrValue := reflect.New(tbl.RowType())
 			query := args[0].Interface().(string)
 			queryArgs := args[1].Interface().([]interface{})
-			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
+			n, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
 				err = errors.Wrap(err, "cannot query one row").With(
 					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
 				)
+				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
+			}
+			if n == 0 {
+				// no rows returned
 				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
 			}
 
