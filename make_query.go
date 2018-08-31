@@ -238,13 +238,16 @@ func makeGetOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Va
 			rowPtrValue := reflect.New(tbl.RowType())
 			query := fmt.Sprintf("select {} from %s where {}", tbl.Name())
 			queryArgs := []interface{}{args[0].Interface()}
-			_, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
+			n, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
 				err = errors.Wrap(err, "cannot get one row").With(
 					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
 				)
+				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
+			} else if n == 0 {
+				// nothing returned, so zero out the pointer
 				rowPtrValue = reflect.Zero(reflect.PtrTo(tbl.RowType()))
 			}
 			return []reflect.Value{
