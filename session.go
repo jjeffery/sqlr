@@ -23,6 +23,9 @@ type Session struct {
 
 	// cache of query functions for this session
 	queryFuncs map[reflect.Type]reflect.Value
+
+	// map of row handler callback functions
+	rowHandlers map[reflect.Type][]func(reflect.Value)
 }
 
 // NewSession returns a new, request-scoped session.
@@ -410,7 +413,15 @@ func (sess *Session) Select(rows interface{}, query string, args ...interface{})
 	if err != nil {
 		return 0, err
 	}
-	return stmt.Select(sess.context, sess.querier, rows, args...)
+	n, err := stmt.Select(sess.context, sess.querier, rows, args...)
+	if err != nil {
+		return n, err
+	}
+	if n > 0 {
+		// TODO: perform notifications
+		sess.callRowHandlers(stmt.tbl, rows, n)
+	}
+	return n, err
 }
 
 // Querier returns the database querier used for this session.
@@ -519,4 +530,92 @@ func (sess *Session) Query(query string, args ...interface{}) (*sql.Rows, error)
 		return nil, err
 	}
 	return sess.querier.QueryContext(sess.context, expandedQuery, expandedArgs...)
+}
+
+// callRowHandlers calls the appropriate row handlers
+func (sess *Session) callRowHandlers(tbl *Table, rows interface{}, rowCount int) {
+	handlers := sess.rowHandlers[tbl.rowType]
+	if len(handlers) == 0 {
+		// nothing to do
+		return
+	}
+	rowsPtrValue := reflect.ValueOf(rows)
+	rowsValue := rowsPtrValue.Elem()
+	if rowsValue.Kind() == reflect.Slice {
+		rowsElemType := rowsValue.Type().Elem()
+		if rowsElemType.Kind() == reflect.Ptr {
+			// this is what we are after
+			for _, callback := range handlers {
+				callback(rowsValue)
+			}
+		}
+		// This is where the result set is an array of struct, not
+		// pointer to struct. It is not necessary possible to get
+		// a slice of pointers to row structs without a lot of
+		// copying. For now, the callbacks just do not get called,
+		// and we'll see if that is a problem.
+		return
+	}
+
+	if rowsValue.Kind() == reflect.Struct {
+		// A single row has been returned
+		sliceValue := reflect.MakeSlice(reflect.SliceOf(rowsPtrValue.Type()), 1, 1)
+		sliceElemValue := sliceValue.Index(0)
+		sliceElemValue.Set(rowsPtrValue)
+		for _, callback := range handlers {
+			callback(sliceValue)
+		}
+	}
+}
+
+// HandleRows supplies a callback function for the session to call when
+// one or more rows are retrieved during a select query. The callback must
+// have a function signature like the following:
+//  func(rows []*RowType)
+// Where RowType is a structure that represents a row. Whenever a select
+// query is called that returns one or more RowType instances, then this
+// callback will be called.
+//
+// These callback functions are useful for preloading foreign keys. See
+// the example.
+func (sess *Session) HandleRows(callback interface{}) {
+	if err := sess.handleRowsHelper(callback); err != nil {
+		panic(err)
+	}
+}
+
+func (sess *Session) handleRowsHelper(callback interface{}) error {
+	cbValue := reflect.ValueOf(callback)
+	if cbValue.Kind() != reflect.Func {
+		return errors.New("HandleRows: expect callback to be func([]*RowStruct)")
+	}
+	cbType := cbValue.Type()
+	if cbType.NumIn() != 1 || cbType.NumOut() != 0 {
+		return errors.New("HandleRows: expect callback to be func([]*RowStruct)")
+	}
+	inSliceType := cbType.In(0)
+	if inSliceType.Kind() != reflect.Slice {
+		return errors.New("HandleRows: expect callback to be func([]*RowStruct)")
+	}
+	inPtrType := inSliceType.Elem()
+	if inPtrType.Kind() != reflect.Ptr {
+		return errors.New("HandleRows: expect callback to be func([]*RowStruct)")
+	}
+	inStructType := inPtrType.Elem()
+	if inStructType.Kind() != reflect.Struct {
+		return errors.New("HandleRows: expect callback to be func([]*RowStruct)")
+	}
+
+	// checks finished: callback is the correct type
+
+	if sess.rowHandlers == nil {
+		sess.rowHandlers = make(map[reflect.Type][]func(reflect.Value))
+	}
+	handlers := sess.rowHandlers[inStructType]
+	handlers = append(handlers, func(rows reflect.Value) {
+		inValues := [1]reflect.Value{rows}
+		cbValue.Call(inValues[:])
+	})
+	sess.rowHandlers[inStructType] = handlers
+	return nil
 }

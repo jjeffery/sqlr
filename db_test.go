@@ -606,6 +606,140 @@ func TestQuery(t *testing.T) {
 	}
 }
 
+func TestHandleRows(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists widget;`)
+	defer func() {
+		mustExec(t, db, `drop table if exists widget`)
+	}()
+	mustExec(t, db, `
+		create table widget(
+			id integer not null primary key,
+			name text not null
+		);
+	`)
+
+	schema := NewSchema(ForDB(db))
+	sess := NewSession(context.Background(), db, schema)
+
+	type Widget struct {
+		ID   int    `sql:"primary key"`
+		Name string `sql:"natural key"`
+	}
+	type WidgetThunk func() (*Widget, error)
+
+	const rowCount = 6
+	var widget Widget
+
+	for i := 0; i < rowCount; i++ {
+		widget.ID = i
+		widget.Name = fmt.Sprintf("Widget %d", i)
+		if _, err := sess.Exec(widget, `insert widget`); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var dao struct {
+		get        func(id int) (*Widget, error)
+		load       func(id int) WidgetThunk
+		getMany    func(ids ...int) ([]*Widget, error)
+		selectRow  func(query string, args ...interface{}) (*Widget, error)
+		selectRows func(query string, args ...interface{}) ([]*Widget, error)
+	}
+
+	sess.MakeQuery(&dao.get, &dao.getMany, &dao.selectRow, &dao.selectRows, &dao.load)
+
+	var handledRows []*Widget
+	sess.HandleRows(func(rows []*Widget) {
+		handledRows = append(handledRows, rows...)
+	})
+
+	for i := 0; i < rowCount; i++ {
+		handledRows = nil
+		w, err := dao.get(i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(handledRows), 1; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+		if got, want := handledRows[0], w; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		ids := make([]int, rowCount)
+		for i := 0; i < rowCount; i++ {
+			ids[i] = i
+		}
+		handledRows = nil
+		widgets, err := dao.getMany(ids...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(handledRows), len(widgets); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+		for i, w := range widgets {
+			if got, want := handledRows[i], w; got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
+		}
+	}
+	{
+		handledRows = nil
+		widgets, err := dao.selectRows("select {} from widget order by id")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(handledRows), len(widgets); got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+		for i, w := range widgets {
+			if got, want := handledRows[i], w; got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
+		}
+	}
+
+	for i := 0; i < rowCount; i++ {
+		handledRows = nil
+		pattern := fmt.Sprintf("%%%d", i)
+		w, err := dao.selectRow(`select {} from widget where name like ?`, pattern)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(handledRows), 1; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+		if got, want := handledRows[0], w; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+
+	{
+		handledRows = nil
+		thunks := make([]WidgetThunk, rowCount)
+		for i := 0; i < rowCount; i++ {
+			thunks[i] = dao.load(i)
+		}
+
+		for i := 0; i < rowCount; i++ {
+			w, err := thunks[i]()
+			if err != nil {
+				t.Errorf("want=no error, got=%v", err)
+				continue
+			}
+			if got, want := handledRows[i], w; got != want {
+				t.Errorf("got=%v, want=%v", got, want)
+			}
+		}
+	}
+}
+
 func TestInsertRow_NoAutoIncr(t *testing.T) {
 	db := postgresDB(t)
 	defer db.Close()
