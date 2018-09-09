@@ -321,8 +321,7 @@ if err != nil {
 // ... now use the widget ...
 ```
 
-See the [Session.MakeQuery](https://godoc.org/github.com/jjeffery/sqlr/#Session.MakeQuery) and
-[Session.MustMakeQuery](https://godoc.org/github.com/jjeffery/sqlr/#Session.MustMakeQuery) functions
+See [Session.MakeQuery](https://godoc.org/github.com/jjeffery/sqlr/#Session.MakeQuery)
 in the [GoDoc](https://godoc.org/github.com/jjeffery/sqlr) for examples.
 
 ## Performance and Caching
