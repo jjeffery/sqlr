@@ -205,6 +205,7 @@ func (sess *Session) postgresInsertRow(row interface{}, tbl *Table, rowValue ref
 	if err != nil {
 		return tbl.wrapRowError(err, row, "cannot insert row")
 	}
+	defer rows.Close()
 	// expecting one row, one column
 	rows.Next()
 	var lastInsertID int64
