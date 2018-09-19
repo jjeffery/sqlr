@@ -302,19 +302,17 @@ func makeGetManyFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.V
 		return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
 			var err error
 			rowsPtrValue := reflect.New(reflect.SliceOf(reflect.PtrTo(tbl.RowType())))
-			if len(args) > 0 {
+			idsValue := args[0]
+			if idsValue.Len() > 0 {
 				pkColName := tbl.PrimaryKey()[0].Name()
 				query := fmt.Sprintf("select {} from %s where `%s` in (?)", tbl.Name(), pkColName)
-				queryArgs := make([]interface{}, len(args))
-				for i, arg := range args {
-					queryArgs[i] = arg.Interface()
-				}
-				_, err = sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
+				ids := idsValue.Interface()
+				_, err = sess.Select(rowsPtrValue.Interface(), query, ids)
 				if err != nil {
 					err = errors.Wrap(err, "cannot get rows").With(
 						"rowType", tbl.RowType(),
 						"query", query,
-						"args", queryArgs,
+						"args", ids,
 					)
 				}
 			}

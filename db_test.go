@@ -564,6 +564,18 @@ func TestQuery(t *testing.T) {
 		}
 	}
 
+	// empty getMany should return empty slice
+	{
+		var ids []int
+		widgets, err := dao.getMany(ids...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(widgets), 0; got != want {
+			t.Errorf("got=%v, want=%v", got, want)
+		}
+	}
+
 	{
 		widgets, err := dao.selectRows("select {} from widget order by id")
 		if err != nil {
