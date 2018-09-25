@@ -252,10 +252,8 @@ func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args
 				jc := newJSONCell(col.info.Field.Name, cellPtr)
 				jsonCells = append(jsonCells, jc)
 				scanValues[i] = jc.ScanValue()
-			} else if col.EmptyNull() {
-				scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 			} else {
-				scanValues[i] = cellPtr
+				scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 			}
 		}
 		err = sqlRows.Scan(scanValues...)
@@ -326,10 +324,8 @@ func (stmt *Stmt) selectOne(ctx context.Context, db Querier, dest interface{}, r
 			jc := newJSONCell(col.info.Field.Name, cellPtr)
 			jsonCells = append(jsonCells, jc)
 			scanValues[i] = jc.ScanValue()
-		} else if col.EmptyNull() {
-			scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 		} else {
-			scanValues[i] = cellPtr
+			scanValues[i] = newNullCell(col.info.Field.Name, cellValue, cellPtr)
 		}
 	}
 	err = rows.Scan(scanValues...)
