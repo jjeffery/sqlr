@@ -548,7 +548,9 @@ func (stmt *Stmt) getArgs(row interface{}, argv []interface{}) ([]interface{}, e
 			if input.col.JSON() {
 				// marshal field contents into JSON and pass as a byte array
 				valueRO := colVal.Interface()
-				if valueRO == nil {
+				if input.col.EmptyNull() && reflect.DeepEqual(valueRO, input.col.zeroValue) {
+					args = append(args, nil)
+				} else if valueRO == nil {
 					args = append(args, nil)
 				} else {
 					data, err := json.Marshal(valueRO)

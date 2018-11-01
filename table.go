@@ -100,6 +100,7 @@ func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 			json:          colInfo.Tag.JSON,
 			naturalKey:    colInfo.Tag.NaturalKey,
 			version:       colInfo.Tag.Version,
+			zeroValue:     reflect.Zero(colInfo.Field.Type).Interface(),
 		}
 
 		if hasColConfig {
@@ -281,6 +282,7 @@ type Column struct {
 	json          bool
 	naturalKey    bool
 	emptyNull     bool
+	zeroValue     interface{}
 
 	info *column.Info
 }

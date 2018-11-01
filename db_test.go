@@ -188,6 +188,64 @@ func TestJsonMarshaling(t *testing.T) {
 	}
 }
 
+func TestJsonNullMarshaling(t *testing.T) {
+	db := sqliteDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `
+		create table test_table(
+			id integer primary key,
+			keyvals text
+		)
+	`)
+	type KV struct {
+		Key   string
+		Value interface{}
+	}
+	type Row struct {
+		ID      int  `sql:"primary key autoincrement"`
+		Keyvals []KV `sql:"json null"`
+	}
+
+	row := Row{
+		ID:      1,
+		Keyvals: nil,
+	}
+
+	schema := NewSchema(ForDB(db))
+
+	if _, err := schema.Exec(db, &row, "insert into test_table({}) values({})"); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// check that the column is null
+	{
+		var keyvals sql.NullString
+		err := db.QueryRow("select keyvals from test_table where id = 1").Scan(&keyvals)
+		wantNoError(t, err)
+		if keyvals.Valid {
+			t.Fatalf("want=null, got=%q", keyvals.String)
+		}
+	}
+
+	{
+		var row2 Row
+		n, err := schema.Select(db, &row2, "select {} from test_table where {}", 1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if n != 1 {
+			t.Fatalf("expected one row, got %d", n)
+		}
+
+		expected := fmt.Sprintf("%+v", row)
+		actual := fmt.Sprintf("%+v", row2)
+		if expected != actual {
+			t.Fatalf("expected %v, got %v", expected, actual)
+		}
+	}
+}
+
 func TestRace(t *testing.T) {
 	db := postgresDB(t)
 	defer db.Close()
@@ -1239,4 +1297,12 @@ func sqliteDB(t *testing.T) *sql.DB {
 		t.Fatal("sql.Open:", err)
 	}
 	return db
+}
+
+func wantNoError(t *testing.T, err error, args ...interface{}) {
+	t.Helper()
+	if err != nil {
+		args = append(args, err)
+		t.Fatal(args...)
+	}
 }
