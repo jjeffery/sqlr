@@ -27,9 +27,35 @@ const (
 	PLACEHOLDER              // prepared statement placeholder
 )
 
+func (t Token) String() string {
+	switch t {
+	case ILLEGAL:
+		return "ILLEGAL"
+	case EOF:
+		return "EOF"
+	case WS:
+		return "WS"
+	case COMMENT:
+		return "COMMENT"
+	case IDENT:
+		return "IDENT"
+	case KEYWORD:
+		return "KEYWORD"
+	case LITERAL:
+		return "LITERAL"
+	case OP:
+		return "OP"
+	case PLACEHOLDER:
+		return "PLACEHOLDER"
+	default:
+		return fmt.Sprintf("Token-%d", t)
+	}
+}
+
 const (
-	eof       = rune(0)
-	operators = "%&()*+,-./:;<=>?^|{}"
+	eof                 = rune(0)
+	multiCharOperators  = "%&*+-/:<=>^|@!~#"
+	singleCharOperators = "(),;"
 )
 
 // Scanner is a simple lexical scanner for SQL statements.
@@ -99,7 +125,7 @@ func (s *Scanner) Scan() bool {
 			return s.scanComment("--")
 		}
 		s.unread(ch2)
-		return s.setToken(OP, runeToString(ch))
+		return s.scanOperator(ch)
 	}
 	if ch == '[' {
 		return s.scanDelimitedIdentifier('[', ']')
@@ -116,7 +142,7 @@ func (s *Scanner) Scan() bool {
 	if ch == '{' {
 		return s.scanDelimitedIdentifier('{', '}')
 	}
-	if strings.ContainsRune("NnXx", ch) {
+	if strings.ContainsRune("NnXxBb", ch) {
 		ch2 := s.read()
 		if ch2 == '\'' {
 			return s.scanQuote(ch, ch2)
@@ -138,19 +164,14 @@ func (s *Scanner) Scan() bool {
 		}
 		return s.setToken(OP, runeToString(ch))
 	}
-	if ch == '<' {
-		ch2 := s.read()
-		if ch2 == '>' {
-			return s.setToken(OP, "<>")
-		}
-		s.unread(ch2)
-		return s.setToken(OP, runeToString(ch))
-	}
 	if ch == '$' || ch == '?' {
 		return s.scanPlaceholder(ch)
 	}
-	if strings.ContainsRune(operators, ch) {
+	if strings.ContainsRune(singleCharOperators, ch) {
 		return s.setToken(OP, runeToString(ch))
+	}
+	if strings.ContainsRune(multiCharOperators, ch) {
+		return s.scanOperator(ch)
 	}
 
 	return s.setToken(ILLEGAL, runeToString(ch))
@@ -243,6 +264,22 @@ func (s *Scanner) scanIdentifier(startCh rune) bool {
 	return s.setToken(IDENT, lit)
 }
 
+func (s *Scanner) scanOperator(startCh rune) bool {
+	var buf bytes.Buffer
+	buf.WriteRune(startCh)
+	for {
+		if ch := s.read(); ch == eof {
+			break
+		} else if strings.ContainsRune(multiCharOperators, ch) {
+			buf.WriteRune(ch)
+		} else {
+			s.unread(ch)
+			break
+		}
+	}
+	return s.setToken(OP, buf.String())
+}
+
 func (s *Scanner) scanNumber(startCh rune) bool {
 	var buf bytes.Buffer
 
@@ -300,6 +337,16 @@ func (s *Scanner) scanQuote(startChs ...rune) bool {
 }
 
 func (s *Scanner) scanPlaceholder(startCh rune) bool {
+	if startCh == '?' {
+		// postgres has the following geometric operators
+		//  which look a bit like placeholders:
+		// ?- ?# ?| ?-| ?||
+		ch := s.read()
+		s.unread(ch)
+		if ch == '-' || ch == '#' || ch == '|' {
+			return s.scanOperator(startCh)
+		}
+	}
 	var buf bytes.Buffer
 	buf.WriteRune(startCh)
 	for {

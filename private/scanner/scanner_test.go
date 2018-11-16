@@ -10,12 +10,45 @@ func TestScan(t *testing.T) {
 		token Token
 		lit   string
 	}
+	operatorList := func(ops ...string) []tokenLit {
+		var list []tokenLit
+		list = append(list, tokenLit{WS, " "})
+		for _, op := range ops {
+			list = append(list, tokenLit{OP, op})
+			list = append(list, tokenLit{WS, " "})
+		}
+		return list
+	}
 	testCases := []struct {
 		sql                    string
 		tokens                 []tokenLit
 		ignoreWhiteSpaceTokens []tokenLit
 		errText                string
 	}{
+		{
+			sql: `select * from tblname where some_column @@ to_tsquery('some & text')`,
+			tokens: []tokenLit{
+				{KEYWORD, "select"},
+				{WS, " "},
+				{OP, "*"},
+				{WS, " "},
+				{KEYWORD, "from"},
+				{WS, " "},
+				{IDENT, "tblname"},
+				{WS, " "},
+				{IDENT, "where"},
+				{WS, " "},
+				{IDENT, "some_column"},
+				{WS, " "},
+				{OP, "@@"},
+				{WS, " "},
+				{IDENT, "to_tsquery"},
+				{OP, "("},
+				{LITERAL, "'some & text'"},
+				{OP, ")"},
+				{EOF, ""},
+			},
+		},
 		{
 			sql: "select * from [from] t where t.id = 'one'",
 			tokens: []tokenLit{
@@ -163,15 +196,6 @@ func TestScan(t *testing.T) {
 				{EOF, ""},
 			},
 		},
-		{ // not-equals, gt, lt operators
-			sql: "<<>>",
-			tokens: []tokenLit{
-				{OP, "<"},
-				{OP, "<>"},
-				{OP, ">"},
-				{EOF, ""},
-			},
-		},
 		{ // illegal token
 			sql: "\x03",
 			tokens: []tokenLit{
@@ -268,6 +292,47 @@ func TestScan(t *testing.T) {
 				{PLACEHOLDER, "$1"},
 				{EOF, ""},
 			},
+		},
+		{ // postgres comparison operators
+			sql:    ` < > <= >= = <> != `,
+			tokens: operatorList("<", ">", "<=", ">=", "=", "<>", "!="),
+		},
+		{ // postgres mathematical operators
+			sql:    ` + - * / % ^ |/ ||/ ! !! @ & | # ~ << >> `,
+			tokens: operatorList("+", "-", "*", "/", "%", "^", "|/", "||/", "!", "!!", "@", "&", "|", "#", "~", "<<", ">>"),
+		},
+		{ // postgres bit string
+			sql: `B'10001' || B'011'`,
+			tokens: []tokenLit{
+				{LITERAL, "B'10001'"},
+				{WS, " "},
+				{OP, "||"},
+				{WS, " "},
+				{LITERAL, "B'011'"},
+			},
+		},
+		{ // postgres geometric operators
+			sql: ` @-@ @@ ## <-> && &< &> <<| |>> &<| |&> <^ >^ ?- ?# ?| ?-| ?|| @> <@ ~= `,
+			tokens: operatorList(
+				"@-@", "@@", "##", "<->", "&&", "&<", "&>", "<<|", "|>>", "&<|", "|&>",
+				"<^", ">^", "?-", "?#", "?|", "?-|", "?||", "@>", "<@", "~=",
+			),
+		},
+		{ // postgres network comparison
+			sql:    ` <<= >>= ~ `,
+			tokens: operatorList("<<=", ">>=", "~"),
+		},
+		{ // postgres text search
+			sql:    ` @@ @@@ || && !! @> <@ `,
+			tokens: operatorList("@@", "@@@", "||", "&&", "!!", "@>", "<@"),
+		},
+		{ // postgres json operators
+			sql:    ` -> ->> #> #>> `,
+			tokens: operatorList("->", "->>", "#>", "#>>"),
+		},
+		{ // range operators (that have not already been tested elsewhere
+			sql:    ` -|- `,
+			tokens: operatorList("-|-"),
 		},
 	}
 
