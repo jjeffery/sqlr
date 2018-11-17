@@ -87,8 +87,8 @@ func TestSelectStmt1Errors(t *testing.T) {
 		},
 		{
 			row:        Row{},
-			sql:        "select {dodgy!} from xx where {}",
-			errPrepare: `cannot expand "dodgy!" in "select columns" clause: unrecognised input near "!"`,
+			sql:        "select {dodgy¥} from xx where {}",
+			errPrepare: `cannot expand "dodgy¥" in "select columns" clause: unrecognised input near "¥"`,
 		},
 	}
 
