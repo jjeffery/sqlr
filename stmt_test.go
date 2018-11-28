@@ -75,8 +75,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "insert into tbl({all}) values({})",
 			queries: map[string]string{
-				"mysql":    "insert into tbl(`id`,`name`) values(?,?)",
-				"postgres": `insert into tbl("id","name") values($1,$2)`,
+				"mysql":    "insert into tbl(`id`, `name`) values(?, ?)",
+				"postgres": `insert into tbl("id", "name") values($1, $2)`,
 			},
 		},
 		{
@@ -86,8 +86,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "insert tbl",
 			queries: map[string]string{
-				"mysql":    "insert into tbl(`id`,`name`) values(?,?)",
-				"postgres": `insert into tbl("id","name") values($1,$2)`,
+				"mysql":    "insert into tbl(`id`, `name`) values(?, ?)",
+				"postgres": `insert into tbl("id", "name") values($1, $2)`,
 			},
 		},
 		{
@@ -97,8 +97,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "update tbl set {} where {}",
 			queries: map[string]string{
-				"mysql":    "update tbl set `name`=? where `id`=?",
-				"postgres": `update tbl set "name"=$1 where "id"=$2`,
+				"mysql":    "update tbl set `name` = ? where `id` = ?",
+				"postgres": `update tbl set "name" = $1 where "id" = $2`,
 			},
 		},
 		{
@@ -108,8 +108,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "update tbl",
 			queries: map[string]string{
-				"mysql":    "update tbl set `name`=? where `id`=?",
-				"postgres": `update tbl set "name"=$1 where "id"=$2`,
+				"mysql":    "update tbl set `name` = ? where `id` = ?",
+				"postgres": `update tbl set "name" = $1 where "id" = $2`,
 			},
 		},
 		{
@@ -121,8 +121,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "update [xxx]\nset\n{}\nwhere {}",
 			queries: map[string]string{
-				"mysql":    "update `xxx` set `name`=?,`count`=? where `id`=? and `hash`=?",
-				"postgres": `update "xxx" set "name"=$1,"count"=$2 where "id"=$3 and "hash"=$4`,
+				"mysql":    "update `xxx` set `name` = ?, `count` = ? where `id` = ? and `hash` = ?",
+				"postgres": `update "xxx" set "name" = $1, "count" = $2 where "id" = $3 and "hash" = $4`,
 			},
 		},
 		{
@@ -132,8 +132,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "delete from tbl where {}",
 			queries: map[string]string{
-				"mysql":    "delete from tbl where `id`=?",
-				"postgres": `delete from tbl where "id"=$1`,
+				"mysql":    "delete from tbl where `id` = ?",
+				"postgres": `delete from tbl where "id" = $1`,
 			},
 		},
 		{
@@ -145,8 +145,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "delete from `xxx`\n-- this is a comment\nwhere {}",
 			queries: map[string]string{
-				"mysql":    "delete from `xxx` where `id`=? and `hash`=?",
-				"postgres": `delete from "xxx" where "id"=$1 and "hash"=$2`,
+				"mysql":    "delete from `xxx` where `id` = ? and `hash` = ?",
+				"postgres": `delete from "xxx" where "id" = $1 and "hash" = $2`,
 			},
 		},
 		{
@@ -156,8 +156,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "select {} from tbl where {}",
 			queries: map[string]string{
-				"mysql":    "select `id`,`name` from tbl where `id`=?",
-				"postgres": `select "id","name" from tbl where "id"=$1`,
+				"mysql":    "select `id`, `name` from tbl where `id` = ?",
+				"postgres": `select "id", "name" from tbl where "id" = $1`,
 			},
 		},
 		{
@@ -167,8 +167,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "select {alias t} from tbl t where {pk,alias t}",
 			queries: map[string]string{
-				"mysql":    "select t.`id`,t.`name` from tbl t where t.`id`=?",
-				"postgres": `select t."id",t."name" from tbl t where t."id"=$1`,
+				"mysql":    "select t.`id`, t.`name` from tbl t where t.`id` = ?",
+				"postgres": `select t."id", t."name" from tbl t where t."id" = $1`,
 			},
 		},
 		{
@@ -180,8 +180,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "select {alias t} from tbl t where {pk,alias t}",
 			queries: map[string]string{
-				"mysql":    "select t.`id`,t.`home_postcode` from tbl t where t.`id`=?",
-				"postgres": `select t."id",t."home_postcode" from tbl t where t."id"=$1`,
+				"mysql":    "select t.`id`, t.`home_postcode` from tbl t where t.`id` = ?",
+				"postgres": `select t."id", t."home_postcode" from tbl t where t."id" = $1`,
 			},
 		},
 		{
@@ -193,8 +193,8 @@ func TestPrepare(t *testing.T) {
 			}{},
 			sql: "select {} from `xxx`\nwhere {}",
 			queries: map[string]string{
-				"mysql":    "select `id`,`hash`,`name`,`count` from `xxx` where `id`=? and `hash`=?",
-				"postgres": `select "id","hash","name","count" from "xxx" where "id"=$1 and "hash"=$2`,
+				"mysql":    "select `id`, `hash`, `name`, `count` from `xxx` where `id` = ? and `hash` = ?",
+				"postgres": `select "id", "hash", "name", "count" from "xxx" where "id" = $1 and "hash" = $2`,
 			},
 		},
 	}

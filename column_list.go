@@ -90,7 +90,7 @@ func (cols columnList) String(dialect Dialect, counter func() int) string {
 				clauseSelectWhere) {
 				buf.WriteString(" and ")
 			} else {
-				buf.WriteRune(',')
+				buf.WriteString(", ")
 			}
 		}
 		switch cols.clause {
@@ -110,7 +110,7 @@ func (cols columnList) String(dialect Dialect, counter func() int) string {
 				buf.WriteRune('.')
 			}
 			buf.WriteString(quotedColumnName(col))
-			buf.WriteRune('=')
+			buf.WriteString(" = ")
 			buf.WriteString(placeholder())
 		}
 	}

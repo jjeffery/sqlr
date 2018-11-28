@@ -45,9 +45,9 @@ func ExampleSchema_Prepare() {
 	}
 
 	// Output:
-	// insert into users([GivenName],[FamilyName]) values(?,?)
-	// insert into users(`givenname`,`familyname`) values(?,?)
-	// insert into users("given_name","family_name") values($1,$2)
+	// insert into users([GivenName], [FamilyName]) values(?, ?)
+	// insert into users(`givenname`, `familyname`) values(?, ?)
+	// insert into users("given_name", "family_name") values($1, $2)
 }
 
 func ExampleStmt_Exec_insert() {
@@ -242,8 +242,8 @@ func ExampleWithIdentifier() {
 	fmt.Println(postgresStmt)
 
 	// Output:
-	// select [UserId],[Name] from [User] where UserId = ?
-	// select "user_id","name" from users where user_id = $1
+	// select [UserId], [Name] from [User] where UserId = ?
+	// select "user_id", "name" from users where user_id = $1
 }
 
 /**** obsolete
