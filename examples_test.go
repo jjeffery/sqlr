@@ -480,7 +480,7 @@ func ExampleSession_Row() {
 
 	// ExampleRow is an example of a row structure.
 	type ExampleRow struct {
-		ID    int `sql:"primary key" table:"example_rows"`
+		ID    int `sql:"primary key"`
 		Name  string
 		Value int
 	}
@@ -491,20 +491,19 @@ func ExampleSession_Row() {
 		Value: 10,
 	}
 
-	// Perform an insert
-	err := session.Row(row).Insert()
+	// Insert a row
+	result, err := session.Row(row).Exec("insert into examples({}) values({})")
 	checkError(err)
-
-	// Update the row
-	row.Value = 20
-	n, err := session.Row(row).Update()
+	count, err := result.RowsAffected()
 	checkError(err)
-	log.Printf("row updated, count=%d", n)
+	log.Printf("row inserted, count=%d", count)
 
 	// Delete the row
-	n, err = session.Row(row).Delete()
+	result, err = session.Row(row).Exec("delete from examples where {}")
 	checkError(err)
-	log.Printf("row deleted, count=%d", n)
+	count, err = result.RowsAffected()
+	checkError(err)
+	log.Printf("row deleted, count=%d", count)
 }
 
 func ExampleSessionRow_Exec() {
