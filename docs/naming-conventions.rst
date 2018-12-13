@@ -19,9 +19,11 @@ Preparing a new naming convention is possible, by implementing
 the `sqlr.NamingConvention <https://godoc.org/github.com/jjeffery/sqlr#NamingConvention>`_
 interface.
 
-The naming convention is specified when creating the schema::
+The naming convention can be specified when creating the schema::
 
 	schema := sqlr.NewSchema(
 		sqlr.WithDialect(sqlr.Postgres),
 		sqlr.WithNamingConvention(sqlr.SnakeCase),
 	)
+
+If the naming convention is not specified, it defaults to snake case.

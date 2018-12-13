@@ -72,19 +72,21 @@ If your program makes use of multiple database connections with different
 types of server, the best thing to do is to specify a ``sqlr.Schema`` 
 for each of the databases::
 
-  var postgres = sqlr.NewSchema(
-    sqlr.WithDialect(sqlr.Postgres),
+  var (
+    pgSchema = sqlr.NewSchema(
+      sqlr.WithDialect(sqlr.Postgres),
+    )
+
+    mysqlSchema = sqlr.NewSchema(
+      sqlr.WithDialect(sqlr.MySQL),
+    )
   )
 
-  var mysql = sqlr.NewSchema(
-    sqlr.WithDialect(sqlr.MySQL),
-  )
+When the time comes to create sessions, use the appropriate schema::
 
-When the time comes to create statements, use the appropriate schema::
+  // create a session for the postgres database
+  pgSession := sqlr.NewSession(ctx, pgDB, pgSchema)
 
-  // insert widgets in postgres database
-  err = postgres.Insert(db1, &widget, "widgets")
-
-  // update statement for gadgets in mysql database
-  _, err = mysql.Update(db2, &gadget, "gadgets")
+  // create a session for the mysql database
+  mysqlSession := sqlr.NewSession(ctx, mysqlDB, mysqlSchema)
 
