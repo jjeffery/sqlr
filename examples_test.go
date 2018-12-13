@@ -352,6 +352,10 @@ func beginTransaction() *sql.Tx {
 	return nil
 }
 
+func newSession() *Session {
+	return nil
+}
+
 func ExampleMustCreateSchema() {
 	type UserRow struct {
 		ID   int64 `sql:"primary key"`
@@ -458,4 +462,90 @@ func ExampleColumnsConfig() {
 
 func doSomethingWith(v interface{}) {
 
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ExampleSession_Row() {
+	var (
+		session *Session
+	)
+
+	// start a session
+	session = newSession()
+
+	// ExampleRow is an example of a row structure.
+	type ExampleRow struct {
+		ID    int `sql:"primary key" table:"example_rows"`
+		Name  string
+		Value int
+	}
+
+	var row = &ExampleRow{
+		ID:    1,
+		Name:  "first row",
+		Value: 10,
+	}
+
+	// Perform an insert
+	err := session.Row(row).Insert()
+	checkError(err)
+
+	// Update the row
+	row.Value = 20
+	n, err := session.Row(row).Update()
+	checkError(err)
+	log.Printf("row updated, count=%d", n)
+
+	// Delete the row
+	n, err = session.Row(row).Delete()
+	checkError(err)
+	log.Printf("row deleted, count=%d", n)
+}
+
+func ExampleSessionRow_Exec() {
+	var (
+		session *Session
+	)
+
+	// start a session
+	session = newSession()
+
+	// ExampleRow is an example of a row structure.
+	type ExampleRow struct {
+		ID    int `sql:"primary key"`
+		Name  string
+		Value int
+	}
+
+	var row = &ExampleRow{
+		ID:    1,
+		Name:  "first row",
+		Value: 10,
+	}
+
+	// Performs an insert, bypassing any of the cleverness of the
+	// Insert() method.
+	//
+	// SQL looks something like:
+	//  insert into the_table("id", "name", "value") values ($1, $2, $3)
+	// Arguments are
+	//  [ 1, "first row", 10 ]
+	n, err := session.Row(row).Exec("insert into the_table({}) values({})")
+	checkError(err)
+	log.Printf("row inserted, count=%d", n)
+
+	// Perform an update with an additional test
+	//
+	// SQL looks like:
+	//  update the_table set name = $1, value = $2 where id =$3 and value = $4
+	// Arguments are:
+	//  [ "first row", 10, 1, 10 ]
+	n, err = session.Row(row).Exec("update the_table set {} where {} and value > ?", 10)
+	checkError(err)
+	log.Printf("row inserted, count=%d", n)
 }

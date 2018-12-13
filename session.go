@@ -66,11 +66,16 @@ func (sess *Session) Close() error {
 	return nil
 }
 
-// Exec executes a query on a row without returning any rows. The args are for any placeholder parameters in the query.
+// Exec executes a query without returning any rows. The args are for any placeholder parameters in the query.
+func (sess *Session) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return sess.execForRow(&struct{}{}, query, args...)
+}
+
+// execForRow executes a query on a row without returning any rows. The args are for any placeholder parameters in the query.
 //
 // Exec is a general-purpose row-based query function. For simple insert and update operations, consider
 // using the InsertRow and UpdateRow methods respectively.
-func (sess *Session) Exec(row interface{}, query string, args ...interface{}) (sql.Result, error) {
+func (sess *Session) execForRow(row interface{}, query string, args ...interface{}) (sql.Result, error) {
 	stmt, err := sess.schema.Prepare(row, query)
 	if err != nil {
 		return nil, err
@@ -620,3 +625,47 @@ func (sess *Session) handleRowsHelper(callback interface{}) error {
 	sess.rowHandlers[inStructType] = handlers
 	return nil
 }
+
+// SessionRow is is used to perform queries that apply to single row.
+type SessionRow struct {
+	Session *Session
+	Row     interface{}
+}
+
+// Row returns a session row, which is then used to call
+// Exec, Insert, etc.
+func (sess *Session) Row(row interface{}) *SessionRow {
+	return &SessionRow{
+		Session: sess,
+		Row:     row,
+	}
+}
+
+// Exec executes a query using the row as parameters to the query.
+func (row *SessionRow) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return row.Session.execForRow(row.Row, query, args...)
+}
+
+/**** TODO(jpj): decide whether we want to include these methods.
+	We want the Exec method because it is more consistent to have
+	every Exec() method accept the same arguments (query, args).
+	There is no real need for these methods, however.
+	For now keep the API smaller by leaving them out, and add them
+	if there is a good reason in the future.
+
+// Insert inserts the row into the database.
+func (row *SessionRow) Insert() error {
+	return row.Session.InsertRow(row.Row)
+}
+
+// Update updates the row in the database.
+func (row *SessionRow) Update() (int, error) {
+	return row.Session.UpdateRow(row.Row)
+}
+
+// Delete deletes the row from the database.
+func (row *SessionRow) Delete() (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+****/

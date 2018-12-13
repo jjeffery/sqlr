@@ -578,7 +578,7 @@ func TestQuery(t *testing.T) {
 	for i := 0; i < rowCount; i++ {
 		widget.ID = i
 		widget.Name = fmt.Sprintf("Widget %d", i)
-		if _, err := sess.Exec(widget, `insert widget`); err != nil {
+		if _, err := sess.Row(widget).Exec(`insert widget`); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -706,7 +706,7 @@ func TestHandleRows(t *testing.T) {
 	for i := 0; i < rowCount; i++ {
 		widget.ID = i
 		widget.Name = fmt.Sprintf("Widget %d", i)
-		if _, err := sess.Exec(widget, `insert widget`); err != nil {
+		if _, err := sess.Row(widget).Exec(`insert widget`); err != nil {
 			t.Fatal(err)
 		}
 	}
