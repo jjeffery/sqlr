@@ -1271,6 +1271,74 @@ func TestUpdateRow_Version_UpdatedAt(t *testing.T) {
 	}
 }
 
+func TestTableName(t *testing.T) {
+	type NamedRow struct {
+		ID   int
+		Name string
+	}
+
+	type StructTagRow struct {
+		ID   int `table:"table_name"`
+		Name string
+	}
+
+	tests := []struct {
+		tests  string
+		schema *Schema
+		row    interface{}
+		want   string
+	}{
+		{
+			tests:  "anon class with struct tag",
+			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			row: struct {
+				ID   int `sql:"primary key" table:"table_name_in_struct_tag"`
+				Name string
+			}{},
+			want: "table_name_in_struct_tag",
+		},
+		{
+			tests:  "named type, no config or struct tag",
+			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			row:    &NamedRow{},
+			want:   "named_row",
+		},
+		{
+			tests:  "named type with struct tag",
+			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			row:    &StructTagRow{},
+			want:   "table_name",
+		},
+		{
+			tests: "config overrides named type",
+			schema: MustCreateSchema(
+				WithTables(TablesConfig{
+					(*NamedRow)(nil): TableConfig{TableName: "override_name"},
+				}),
+			),
+			row:  &NamedRow{},
+			want: "override_name",
+		},
+		{
+			tests: "config overrides struct tag",
+			schema: MustCreateSchema(
+				WithTables(TablesConfig{
+					(*StructTagRow)(nil): TableConfig{TableName: "override_name"},
+				}),
+			),
+			row:  &StructTagRow{},
+			want: "override_name",
+		},
+	}
+
+	for tn, tt := range tests {
+		tbl := tt.schema.TableFor(tt.row)
+		if got, want := tbl.Name(), tt.want; got != want {
+			t.Fatalf("%d: got=%q want=%q", tn, got, want)
+		}
+	}
+}
+
 // mustExec performs an SQL command, which must succeed or the test stops
 func mustExec(t *testing.T, db *sql.DB, query string) {
 	t.Helper()

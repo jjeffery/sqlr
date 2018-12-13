@@ -47,35 +47,41 @@ func getRowType(row interface{}) (reflect.Type, error) {
 	return rowType, nil
 }
 
-// newTable returns a new Table value for the row type. If cfg is non-nil,
-// then it must have already been checked for any inconsistencies.
-func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
-	columnNamer := schema.columnNamer()
-
-	var tableName string
+// getTableName returns the table name for the row type.
+func getTableName(schema *Schema, rowType reflect.Type, cfg *TableConfig) string {
 	if cfg != nil && cfg.TableName != "" {
-		tableName = cfg.TableName
-	} else if rowTypeName := rowType.Name(); rowTypeName != "" {
+		return cfg.TableName
+	}
+
+	// not specified in the config, so look for the first field
+	// in the struct with a "table" tag.
+	for _, colInfo := range column.ListForType(rowType) {
+		if tableName, ok := colInfo.Field.Tag.Lookup("table"); ok {
+			return tableName
+		}
+	}
+
+	// try to work out the name based on the naming convention
+	if rowTypeName := rowType.Name(); rowTypeName != "" {
 		convention := schema.convention
 		if convention == nil {
 			convention = defaultNamingConvention
 		}
-		tableName = convention.TableName(rowTypeName)
-	} else {
-		// TODO(jpj): this will happen for anonymous types.
-		// Need a mechanism to specify table name using struct tags.
-		// eg
-		//  TableName sqlr.Name `sql:"table_name_here"`
-		//
-		// or
-		//  ID int64 `sql:"primary key" table:"table_name_here"`
-		tableName = "__unknown_table_name__"
+		return convention.TableName(rowTypeName)
 	}
 
+	// anonymous type: table name cannot be determined
+	return "__unknown_table_name__"
+}
+
+// newTable returns a new Table value for the row type. If cfg is non-nil,
+// then it must have already been checked for any inconsistencies.
+func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
+	columnNamer := schema.columnNamer()
 	tbl := &Table{
 		schema:    schema,
 		rowType:   rowType,
-		tableName: tableName,
+		tableName: getTableName(schema, rowType, cfg),
 	}
 
 	for _, colInfo := range column.ListForType(rowType) {
@@ -136,7 +142,7 @@ func newTable(schema *Schema, rowType reflect.Type, cfg *TableConfig) *Table {
 		if col.version {
 			tbl.version = col
 		}
-		// TODO(jpj): should we have another way to define these columns
+		// TODO(jpj): we should have another way to define these columns
 		// apart from their field names.
 		if col.info.FieldNames == "CreatedAt" {
 			tbl.createdAt = col
