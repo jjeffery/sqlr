@@ -357,6 +357,7 @@ func TestExecRowStmtErrors(t *testing.T) {
 }
 
 func TestInvalidStmts(t *testing.T) {
+	ctx := context.Background()
 	type Row struct {
 		ID     int64 `sql:"primary key"`
 		Name   string
@@ -366,47 +367,50 @@ func TestInvalidStmts(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
 	schema := NewSchema(ForDB(db))
+	sess := NewSession(ctx, db, schema)
+	defer sess.Close()
+
 	var row Row
 	var notRow int
 
 	tests := []struct {
-		fn   func() (int, error)
+		fn   func() (interface{}, error)
 		want string
 	}{
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &notRow, "insert into rows({}) values({})") },
+			fn:   func() (interface{}, error) { return sess.Row(&notRow).Exec("insert into rows({}) values({})") },
 			want: `expected row type to be a struct, found int`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &row, "insert into xyz values({})") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("insert into xyz values({})") },
 			want: `cannot expand "insert values" clause because "insert columns" clause is missing`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &row, "insert into xyz({}) values({pk})") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("insert into xyz({}) values({pk})") },
 			want: `columns for "insert values" clause must match the "insert columns" clause`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &row, "update {} this is not valid SQL") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("update {} this is not valid SQL") },
 			want: `cannot expand "{}" in "update table" clause`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &row, "update rows set {} where {} and number=?") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("update rows set {} where {} and number=?") },
 			want: `expected arg count=1, actual=0`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Exec(db, &row, "delete from rows where {}") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("delete from rows where {}") },
 			want: `no such table: rows`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Select(db, &row, "select {alias} from rows") },
+			fn:   func() (interface{}, error) { return sess.Row(&row).Exec("select {alias} from rows") },
 			want: `cannot expand "alias" in "select columns" clause: missing ident after 'alias'`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Select(db, &row, "select {'col1} from rows") },
+			fn:   func() (interface{}, error) { return sess.Select(&row, "select {'col1} from rows") },
 			want: `cannot expand "'col1" in "select columns" clause: unrecognised input near "'col1"`,
 		},
 		{
-			fn:   func() (int, error) { return schema.Select(db, &notRow, "select {} from rows") },
+			fn:   func() (interface{}, error) { return sess.Select(&notRow, "select {} from rows") },
 			want: `expected row type to be a struct, found int`,
 		},
 	}

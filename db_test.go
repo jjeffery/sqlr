@@ -14,13 +14,11 @@ import (
 )
 
 func TestDB1(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		t.Fatal("sql.Open:", err)
-	}
+	ctx := context.Background()
+	db := sqliteDB(t)
 	defer db.Close()
 
-	_, err = db.Exec(`
+	mustExec(t, db, `
 		create table test_table(
 			id integer primary key autoincrement,
 			string_column text,
@@ -34,6 +32,8 @@ func TestDB1(t *testing.T) {
 	}
 
 	schema := NewSchema(ForDB(db))
+	sess := NewSession(ctx, db, schema)
+	defer sess.Close()
 
 	// insert three rows, IDs are automatically generated (1, 2, 3)
 	for i, s := range []string{"AAAA", "BBBB", "CCCC"} {
@@ -41,7 +41,7 @@ func TestDB1(t *testing.T) {
 			String: s,
 			Number: i,
 		}
-		_, err = schema.Exec(db, &row, `insert into test_table({}) values({})`)
+		_, err := sess.Row(&row).Exec(`insert into test_table({}) values({})`)
 		if err != nil {
 			t.Fatal("insert: ", err)
 		}
@@ -49,7 +49,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := schema.Select(db, &rows, "select {} from test_table order by {}")
+		n, err := sess.Select(&rows, "select {} from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -60,7 +60,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var rows []Row
-		n, err := schema.Select(db, &rows, "select id, int_column, string_column from test_table order by {}")
+		n, err := sess.Select(&rows, "select id, int_column, string_column from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -71,7 +71,7 @@ func TestDB1(t *testing.T) {
 
 	{
 		var row Row
-		n, err := schema.Select(db, &row, "select {} from test_table order by {}")
+		n, err := sess.Select(&row, "select {} from test_table order by {}")
 		if err != nil {
 			t.Fatal("sqlrow.Select:", err)
 		}
@@ -81,18 +81,20 @@ func TestDB1(t *testing.T) {
 		if want := "AAAA"; row.String != want {
 			t.Errorf("want %q, got %q", want, row.String)
 		}
-		n, err = schema.Exec(db, &row, "update test_table set {} where {} and int_column = ?", 0)
+		result, err := sess.Row(&row).Exec("update test_table set {} where {} and int_column = ?", 0)
 		if err != nil {
 			t.Fatal("sqlrow.Update:", err)
 		}
-		if want := 1; n != want {
-			t.Errorf("expected %d, got %d", want, n)
+		count, err := result.RowsAffected()
+		wantNoError(t, err)
+		if got, want := count, int64(1); got != want {
+			t.Errorf("got=%d, want=%d", got, want)
 		}
 	}
 
 	{
 		var rows []Row
-		n, err := schema.Select(db, &rows, "select {} from test_table where string_column in (?)", []string{
+		n, err := sess.Select(&rows, "select {} from test_table where string_column in (?)", []string{
 			"AAAA",
 			"BBBB",
 			"CCCC",
@@ -118,6 +120,7 @@ func TestDB1(t *testing.T) {
 }
 
 func TestJsonMarshaling(t *testing.T) {
+	ctx := context.Background()
 	db := sqliteDB(t)
 	defer db.Close()
 
@@ -133,7 +136,7 @@ func TestJsonMarshaling(t *testing.T) {
 		Value interface{}
 	}
 	type Row struct {
-		ID      int `sql:"primary key autoincrement"`
+		ID      int `sql:"primary key autoincrement" table:"test_table"`
 		Name    string
 		Keyvals []KV `sql:"json"`
 	}
@@ -147,31 +150,27 @@ func TestJsonMarshaling(t *testing.T) {
 	}
 
 	schema := NewSchema(ForDB(db))
+	sess := NewSession(ctx, db, schema)
 
-	if _, err := schema.Exec(db, &row, "insert into test_table({}) values({})"); err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
+	err := sess.InsertRow(&row)
+	wantNoError(t, err)
 
 	{
 		var row2 Row
-		n, err := schema.Select(db, &row2, "select {} from test_table where {}", 1)
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if n != 1 {
-			t.Fatalf("expected one row, got %d", n)
+		n, err := sess.Select(&row2, "select {} from test_table where {}", 1)
+		wantNoError(t, err)
+		if got, want := n, 1; got != want {
+			t.Fatalf("got=%d, want=%d", got, want)
 		}
 
-		expected := fmt.Sprintf("%+v", row)
-		actual := fmt.Sprintf("%+v", row2)
-		if expected != actual {
-			t.Fatalf("expected %v, got %v", expected, actual)
+		if got, want := fmt.Sprintf("%+v", row2), fmt.Sprintf("%+v", row); got != want {
+			t.Fatalf("got=%s, want=%s", got, want)
 		}
 	}
 
 	{
 		var rows []Row
-		n, err := schema.Select(db, &rows, "select {} from test_table where {}", 1)
+		n, err := sess.Select(&rows, "select {} from test_table where {}", 1)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -189,6 +188,7 @@ func TestJsonMarshaling(t *testing.T) {
 }
 
 func TestJsonNullMarshaling(t *testing.T) {
+	ctx := context.Background()
 	db := sqliteDB(t)
 	defer db.Close()
 
@@ -213,8 +213,9 @@ func TestJsonNullMarshaling(t *testing.T) {
 	}
 
 	schema := NewSchema(ForDB(db))
+	sess := NewSession(ctx, db, schema)
 
-	if _, err := schema.Exec(db, &row, "insert into test_table({}) values({})"); err != nil {
+	if _, err := sess.Row(&row).Exec("insert into test_table({}) values({})"); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
@@ -230,7 +231,7 @@ func TestJsonNullMarshaling(t *testing.T) {
 
 	{
 		var row2 Row
-		n, err := schema.Select(db, &row2, "select {} from test_table where {}", 1)
+		n, err := sess.Select(&row2, "select {} from test_table where {}", 1)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -247,6 +248,7 @@ func TestJsonNullMarshaling(t *testing.T) {
 }
 
 func TestRace(t *testing.T) {
+	ctx := context.Background()
 	db := postgresDB(t)
 	defer db.Close()
 
@@ -274,19 +276,20 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+			sess := NewSession(ctx, db, schema)
 			for j := 0; j < loops; j++ {
 				id := i*loops + j
 				row := Row1{
 					ID:   id,
 					Name: fmt.Sprintf("Row #%d", id),
 				}
-				if _, err := schema.Exec(db, row, "insert into t1({}) values({})"); err != nil {
+				if _, err := sess.Row(row).Exec("insert into t1({}) values({})"); err != nil {
 					t.Errorf("cannot insert row %d: %v", id, err)
 					return
 				}
 
 				var rows []Row1
-				if _, err := schema.Select(db, &rows, "select {} from t1 order by id desc limit ?", id); err != nil {
+				if _, err := sess.Select(&rows, "select {} from t1 order by id desc limit ?", id); err != nil {
 					t.Errorf("%d: cannot query rows: %v", id, err)
 					return
 				}
@@ -309,6 +312,7 @@ func TestRace(t *testing.T) {
 }
 
 func TestNullable(t *testing.T) {
+	ctx := context.Background()
 	db := postgresDB(t)
 	defer db.Close()
 
@@ -341,6 +345,7 @@ func TestNullable(t *testing.T) {
 	`)
 
 	schema := NewSchema(ForDB(db))
+	sess := NewSession(ctx, db, schema)
 
 	type Row struct {
 		Id  int       `sql:"primary key"`
@@ -366,7 +371,7 @@ func TestNullable(t *testing.T) {
 	}
 
 	var row Row
-	n, err := schema.Select(db, &row, "select {} from nullable_types where id = $1", 1)
+	n, err := sess.Select(&row, "select {} from nullable_types where id = $1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +429,7 @@ func TestNullable(t *testing.T) {
 
 	row2 := row
 	row2.Id = 2
-	if _, err := schema.Exec(db, row2, "insert into nullable_types({}) values({})"); err != nil {
+	if _, err := sess.Row(row2).Exec("insert into nullable_types({}) values({})"); err != nil {
 		t.Fatal(err)
 	}
 

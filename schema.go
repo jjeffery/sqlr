@@ -219,22 +219,6 @@ func (s *Schema) Select(db Querier, rows interface{}, sql string, args ...interf
 	return stmt.Select(context.TODO(), db, rows, args...)
 }
 
-// Exec executes the query with the given row and optional arguments.
-// It returns the number of rows affected by the statement.
-//
-// Deprecated: use Session.Exec instead.
-//
-// If the statement is an INSERT statement and the row has an auto-increment field,
-// then the row is updated with the value of the auto-increment column, as long as
-// the SQL driver supports this functionality.
-func (s *Schema) Exec(db Querier, row interface{}, sql string, args ...interface{}) (int, error) {
-	stmt, err := s.Prepare(row, sql)
-	if err != nil {
-		return 0, err
-	}
-	return stmt.Exec(context.TODO(), db, row, args...)
-}
-
 // Key returns the key associated with the schema.
 func (s *Schema) Key() string {
 	return s.key
