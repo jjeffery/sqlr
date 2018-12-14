@@ -40,8 +40,12 @@ func init() {
 	LowerCase = naming.LowerCase
 }
 
+/**
+
 // PluralizeTableNames returns a naming convention based on nc,
 // that pluralizes table names.
 func PluralizeTableNames(nc NamingConvention) NamingConvention {
 	panic("not implemented yet")
 }
+
+**/
