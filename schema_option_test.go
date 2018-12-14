@@ -69,7 +69,6 @@ func TestWithNamingConvention(t *testing.T) {
 			schema: NewSchema(
 				WithNamingConvention(LowerCase),
 				WithField("Home.Locality", "suburb"),
-			).Clone(
 				WithField("ID", "rowid"),
 			),
 			row: struct {
