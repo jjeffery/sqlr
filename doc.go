@@ -36,7 +36,7 @@ rules include specifying the SQL dialect (eg MySQL, Postgres, SQLite) and the na
 used to convert Go struct field names into column names (eg "GivenName" => "given_name"). The schema
 is usually created during program initialization. Once created, a schema is immutable and can be
 called concurrently from multiple goroutines.
- schema := MustCreateSchema(
+ schema := NewSchema(
    WithDialect(MySQL),
    WithNamingConvention(SnakeCase),
  )

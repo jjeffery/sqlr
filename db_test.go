@@ -837,7 +837,7 @@ func TestInsertRow_NoAutoIncr(t *testing.T) {
 		UpdatedAt time.Time
 	}
 
-	schema := MustCreateSchema(WithDialect(Postgres))
+	schema := NewSchema(WithDialect(Postgres))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []NoAutoIncr{
@@ -906,7 +906,7 @@ func TestInsertRow_Serial(t *testing.T) {
 		UpdatedAt time.Time
 	}
 
-	schema := MustCreateSchema(WithDialect(Postgres))
+	schema := NewSchema(WithDialect(Postgres))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []AutoIncr{
@@ -977,7 +977,7 @@ func TestInsertRow_AutoIncr(t *testing.T) {
 		UpdatedAt time.Time
 	}
 
-	schema := MustCreateSchema(WithDialect(SQLite))
+	schema := NewSchema(WithDialect(SQLite))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []AutoIncr{
@@ -1046,7 +1046,7 @@ func TestUpdateRow_NoVersion_NoUpdatedAt(t *testing.T) {
 		Counter int
 	}
 
-	schema := MustCreateSchema(WithDialect(Postgres))
+	schema := NewSchema(WithDialect(Postgres))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []NoVersionNoUpdatedAt{
@@ -1111,7 +1111,7 @@ func TestUpdateRow_NoVersion_UpdatedAt(t *testing.T) {
 		UpdatedAt time.Time
 	}
 
-	schema := MustCreateSchema(WithDialect(Postgres))
+	schema := NewSchema(WithDialect(Postgres))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []NoVersionUpdatedAt{
@@ -1197,7 +1197,7 @@ func TestUpdateRow_Version_UpdatedAt(t *testing.T) {
 		UpdatedAt time.Time
 	}
 
-	schema := MustCreateSchema(WithDialect(Postgres))
+	schema := NewSchema(WithDialect(Postgres))
 	sess := NewSession(context.Background(), db, schema)
 
 	rows := []VersionUpdatedAt{
@@ -1295,7 +1295,7 @@ func TestTableName(t *testing.T) {
 	}{
 		{
 			tests:  "anon class with struct tag",
-			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			schema: NewSchema(WithNamingConvention(SnakeCase)),
 			row: struct {
 				ID   int `sql:"primary key" table:"table_name_in_struct_tag"`
 				Name string
@@ -1304,19 +1304,19 @@ func TestTableName(t *testing.T) {
 		},
 		{
 			tests:  "named type, no config or struct tag",
-			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			schema: NewSchema(WithNamingConvention(SnakeCase)),
 			row:    &NamedRow{},
 			want:   "named_row",
 		},
 		{
 			tests:  "named type with struct tag",
-			schema: MustCreateSchema(WithNamingConvention(SnakeCase)),
+			schema: NewSchema(WithNamingConvention(SnakeCase)),
 			row:    &StructTagRow{},
 			want:   "table_name",
 		},
 		{
 			tests: "config overrides named type",
-			schema: MustCreateSchema(
+			schema: NewSchema(
 				WithTables(TablesConfig{
 					(*NamedRow)(nil): TableConfig{TableName: "override_name"},
 				}),
@@ -1326,7 +1326,7 @@ func TestTableName(t *testing.T) {
 		},
 		{
 			tests: "config overrides struct tag",
-			schema: MustCreateSchema(
+			schema: NewSchema(
 				WithTables(TablesConfig{
 					(*StructTagRow)(nil): TableConfig{TableName: "override_name"},
 				}),

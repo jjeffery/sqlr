@@ -13,7 +13,7 @@ import (
 // table names.
 //
 // Although the zero value schema can be used and represents a database schema
-// with default values, it is also common to use the MustCreateSchema function to
+// with default values, it is also common to use the NewSchema function to
 // create a schema with options.
 //
 // A schema maintains an internal cache, which is used to store details of
@@ -40,17 +40,13 @@ type schemaInit struct {
 }
 
 // NewSchema creates a schema with options.
-// If the schema has any inconsistencies, then this function will panic.
 //
-// Deprecated: Use MustCreateSchema (or CreateSchema) instead.
+// If the schema has any inconsistencies, then this function will panic.
+// If there is real expectation that the options contain invalid data, call
+// NewSchemaE instead, which returns an error. Errors due to inconsistencies
+// are only possible if the WithTables option is specified.
 func NewSchema(opts ...SchemaOption) *Schema {
-	return MustCreateSchema(opts...)
-}
-
-// MustCreateSchema creates a new schema with options. If the
-// schema has any inconsistencies, then this function will panic.
-func MustCreateSchema(opts ...SchemaOption) *Schema {
-	schema, err := CreateSchema(opts...)
+	schema, err := NewSchemaE(opts...)
 	if err != nil {
 		panic(err)
 	}
