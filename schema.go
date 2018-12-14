@@ -53,13 +53,15 @@ func NewSchema(opts ...SchemaOption) *Schema {
 	return schema
 }
 
-// CreateSchema creates a new schema with options. If the schema
+// NewSchemaE creates a new schema with options. If the schema
 // contains any inconsistencies, then an error is returned.
 //
 // Because a schema is usually created during program initialization,
-// it is more common for a program to call MustCreateSchema, which will
+// it is more common for a program to call NewSchema, which will
 // panic if there are any inconsistencies in the schema configuration.
-func CreateSchema(opts ...SchemaOption) (*Schema, error) {
+// Errors due to inconsistencies are only possible if the WithTables
+// option is specified.
+func NewSchemaE(opts ...SchemaOption) (*Schema, error) {
 	schema := &Schema{
 		init: &schemaInit{},
 	}
@@ -173,7 +175,7 @@ func (s *Schema) getDialect() Dialect {
 // statement.
 //
 // Statements are low-level, and most programs do not need to use them
-// directly.
+// directly. This method may be removed in a future version of the API.
 func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	// for queries that do not involve a row, just use an empty struct
 	if row == nil {

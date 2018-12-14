@@ -18,24 +18,23 @@ func ExampleSchema_Prepare() {
 	}
 
 	// Define different schemas for different dialects and naming conventions
-
-	mssql := NewSchema(
-		WithDialect(MSSQL),
-		WithNamingConvention(SameCase),
-	)
-
-	mysql := NewSchema(
-		WithDialect(MySQL),
-		WithNamingConvention(LowerCase),
-	)
-
-	postgres := NewSchema(
-		WithDialect(Postgres),
-		WithNamingConvention(SnakeCase),
-	)
+	schemas := []*Schema{
+		NewSchema(
+			WithDialect(MSSQL),
+			WithNamingConvention(SameCase),
+		),
+		NewSchema(
+			WithDialect(MySQL),
+			WithNamingConvention(LowerCase),
+		),
+		NewSchema(
+			WithDialect(Postgres),
+			WithNamingConvention(SnakeCase),
+		),
+	}
 
 	// for each schema, print the SQL generated for each statement
-	for _, schema := range []*Schema{mssql, mysql, postgres} {
+	for _, schema := range schemas {
 		stmt, err := schema.Prepare(UserRow{}, `insert into users({}) values({})`)
 		if err != nil {
 			log.Fatal(err)
@@ -137,7 +136,7 @@ func newSession() *Session {
 	return nil
 }
 
-func ExampleMustCreateSchema() {
+func ExamplNewSchema() {
 	type UserRow struct {
 		ID   int64 `sql:"primary key"`
 		Name string
@@ -151,7 +150,7 @@ func ExampleMustCreateSchema() {
 		Content   string
 	}
 
-	schema := MustCreateSchema(
+	schema := NewSchema(
 		WithNamingConvention(SnakeCase),
 		WithTables(TablesConfig{
 			(*UserRow)(nil): {
@@ -187,7 +186,7 @@ func ExampleColumnConfig() {
 		Address Address
 	}
 
-	schema := MustCreateSchema(
+	schema := NewSchema(
 		WithTables(TablesConfig{
 			(*PersonRow)(nil): {
 				Columns: ColumnsConfig{
@@ -222,7 +221,7 @@ func ExampleColumnsConfig() {
 		Address Address
 	}
 
-	schema := MustCreateSchema(
+	schema := NewSchema(
 		WithTables(TablesConfig{
 			(*PersonRow)(nil): {
 				Columns: ColumnsConfig{
