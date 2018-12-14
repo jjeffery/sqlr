@@ -246,69 +246,6 @@ func ExampleWithIdentifier() {
 	// select "user_id", "name" from users where user_id = $1
 }
 
-func ExampleSchema_Select_oneRow() {
-	type UserRow struct {
-		ID         int `sql:"primary key autoincrement"`
-		GivenName  string
-		FamilyName string
-	}
-
-	// Schema for an MSSQL database, where column names
-	// are the same as the Go struct field names.
-	mssql := NewSchema(
-		WithDialect(MSSQL),
-		WithNamingConvention(SameCase),
-	)
-
-	// find user with ID=42
-	var row UserRow
-	n, err := mssql.Select(db, &row, `select {} from [Users] where ID=?`, 42)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if n > 0 {
-		log.Printf("found: %v", row)
-	} else {
-		log.Printf("not found")
-	}
-}
-
-func ExampleSchema_Select_multipleRows() {
-	type UserRow struct {
-		ID         int `sql:"primary key autoincrement"`
-		GivenName  string
-		FamilyName string
-	}
-
-	// Schema for an MSSQL database, where column names
-	// are the same as the Go struct field names.
-	mssql := NewSchema(
-		WithDialect(MSSQL),
-		WithNamingConvention(SameCase),
-	)
-
-	// find users with search terms
-	var rows []UserRow
-	n, err := mssql.Select(db, &rows, `
-		select {alias u}
-		from [Users] u
-		inner join [UserSearchTerms] t on t.UserID = u.ID
-		where t.SearchTerm like ?
-		limit ? offset ?`, "smith%", 100, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if n > 0 {
-		for i, row := range rows {
-			log.Printf("row %d: %v", i, row)
-		}
-	} else {
-		log.Printf("not found")
-	}
-}
-
 func ExampleSession_MakeQuery() {
 	var schema Schema
 	ctx := context.Background()

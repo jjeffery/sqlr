@@ -1,8 +1,6 @@
 package sqlr
 
 import (
-	"context"
-
 	"github.com/jjeffery/sqlr/private/column"
 )
 
@@ -178,8 +176,8 @@ func (s *Schema) getDialect() Dialect {
 // Multiple queries or executions may be run concurrently from the returned
 // statement.
 //
-// Deprecated: Use Session object and run queries directly using Session.Select,
-// Session.Exec, Session.Insert, Session.Update or Session.Upsert.
+// Statements are low-level, and most programs do not need to use them
+// directly.
 func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	// determine row type to use for statement
 	rowType, err := getRowType(row)
@@ -206,17 +204,6 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 		stmt = s.cache.set(rowType, query, stmt)
 	}
 	return stmt, nil
-}
-
-// Select executes a SELECT query and stores the result in rows.
-//
-// Deprecated: Use Session.Select instead.
-func (s *Schema) Select(db Querier, rows interface{}, sql string, args ...interface{}) (int, error) {
-	stmt, err := s.Prepare(rows, sql)
-	if err != nil {
-		return 0, err
-	}
-	return stmt.Select(context.TODO(), db, rows, args...)
 }
 
 // Key returns the key associated with the schema.

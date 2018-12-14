@@ -450,7 +450,7 @@ func TestNullable(t *testing.T) {
 		and t is null
 	`
 	var rows []Row
-	n, err = schema.Select(db, &rows, sql)
+	n, err = sess.Select(&rows, sql)
 	if err != nil {
 		t.Fatal(err)
 	}
