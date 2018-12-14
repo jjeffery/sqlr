@@ -222,14 +222,8 @@ func TestInsertRowStmtErrors(t *testing.T) {
 		row             interface{}
 		execErr         error
 		lastInsertIdErr error
-		errPrepare      string
 		errText         string
 	}{
-		{
-			sql:     "insert into tablename({}) values({})",
-			row:     Row{},
-			errText: "cannot set auto-increment value for type Row",
-		},
 		{
 			sql:     "insert into tablename({}) values({})",
 			row:     &Row{},
@@ -237,51 +231,30 @@ func TestInsertRowStmtErrors(t *testing.T) {
 			errText: "test error condition",
 		},
 		{
-			sql:             "insert into tablename({}) values({})",
-			row:             &Row{},
-			lastInsertIdErr: errors.New("test LastInsertId"),
-			errText:         "test LastInsertId",
+			sql:     "insert into table values {}",
+			row:     &Row{},
+			errText: `cannot expand "insert values" clause because "insert columns" clause is missing`,
 		},
 		{
-			sql:        "insert into table values {}",
-			row:        &Row{},
-			errPrepare: `cannot expand "insert values" clause because "insert columns" clause is missing`,
-		},
-		{
-			sql:        "insert into table({}) values({all})",
-			row:        &Row{},
-			errPrepare: `columns for "insert values" clause must match the "insert columns" clause`,
+			sql:     "insert into table({}) values({all})",
+			row:     &Row{},
+			errText: `columns for "insert values" clause must match the "insert columns" clause`,
 		},
 	}
 
 	for i, tt := range tests {
 		schema := NewSchema()
 		ctx := context.Background()
-		stmt, err := schema.Prepare(Row{}, tt.sql)
-		if tt.errPrepare == "" {
-			if err != nil {
-				t.Errorf("%d: expected no error, got %q", i, err)
-			}
-		} else if err == nil {
-			t.Errorf("%d: expected %q, got nil", i, tt.errPrepare)
-		} else if got, want := err.Error(), tt.errPrepare; got != want {
-			t.Errorf("%d: expected %q, got %q", i, want, got)
-		}
-
-		if err != nil {
-			continue
-		}
-
 		db := &FakeDB{
 			execErr:         tt.execErr,
 			lastInsertIdErr: tt.lastInsertIdErr,
 		}
 
-		_, err = stmt.Exec(ctx, db, tt.row)
+		sess := NewSession(ctx, db, schema)
+		_, err := sess.Row(tt.row).Exec(tt.sql)
 		if err == nil || err.Error() != tt.errText {
-			t.Errorf("expected=%q, actual=%v", tt.errText, err)
+			t.Errorf("%d: expected=%q, actual=%v", i, tt.errText, err)
 		}
-
 	}
 }
 
@@ -295,12 +268,10 @@ func TestExecRowStmtErrors(t *testing.T) {
 		SomethingElse int
 	}
 	tests := []struct {
-		sql             string
-		row             interface{}
-		execErr         error
-		rowsAffectedErr error
-		errPrepare      string
-		errText         string
+		sql     string
+		row     interface{}
+		execErr error
+		errText string
 	}{
 		{
 			sql:     "update tablename set {} where {}",
@@ -309,47 +280,21 @@ func TestExecRowStmtErrors(t *testing.T) {
 			errText: "test error condition",
 		},
 		{
-			sql:             "delete from tablename where {}",
-			row:             &Row{},
-			rowsAffectedErr: errors.New("test RowsAffected"),
-			errText:         "test RowsAffected",
-		},
-		{
-			sql:        "update table {}",
-			row:        &Row{},
-			errPrepare: `cannot expand "{}" in "update table" clause`,
-		},
-		{
-			sql:     "select {} from tablename where {}",
+			sql:     "update table {}",
 			row:     &Row{},
-			errText: `attempt to call Exec on select statement`,
+			errText: `cannot expand "{}" in "update table" clause`,
 		},
 	}
 
 	for i, tt := range tests {
 		schema := NewSchema()
 		ctx := context.Background()
-		stmt, err := schema.Prepare(&Row{}, tt.sql)
-		if tt.errPrepare == "" {
-			if err != nil {
-				t.Errorf("%d: expected no error, got %q", i, err)
-			}
-		} else if err == nil {
-			t.Errorf("%d: expected %q, got nil", i, tt.errPrepare)
-		} else if got, want := err.Error(), tt.errPrepare; got != want {
-			t.Errorf("%d: expected %q, got %q", i, want, got)
-		}
-
-		if err != nil {
-			continue
-		}
-
 		db := &FakeDB{
-			execErr:         tt.execErr,
-			rowsAffectedErr: tt.rowsAffectedErr,
+			execErr: tt.execErr,
 		}
+		sess := NewSession(ctx, db, schema)
 
-		_, err = stmt.Exec(ctx, db, tt.row)
+		_, err := sess.Row(tt.row).Exec(tt.sql)
 		if err == nil || err.Error() != tt.errText {
 			t.Errorf("%d: expected=%q, actual=%q", i, tt.errText, err)
 		}

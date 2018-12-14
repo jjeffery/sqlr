@@ -20,6 +20,7 @@ import (
 // Deprecated: Use equivalent methods on Session instead. This type will be removed from
 // the public API shortly.
 type Stmt struct {
+	schema    *Schema
 	tbl       *Table
 	queryType queryType
 	query     string
@@ -46,22 +47,14 @@ type inputSource struct {
 	argIndex int // used only if col == nil
 }
 
-// identRenamer renames identifiers
-type identRenamer interface {
-	renameIdent(ident string) (string, bool)
-}
-
-// TODO(SELECT): inferRowType should handle scalars: string, int, float, time.Time and types
-// based on these types.
-
-// newStmt creates a new statement for the row type and query. Panics if rowType does not
-// refer to a struct type.
-func newStmt(dialect Dialect, renamer identRenamer, tbl *Table, sql string) (*Stmt, error) {
+// newStmt creates a new statement for the schema, table and query.
+func newStmt(schema *Schema, tbl *Table, sql string) (*Stmt, error) {
 	stmt := &Stmt{
-		dialect: dialect,
+		schema:  schema,
+		dialect: schema.getDialect(),
 		tbl:     tbl,
 	}
-	if err := stmt.scanSQL(sql, renamer); err != nil {
+	if err := stmt.scanSQL(sql); err != nil {
 		return nil, err
 	}
 
@@ -93,67 +86,6 @@ func newStmt(dialect Dialect, renamer identRenamer, tbl *Table, sql string) (*St
 // String prints the SQL query associated with the statement.
 func (stmt *Stmt) String() string {
 	return stmt.query
-}
-
-// Exec executes the prepared statement with the given row and optional arguments.
-// It returns the number of rows affected by the statement.
-//
-// Deprecated: Use Session.Exec, Session.Insert, Session.Update, or Session.Upsert instead.
-//
-// If the statement is an INSERT statement and the row has an auto-increment field,
-// then the row is updated with the value of the auto-increment column as long as
-// the SQL driver supports this functionality.
-func (stmt *Stmt) Exec(ctx context.Context, db Querier, row interface{}, args ...interface{}) (int, error) {
-	if stmt.queryType == querySelect {
-		return 0, errors.New("attempt to call Exec on select statement")
-	}
-
-	// field for setting the auto-increment value
-	var field reflect.Value
-	if stmt.autoIncrColumn != nil {
-		rowVal := reflect.ValueOf(row)
-		field = stmt.autoIncrColumn.info.Index.ValueRW(rowVal)
-		if !field.CanSet() {
-			return 0, fmt.Errorf("cannot set auto-increment value for type %s", rowVal.Type().Name())
-		}
-	}
-
-	args, err := stmt.getArgs(row, args)
-	if err != nil {
-		return 0, err
-	}
-	expandedQuery, expandedArgs, err := wherein.Expand(stmt.query, args)
-	if err != nil {
-		return 0, err
-	}
-	result, err := db.ExecContext(ctx, expandedQuery, expandedArgs...)
-	if err != nil {
-		return 0, err
-	}
-
-	if field.IsValid() {
-		n, err := result.LastInsertId()
-		if err != nil {
-			// The statement was successful but getting last insert ID failed.
-			// Return error with the expectation that the calling program will
-			// roll back the transaction.
-			return 0, err
-		}
-		// TODO: could catch a panic here if the type is not int8, 1nt16, int32, int64
-		// but it would be better to check when statement is prepared
-		field.SetInt(n)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		// The statement was successful but getting the row count failed.
-		// Return error with the expectation that the calling program will
-		// roll back the transaction.
-		return 0, err
-	}
-
-	// assuming that rows affected fits in an int
-	return int(rowsAffected), nil
 }
 
 func (stmt *Stmt) exec(ctx context.Context, db Querier, row interface{}, args ...interface{}) (sql.Result, error) {
@@ -430,7 +362,7 @@ func (stmt *Stmt) getOutputs(rows *sql.Rows) ([]*Column, error) {
 	return stmt.output.columns, nil
 }
 
-func (stmt *Stmt) scanSQL(query string, renamer identRenamer) error {
+func (stmt *Stmt) scanSQL(query string) error {
 	query = strings.TrimSpace(query)
 	scan := scanner.New(strings.NewReader(query))
 	columns := newColumns(stmt.tbl.Columns())
@@ -440,7 +372,7 @@ func (stmt *Stmt) scanSQL(query string, renamer identRenamer) error {
 	var clause sqlClause
 	var buf bytes.Buffer
 	rename := func(name string) string {
-		if newName, ok := renamer.renameIdent(name); ok {
+		if newName, ok := stmt.schema.renameIdent(name); ok {
 			return newName
 		}
 		return name

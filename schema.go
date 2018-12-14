@@ -179,6 +179,11 @@ func (s *Schema) getDialect() Dialect {
 // Statements are low-level, and most programs do not need to use them
 // directly.
 func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
+	// for queries that do not involve a row, just use an empty struct
+	if row == nil {
+		row = &struct{}{}
+	}
+
 	// determine row type to use for statement
 	rowType, err := getRowType(row)
 	if err != nil {
@@ -195,7 +200,7 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	if !ok {
 		// build statement from scratch
 		tbl := s.TableFor(rowType)
-		stmt, err = newStmt(s.getDialect(), s, tbl, query)
+		stmt, err = newStmt(s, tbl, query)
 		if err != nil {
 			return nil, err
 		}
