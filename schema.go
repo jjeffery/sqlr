@@ -17,7 +17,8 @@ import (
 // create a schema with options.
 //
 // A schema maintains an internal cache, which is used to store details of
-// frequently called SQL commands for improved performance.
+// frequently called SQL commands for improved performance. All methods are
+// safe to call concurrently from different goroutines.
 type Schema struct {
 	dialect    Dialect
 	convention NamingConvention
@@ -42,8 +43,8 @@ type schemaInit struct {
 // NewSchema creates a schema with options.
 //
 // If the schema has any inconsistencies, then this function will panic.
-// If there is real expectation that the options contain invalid data, call
-// NewSchemaE instead, which returns an error. Errors due to inconsistencies
+// If there is an expectation that the options contain invalid data, call
+// NewSchemaE instead. Errors due to inconsistencies
 // are only possible if the WithTables option is specified.
 func NewSchema(opts ...SchemaOption) *Schema {
 	schema, err := NewSchemaE(opts...)
@@ -209,7 +210,8 @@ func (s *Schema) Prepare(row interface{}, query string) (*Stmt, error) {
 	return stmt, nil
 }
 
-// Key returns the key associated with the schema.
+// Key returns the key associated with the schema, which is specififed using
+// the WithKey schema option.
 func (s *Schema) Key() string {
 	return s.key
 }

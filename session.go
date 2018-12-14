@@ -430,12 +430,16 @@ func (sess *Session) Select(rows interface{}, query string, args ...interface{})
 	return n, err
 }
 
-// Querier returns the database querier used for this session.
+// Querier returns the database querier associated with this session.
 func (sess *Session) Querier() Querier {
 	return sess.querier
 }
 
-// Context returns the request-scoped context used by this session.
+// Context returns the context associated with this session.
+//
+// Note that the context returned by this function is not identical to the
+// context passed to the NewSession function. The context returned by this
+// method is canceled when the Close method is called.
 func (sess *Session) Context() context.Context {
 	return sess.context
 }
@@ -582,8 +586,7 @@ func (sess *Session) callRowHandlers(tbl *Table, rows interface{}, rowCount int)
 // query is called that returns one or more RowType instances, then this
 // callback will be called.
 //
-// These callback functions are useful for preloading foreign keys. See
-// the example.
+// If callback is not a function as described above, this method will panic.
 func (sess *Session) HandleRows(callback interface{}) {
 	if err := sess.handleRowsHelper(callback); err != nil {
 		panic(err)
@@ -632,8 +635,8 @@ type SessionRow struct {
 	Row     interface{}
 }
 
-// Row returns a session row, which is then used to call
-// Exec, Insert, etc.
+// Row returns a session row, which is then used to execute a query
+// based on the contents of row.
 func (sess *Session) Row(row interface{}) *SessionRow {
 	return &SessionRow{
 		Session: sess,

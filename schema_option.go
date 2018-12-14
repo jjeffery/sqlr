@@ -3,12 +3,10 @@ package sqlr
 import "database/sql"
 
 // A SchemaOption provides optional configuration and is supplied when
-// creating a new Schema, or cloning a Schema.
-//
-// Deprecated: SchemaOption is being replaced by SchemaConfig.
+// creating a new Schema.
 type SchemaOption func(schema *Schema) error
 
-// ForDB creates an option that sets the dialect for the open DB handle.
+// ForDB creates an option that sets the dialect based on the DB handle.
 func ForDB(db *sql.DB) SchemaOption {
 	return func(schema *Schema) error {
 		schema.dialect = dialectFor(db)

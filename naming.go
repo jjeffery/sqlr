@@ -6,7 +6,7 @@ import (
 
 // The NamingConvention interface provides methods that are used to
 // infer a database column name from its associated Go struct field,
-// and a database table name from the name its associated row type.
+// and a database table name from the name of its associated row type.
 type NamingConvention interface {
 	// Convert converts a Go struct field name according to the naming convention.
 	Convert(fieldName string) string

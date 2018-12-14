@@ -279,7 +279,7 @@ func (tbl *Table) wrapRowError(err error, row interface{}, msg string) errors.Er
 	return errors.Wrap(err, msg).With(keyvals...)
 }
 
-// Column represents a table column.
+// Column contains meta-data about a column in a database table.
 type Column struct {
 	columnName    string
 	primaryKey    bool
@@ -325,10 +325,8 @@ func (col *Column) Version() bool {
 	return col.version
 }
 
-// EmptyNull returns true if the empty value for the associated field type
-// should be stored as NULL in the database, and if the NULL value in the
-// database should be stored in the associated field as the empty (or zero)
-// value.
+// EmptyNull returns true if the zero value for the associated field type
+// should be stored as NULL in the database.
 //
 // This is commonly set for string values and time.Time values. It is common
 // for an empty string value or an empty time.Time value to be represented

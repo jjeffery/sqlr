@@ -16,6 +16,10 @@ import (
 )
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
+//
+// Stmt is important for the implementation, but currently does not export many public methods.
+// Currently the only public operation is to print the SQL. It may be removed from the public API
+// in a future version.
 type Stmt struct {
 	schema    *Schema
 	tbl       *Table
