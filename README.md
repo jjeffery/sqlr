@@ -95,7 +95,7 @@ schema := NewSchema(
 A session is created using a context, a database connection (eg `*sql.DB`, `*sql.Tx`, `*sql.Conn`),
 and a schema. A session is inexpensive to create, and is intended to last no longer than a single
 request (which might be a HTTP request, in the case of a HTTP server). A session is bounded by the
-lifetime of its context. The most common pattern is to crate a new session for each database transaction.
+lifetime of its context. The most common pattern is to create a new session for each database transaction.
 
 ```go
 sess := NewSession(ctx, tx, schema)
@@ -116,7 +116,7 @@ With a session, it is possible to create simple CRUD statements with minimal eff
  result, err := sess.UpdateRow(row)
 ```
 
-In the example above, the insert and update statements would look like:
+In the example above, the generated insert and update statements would look like:
 
 ```sql
  insert into users(`id`,`given_name`,`family_name`,`dob`,`ssn`,`street`,`locality`,`postcode`,
