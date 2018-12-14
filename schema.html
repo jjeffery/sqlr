@@ -24,24 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="Code Generation using sqlr-gen" href="sqlr-gen.html"/>
-        <link rel="prev" title="Column Naming Conventions" href="naming-conventions.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Sessions" href="session.html" />
+    <link rel="prev" title="Column Naming Conventions" href="naming-conventions.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -63,7 +58,7 @@
             
             
               <div class="version">
-                1.0
+                0.6
               </div>
             
           
@@ -96,14 +91,13 @@
 <li class="toctree-l1"><a class="reference internal" href="naming-conventions.html">Column Naming Conventions</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">The Schema Type</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#creating-the-schema">Creating the Schema</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#using-a-schema-to-perform-queries">Using a Schema to perform Queries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mapping-individual-field-column-names">Mapping Individual Field/Column Names</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#specifying-a-struct-tag-key-for-column-names">Specifying a struct tag key for column names</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#replacing-sql-identifiers">Replacing SQL identifiers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#cloning-a-schema">Cloning a Schema</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">Sessions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dao.html">The DAO Pattern</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests.html">Running the Tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
 </ul>
@@ -117,7 +111,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -125,9 +119,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -156,7 +151,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/schema.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/schema.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -187,7 +182,7 @@ in the Go struct tag.</li>
 <h2>Creating the Schema<a class="headerlink" href="#creating-the-schema" title="Permalink to this headline">¶</a></h2>
 <p>A schema is created using the <cite>NewSchema</cite> function, which accepts
 a variable number of <cite>SchemaOption</cite> options:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
     <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
 <span class="p">)</span>
@@ -195,9 +190,9 @@ a variable number of <cite>SchemaOption</cite> options:</p>
 </div>
 <p>In most cases it is enough to create a single schema instance
 at program initialization, probably at the same point as the
-<code class="docutils literal"><span class="pre">*sql.DB</span></code> instance is being created. In fact it is possible to
-specify the dialect directly from the <code class="docutils literal"><span class="pre">*sql.DB</span></code> handle:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sql</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">&quot;postgres&quot;</span><span class="p">,</span> <span class="s">&quot;postgres://user:pwd@localhost/mydb&quot;</span><span class="p">)</span>
+<code class="docutils literal notranslate"><span class="pre">*sql.DB</span></code> instance is being created. In fact it is possible to
+specify the dialect directly from the <code class="docutils literal notranslate"><span class="pre">*sql.DB</span></code> handle:</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">sql</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="s">&quot;postgres&quot;</span><span class="p">,</span> <span class="s">&quot;postgres://user:pwd@localhost/mydb&quot;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
     <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
@@ -207,39 +202,11 @@ specify the dialect directly from the <code class="docutils literal"><span class
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>It not all that expensive to create a schema, but it is a good
-idea to create a schema at program initialization and re-use it rather
+<p>It is recommended practice to create a schema at program initialization and
+re-use it rather
 than create one whenever necessary. The reason for this is that the
 schema caches information about Go structures and SQL statements in order
 to improve performance.</p>
-</div>
-<div class="section" id="using-a-schema-to-perform-queries">
-<h2>Using a Schema to perform Queries<a class="headerlink" href="#using-a-schema-to-perform-queries" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal"><span class="pre">Schema</span></code> type has the following methods to support performing queries:</p>
-<ul class="simple">
-<li><code class="docutils literal"><span class="pre">Exec</span></code> method; and</li>
-<li><code class="docutils literal"><span class="pre">Select</span></code> method.</li>
-</ul>
-<p>These methods are shorthand for preparing a statement (<code class="docutils literal"><span class="pre">Stmt</span></code>) and then
-performing the corresponding <code class="docutils literal"><span class="pre">Exec</span></code> or <code class="docutils literal"><span class="pre">Select</span></code> method on that statement.</p>
-<p>For example:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;update table1&quot;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Is the same as:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">stmt</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Prepare</span><span class="p">(</span><span class="nx">row</span><span class="p">,</span> <span class="s">&quot;update table1&quot;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">stmt</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-</pre></div>
-</div>
 </div>
 <div class="section" id="mapping-individual-field-column-names">
 <h2>Mapping Individual Field/Column Names<a class="headerlink" href="#mapping-individual-field-column-names" title="Permalink to this headline">¶</a></h2>
@@ -247,9 +214,9 @@ performing the corresponding <code class="docutils literal"><span class="pre">Ex
 creating a column name from a Go struct field. Although it is probably
 more common to use Go struct tags to specify a column name for a field,
 there are times when this is not possible. When this happens, it is
-possible to specify individual naming rules using the <code class="docutils literal"><span class="pre">WithField</span></code> schema
+possible to specify individual naming rules using the <code class="docutils literal notranslate"><span class="pre">WithField</span></code> schema
 option. Take the following (simplified) table:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">create</span> <span class="nx">table</span> <span class="nx">contact_details</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">create</span> <span class="nx">table</span> <span class="nx">contact_details</span><span class="p">(</span>
     <span class="nx">id</span>              <span class="nx">integer</span> <span class="nx">primary</span> <span class="nx">key</span> <span class="nx">not</span> <span class="nx">null</span><span class="p">,</span>
     <span class="nx">work_email</span>      <span class="nx">text</span><span class="p">,</span>
     <span class="nx">work_fax</span>        <span class="nx">text</span><span class="p">,</span>
@@ -260,7 +227,7 @@ option. Take the following (simplified) table:</p>
 </div>
 <p>There is some inconsistency in the column names, but we want to use a common
 structure to handle the location-specific contact details:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">LocationContact</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">LocationContact</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">Email</span>     <span class="kt">string</span>
     <span class="nx">Facsimile</span> <span class="kt">string</span> <span class="c1">// cannot specify a struct tag here for two different column names</span>
 <span class="p">}</span>
@@ -277,7 +244,7 @@ not to be possible to use the Go struct tag: it is not possible to specify
 the names of two different columns on the same Go struct field.</p>
 <p>The solution is to specify the individual column names when creating the
 schema:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SQLite</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Snake</span><span class="p">),</span>
     <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Work.Facsimile&quot;</span><span class="p">,</span> <span class="s">&quot;work_fax&quot;</span><span class="p">),</span>
@@ -290,29 +257,29 @@ schema:</p>
 <h2>Specifying a struct tag key for column names<a class="headerlink" href="#specifying-a-struct-tag-key-for-column-names" title="Permalink to this headline">¶</a></h2>
 <p>One of the schema options allows for a struct tag key to be associated with
 the schema:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
 <p>Where does this come in useful? Perhaps it is best to describe the scenario
 that occured that brought about this feature being added to the package.</p>
 <p>Take the example of a existing system that makes use of (say) an MS SQL Server
-database. Like many SQL Server databases, it uses a &#8220;Same&#8221; naming convention,
+database. Like many SQL Server databases, it uses a “Same” naming convention,
 where the name of the column is the same as its equivalent Go struct field.</p>
 <p>Then consider that this system is being migrated over to operate with (say) a
-PostgreSQL database. The &#8220;Same&#8221; naming convention does not work well with
-PostgreSQL: it is far more idiomatic to use the &#8220;snake_case&#8221; naming convention.</p>
+PostgreSQL database. The “Same” naming convention does not work well with
+PostgreSQL: it is far more idiomatic to use the “snake_case” naming convention.</p>
 <p>So the decision is made to change the database naming convention as part of
 the migration project. To make the scheduling of the cutover more flexible it
 would be good if the Go program could work with both the MS SQL Server database
 as well as with the PostgreSQL database. For queries made to the database using
-the <code class="docutils literal"><span class="pre">sqlr</span></code> package this should not be a significant problem; all that is needed
+the <code class="docutils literal notranslate"><span class="pre">sqlr</span></code> package this should not be a significant problem; all that is needed
 are two different schemas to handle the different dialects and the different
 naming conventions:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
         <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">MSSQL</span><span class="p">),</span>
         <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SameCase</span><span class="p">),</span>
 <span class="p">)</span>
@@ -327,7 +294,7 @@ naming conventions:</p>
 Just say that there is a Go struct with a field called <cite>Max</cite>, and that we
 have our reasons for wanting it to be called that, but that the MS SQL Server
 column name is called <cite>MaximumValue</cite> to avoid conflict with the SQL reserved word.</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">MyRow</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">MyRow</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">ID</span>  <span class="kt">int</span>   <span class="s">`sql:&quot;primary key&quot;`</span>
     <span class="nx">Max</span> <span class="kt">int</span>   <span class="s">`sql:&quot;MaximumValue&quot;`</span>
     <span class="c1">// ... other fields go here ...</span>
@@ -335,29 +302,29 @@ column name is called <cite>MaximumValue</cite> to avoid conflict with the SQL r
 </pre></div>
 </div>
 <p>We would like to be able to specify a different column name for the Postgres
-database (which also treats <code class="docutils literal"><span class="pre">max</span></code> as a reserved word), but there is no way to
+database (which also treats <code class="docutils literal notranslate"><span class="pre">max</span></code> as a reserved word), but there is no way to
 specify two different column names in the Go struct tag.</p>
-<p>While it is possible to get around this problem using the <code class="docutils literal"><span class="pre">WithField</span></code> schema
+<p>While it is possible to get around this problem using the <code class="docutils literal notranslate"><span class="pre">WithField</span></code> schema
 option, there is some benefit visibility-wise if the two column names can
-appear in the Go struct field. This is where the <code class="docutils literal"><span class="pre">WithTagKey</span></code> schema option
+appear in the Go struct field. This is where the <code class="docutils literal notranslate"><span class="pre">WithKey</span></code> schema option
 becomes relevant. If the two schemas each specify a different struct tag key, then
-the <code class="docutils literal"><span class="pre">sqlr</span></code> package will look in the struct tag key for column names:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+the <code class="docutils literal notranslate"><span class="pre">sqlr</span></code> package will look in the struct tag key for column names:</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">MSSQL</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SameCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;mssql&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;mssql&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 
 <span class="nx">pgSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
+    <span class="nx">WithKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
 <p>So now the column name exceptions can be included in the struct tag, and will only
 apply to the schema with the matching tag key:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">MyRow</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">MyRow</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">ID</span>  <span class="kt">int</span>   <span class="s">`sql:&quot;primary key&quot;`</span>
     <span class="nx">Max</span> <span class="kt">int</span>   <span class="s">`mssql:&quot;MaximumValue&quot; pg:&quot;maximum_value&quot;`</span>
     <span class="c1">// ... other fields go here ...</span>
@@ -369,7 +336,7 @@ be used very often, but it can occasionally come in useful.</p>
 </div>
 <div class="section" id="replacing-sql-identifiers">
 <h2>Replacing SQL identifiers<a class="headerlink" href="#replacing-sql-identifiers" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal"><span class="pre">WithIdentifer</span></code> option is another schema option that helps with portability SQL
+<p>The <code class="docutils literal notranslate"><span class="pre">WithIdentifer</span></code> option is another schema option that helps with portability SQL
 queries across different SQL database schemas that have different naming conventions.
 Once again, it is a feature that is probably not commonly used, but can come in handy
 with the sort of scenario described in the previous section (eg migrating from one
@@ -379,7 +346,7 @@ different database schemas, where the structure of the data is the same but the
 columns have different naming conventions. The column names are mapped from the
 corresponding Go structures, but there is no reason why they cannot appear in the
 SQL text as well:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">rowsAffected</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">`</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">rowsAffected</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">`</span>
 <span class="s">    update widgets</span>
 <span class="s">    set {} where {}</span>
 <span class="s">    and version = ?`</span><span class="p">,</span> <span class="nx">row</span><span class="p">.</span><span class="nx">Version</span><span class="p">,</span>
@@ -387,11 +354,11 @@ SQL text as well:</p>
 </pre></div>
 </div>
 <p>In the example above the schema will handle the different naming conventions for
-the column names specified by the special <code class="docutils literal"><span class="pre">{}</span></code> markers, but the table name <code class="docutils literal"><span class="pre">widgets</span></code>
-and the column name <code class="docutils literal"><span class="pre">version</span></code> has been hard-coded into the SQL.</p>
+the column names specified by the special <code class="docutils literal notranslate"><span class="pre">{}</span></code> markers, but the table name <code class="docutils literal notranslate"><span class="pre">widgets</span></code>
+and the column name <code class="docutils literal notranslate"><span class="pre">version</span></code> has been hard-coded into the SQL.</p>
 <p>The solution, while not ideal, is to specify individual identifer replacements
 when creating the schema:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">mssqlSchema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
     <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">MSSQL</span><span class="p">),</span>
     <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SameCase</span><span class="p">),</span>
     <span class="nx">WithIdentifer</span><span class="p">(</span><span class="s">&quot;widgets&quot;</span><span class="p">,</span> <span class="s">&quot;Widgets&quot;</span><span class="p">),</span>
@@ -400,73 +367,22 @@ when creating the schema:</p>
 </pre></div>
 </div>
 <p>So the SQL that would be produced for the MSSQL schema will now substitute all
-identifers named <code class="docutils literal"><span class="pre">widgets</span></code> with <code class="docutils literal"><span class="pre">Widgets</span></code>, and all identifiers named
-<code class="docutils literal"><span class="pre">version</span></code> with <code class="docutils literal"><span class="pre">Version</span></code>.</p>
+identifers named <code class="docutils literal notranslate"><span class="pre">widgets</span></code> with <code class="docutils literal notranslate"><span class="pre">Widgets</span></code>, and all identifiers named
+<code class="docutils literal notranslate"><span class="pre">version</span></code> with <code class="docutils literal notranslate"><span class="pre">Version</span></code>.</p>
 <p>If you think this is untidy, you are probably correct. It is a seldom-used feature
 designed to help with an uncommon situation.</p>
 </div>
-<div class="section" id="cloning-a-schema">
-<h2>Cloning a Schema<a class="headerlink" href="#cloning-a-schema" title="Permalink to this headline">¶</a></h2>
-<p>Once created, a schema is immutable. The reason for this is that schemas
-have an internal cache to help with performance, and changing the dialect,
-naming convention, or any other schema option would render this cache invalid.</p>
-<p>It is not anticipated that this is a common requirement, but in some cases
-it is useful to be able to clone a schema, which provides a deep copy of
-the configuration and allows for further configuration:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// ... schema has already been created elsewhere ...</span>
-
-<span class="nx">schemaForContactDetails</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Clone</span><span class="p">(</span>
-    <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Work.Facsimile&quot;</span><span class="p">,</span> <span class="s">&quot;work_fax&quot;</span><span class="p">),</span>
-    <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Home.Facsimile&quot;</span><span class="p">,</span> <span class="s">&quot;home_fax_number&quot;</span><span class="p">),</span>
-    <span class="nx">WithTagKey</span><span class="p">(</span><span class="s">&quot;pg&quot;</span><span class="p">),</span>
-    <span class="nx">WithIdentifer</span><span class="p">(</span><span class="s">&quot;Users&quot;</span><span class="p">,</span> <span class="s">&quot;users&quot;</span><span class="p">),</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>Still looking at unusual cases, it would be possible to keep separate schemas
-for a database whose tables have evolved with different naming conventions:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">schema</span> <span class="kd">struct</span> <span class="p">{</span>
-    <span class="nx">Base</span>   <span class="o">*</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Schema</span>
-    <span class="nx">Table1</span> <span class="o">*</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Schema</span>
-    <span class="nx">Table2</span> <span class="o">*</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Schema</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nx">init</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// The original database was created using `SameCase`, as many MS SQL DBs are.</span>
-    <span class="nx">schema</span><span class="p">.</span><span class="nx">Base</span> <span class="o">:=</span> <span class="nx">NewSchema</span><span class="p">(</span>
-        <span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">MSSQL</span><span class="p">),</span>
-        <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SameCase</span><span class="p">),</span>
-    <span class="p">)</span>
-
-    <span class="c1">// Table1 got added later by someone who preferred `snake_case` and thought</span>
-    <span class="c1">// it would be better to use it than be consistent. (This can happen...)</span>
-    <span class="nx">schema</span><span class="p">.</span><span class="nx">Table1</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Base</span><span class="p">.</span><span class="nx">Clone</span><span class="p">(</span>
-        <span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
-    <span class="p">)</span>
-
-    <span class="c1">// Table2 was added, but there are some exceptions to the naming rules that</span>
-    <span class="c1">// are not universal across the database.</span>
-    <span class="nx">schema</span><span class="p">.</span><span class="nx">Table2</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Base</span><span class="p">.</span><span class="nx">Clone</span><span class="p">(</span>
-        <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;Home.Locality&quot;</span><span class="p">,</span> <span class="s">&quot;HomeSuburb&quot;</span><span class="p">),</span>
-        <span class="nx">WithField</span><span class="p">(</span><span class="s">&quot;ID&quot;</span><span class="p">,</span> <span class="s">&quot;table2_id&quot;</span><span class="p">),</span>
-    <span class="p">)</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</div>
 </div>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="sqlr-gen.html" class="btn btn-neutral float-right" title="Code Generation using sqlr-gen" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="session.html" class="btn btn-neutral float-right" title="Sessions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="naming-conventions.html" class="btn btn-neutral" title="Column Naming Conventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -478,11 +394,11 @@ for a database whose tables have evolved with different naming conventions:</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Jeffery.
+        &copy; Copyright 2017-2018, John Jeffery.
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -500,11 +416,12 @@ for a database whose tables have evolved with different naming conventions:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0',
+            VERSION:'0.6',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
@@ -513,19 +430,13 @@ for a database whose tables have evolved with different naming conventions:</p>
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

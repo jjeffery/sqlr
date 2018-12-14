@@ -24,24 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="The Schema Type" href="schema.html"/>
-        <link rel="prev" title="SQL Dialects" href="dialects.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Schema Type" href="schema.html" />
+    <link rel="prev" title="SQL Dialects" href="dialects.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -63,7 +58,7 @@
             
             
               <div class="version">
-                1.0
+                0.6
               </div>
             
           
@@ -95,7 +90,8 @@
 <li class="toctree-l1"><a class="reference internal" href="dialects.html">SQL Dialects</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Column Naming Conventions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="schema.html">The Schema Type</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">Sessions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dao.html">The DAO Pattern</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests.html">Running the Tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
 </ul>
@@ -109,7 +105,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -117,9 +113,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -148,7 +145,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/naming-conventions.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/naming-conventions.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -170,27 +167,26 @@ database column name.</p>
 <p>The following naming conventions are supported out of the box:</p>
 <ul class="simple">
 <li><a class="reference external" href="https://en.wikipedia.org/wiki/Snake_case">Snake case</a> (eg
-<code class="docutils literal"><span class="pre">HomePhone</span></code> converts to <code class="docutils literal"><span class="pre">home_phone</span></code>)</li>
-<li>Same case (same as the Go struct field, eg <code class="docutils literal"><span class="pre">HomePhone</span></code> =&gt; <code class="docutils literal"><span class="pre">HomePhone</span></code>)</li>
-<li>Lower case (convert to lower case, eg <code class="docutils literal"><span class="pre">HomePhone</span></code> =&gt; <code class="docutils literal"><span class="pre">homephone</span></code>)</li>
+<code class="docutils literal notranslate"><span class="pre">HomePhone</span></code> converts to <code class="docutils literal notranslate"><span class="pre">home_phone</span></code>)</li>
+<li>Same case (same as the Go struct field, eg <code class="docutils literal notranslate"><span class="pre">HomePhone</span></code> =&gt; <code class="docutils literal notranslate"><span class="pre">HomePhone</span></code>)</li>
+<li>Lower case (convert to lower case, eg <code class="docutils literal notranslate"><span class="pre">HomePhone</span></code> =&gt; <code class="docutils literal notranslate"><span class="pre">homephone</span></code>)</li>
 </ul>
 <p>Preparing a new naming convention is possible, by implementing
 the <a class="reference external" href="https://godoc.org/github.com/jjeffery/sqlr#NamingConvention">sqlr.NamingConvention</a>
 interface.</p>
-<p>The naming convention is specified when creating the schema:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
+<p>The naming convention can be specified when creating the schema:</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="nx">schema</span> <span class="o">:=</span> <span class="nx">sqlr</span><span class="p">.</span><span class="nx">NewSchema</span><span class="p">(</span>
         <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithDialect</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">Postgres</span><span class="p">),</span>
         <span class="nx">sqlr</span><span class="p">.</span><span class="nx">WithNamingConvention</span><span class="p">(</span><span class="nx">sqlr</span><span class="p">.</span><span class="nx">SnakeCase</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>If the naming convention is not specified, it defaults to snake case.</p>
 </div>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -208,11 +204,11 @@ interface.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Jeffery.
+        &copy; Copyright 2017-2018, John Jeffery.
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -230,11 +226,12 @@ interface.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0',
+            VERSION:'0.6',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
@@ -243,19 +240,13 @@ interface.</p>
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

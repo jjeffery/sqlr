@@ -24,24 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="Extended SQL Format" href="sql-format.html"/>
-        <link rel="prev" title="Performing Queries" href="queries.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Extended SQL Format" href="sql-format.html" />
+    <link rel="prev" title="Performing Queries" href="queries.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -63,7 +58,7 @@
             
             
               <div class="version">
-                1.0
+                0.6
               </div>
             
           
@@ -101,7 +96,8 @@
 <li class="toctree-l1"><a class="reference internal" href="dialects.html">SQL Dialects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="naming-conventions.html">Column Naming Conventions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="schema.html">The Schema Type</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">Sessions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dao.html">The DAO Pattern</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests.html">Running the Tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
 </ul>
@@ -115,7 +111,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -123,9 +119,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -154,7 +151,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/column-mapping.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/column-mapping.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -178,7 +175,7 @@ convention. The column names will change with a different
 <a class="reference internal" href="naming-conventions.html#naming-conventions"><span class="std std-ref">naming convention</span></a>, but the principles remain the same.</p>
 <div class="section" id="simple-structs">
 <h2>Simple structs<a class="headerlink" href="#simple-structs" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
         <span class="nx">ID</span>        <span class="kt">int64</span> <span class="s">`sql:&quot;primary key&quot;`</span>
         <span class="nx">Name</span>      <span class="kt">string</span>
         <span class="nx">UpdatedAt</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
@@ -194,7 +191,7 @@ convention. The column names will change with a different
 </div>
 <p>Note the use of the struct tag to specify the primary key. The struct tag
 can also be used to override the column name:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
         <span class="nx">ID</span>        <span class="kt">int64</span>     <span class="s">`sql:&quot;user_id primary key&quot;`</span>
         <span class="nx">Name</span>      <span class="kt">string</span>
         <span class="nx">UpdatedAt</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
@@ -212,7 +209,7 @@ can also be used to override the column name:</p>
 </div>
 <p>If you need to override the column name to be an SQL keyword, (which is
 rarely a good idea), you can use quotes to specify the column name:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// Not recommended</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="c1">// Not recommended</span>
 <span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
         <span class="nx">ID</span> <span class="kt">int64</span> <span class="s">`sql:&quot;&#39;primary&#39; primary key&quot;`</span> <span class="c1">// setting column name to SQL keyword</span>
         <span class="c1">// ... rest of struct here</span>
@@ -225,7 +222,7 @@ rarely a good idea), you can use quotes to specify the column name:</p>
 <p>Sometimes there are a set of common columns, used by each table.
 Anonymous structs provide a way to ensure consistency across
 the Go structs:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Entity</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Entity</span> <span class="kd">struct</span> <span class="p">{</span>
         <span class="nx">ID</span>        <span class="kt">int64</span> <span class="s">`sql:&quot;primary key autoincrement&quot;`</span>
         <span class="nx">UpdatedAt</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
         <span class="nx">CreatedAt</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
@@ -263,7 +260,7 @@ the Go structs:</p>
 <h2>Embedded structs<a class="headerlink" href="#embedded-structs" title="Permalink to this headline">¶</a></h2>
 <p>In some cases it is useful to use embedded structures when representing
 components in a structure:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Address</span> <span class="kd">struct</span> <span class="p">{</span>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">type</span> <span class="nx">Address</span> <span class="kd">struct</span> <span class="p">{</span>
         <span class="nx">Street</span>   <span class="kt">string</span>
         <span class="nx">Locality</span> <span class="kt">string</span>
         <span class="nx">City</span>     <span class="kt">string</span>
@@ -311,32 +308,32 @@ the tag key consists of an optional column name followed by keywords.</p>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td><cite>sql:&#8221;user_id primary key&#8221;</cite></td>
+<tr class="row-even"><td><cite>sql:”user_id primary key”</cite></td>
 <td>user_id</td>
 <td>yes</td>
 <td>no</td>
 </tr>
-<tr class="row-odd"><td><cite>sql:&#8221;user_id&#8221;</cite></td>
+<tr class="row-odd"><td><cite>sql:”user_id”</cite></td>
 <td>user_id</td>
 <td>no</td>
 <td>no</td>
 </tr>
-<tr class="row-even"><td><cite>sql:&#8221;primary key&#8221;</cite></td>
+<tr class="row-even"><td><cite>sql:”primary key”</cite></td>
 <td>Use naming convention</td>
 <td>yes</td>
 <td>no</td>
 </tr>
-<tr class="row-odd"><td><cite>sql:&#8221;primary key autoincrement&#8221;</cite></td>
+<tr class="row-odd"><td><cite>sql:”primary key autoincrement”</cite></td>
 <td>Use naming convention</td>
 <td>yes</td>
 <td>yes</td>
 </tr>
-<tr class="row-even"><td><cite>sql:&#8220;&#8216;primary&#8217; primary key&#8221;</cite></td>
+<tr class="row-even"><td><cite>sql:“‘primary’ primary key”</cite></td>
 <td>primary</td>
 <td>yes</td>
 <td>no</td>
 </tr>
-<tr class="row-odd"><td><cite>sql:&#8221; &#8216;key&#8217; &#8220;</cite></td>
+<tr class="row-odd"><td><cite>sql:” ‘key’ “</cite></td>
 <td>key</td>
 <td>no</td>
 <td>no</td>
@@ -345,7 +342,7 @@ the tag key consists of an optional column name followed by keywords.</p>
 </table>
 <p>If first name in the tag column name is not one of the keywords it is interpreted to be
 a column name. In the rare (and inadvisable) situation where a column is required to be
-a keyword, it can be enclosed in single quotes (<code class="docutils literal"><span class="pre">'</span></code>).</p>
+a keyword, it can be enclosed in single quotes (<code class="docutils literal notranslate"><span class="pre">'</span></code>).</p>
 <p>The full list of accepted keywords is:</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -360,29 +357,29 @@ a keyword, it can be enclosed in single quotes (<code class="docutils literal"><
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">primary</span> <span class="pre">key</span></code></td>
-<td><code class="docutils literal"><span class="pre">pk</span></code>, <code class="docutils literal"><span class="pre">primary_key</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">primary</span> <span class="pre">key</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pk</span></code>, <code class="docutils literal notranslate"><span class="pre">primary_key</span></code></td>
 <td>Column is the primary key, or part <br/>
 of a composite primary key</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">autoincrement</span></code></td>
-<td><code class="docutils literal"><span class="pre">autoincr</span></code>, <code class="docutils literal"><span class="pre">identity</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">autoincrement</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">autoincr</span></code>, <code class="docutils literal notranslate"><span class="pre">identity</span></code></td>
 <td>Column is an auto-increment
 (aka identity) column</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">natural</span> <span class="pre">key</span></code></td>
-<td><code class="docutils literal"><span class="pre">natural_key</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">natural</span> <span class="pre">key</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">natural_key</span></code></td>
 <td>Column is a natural key, or part of a
 composite <br/> natural key: used in
 error messages to assist <br/> in
 identifying the row</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">json</span></code></td>
-<td><code class="docutils literal"><span class="pre">jsonb</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">json</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">jsonb</span></code></td>
 <td>Column is marshaled as JSON</td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">null</span></code></td>
-<td><code class="docutils literal"><span class="pre">omitempty</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">null</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">omitempty</span></code></td>
 <td>Empty value is stored in the DB as NULL,
 <br/> NULL is scanned as empty value</td>
 </tr>
@@ -393,9 +390,7 @@ identifying the row</td>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -413,11 +408,11 @@ identifying the row</td>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Jeffery.
+        &copy; Copyright 2017-2018, John Jeffery.
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -435,11 +430,12 @@ identifying the row</td>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0',
+            VERSION:'0.6',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
@@ -448,19 +444,13 @@ identifying the row</td>
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

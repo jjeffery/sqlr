@@ -24,7 +24,8 @@ sqlr -- SQL package
    dialects
    naming-conventions
    schema
-   sqlr-gen
+   session
+   dao
    tests
    prior-art
 

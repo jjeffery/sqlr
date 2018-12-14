@@ -24,24 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="Prior Art" href="prior-art.html"/>
-        <link rel="prev" title="Code Generation using sqlr-gen" href="sqlr-gen.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Prior Art" href="prior-art.html" />
+    <link rel="prev" title="The DAO Pattern" href="dao.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -63,7 +58,7 @@
             
             
               <div class="version">
-                1.0
+                0.6
               </div>
             
           
@@ -95,7 +90,8 @@
 <li class="toctree-l1"><a class="reference internal" href="dialects.html">SQL Dialects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="naming-conventions.html">Column Naming Conventions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="schema.html">The Schema Type</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">Sessions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dao.html">The DAO Pattern</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the Tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
 </ul>
@@ -109,7 +105,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -117,9 +113,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -148,7 +145,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/tests.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/tests.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -170,9 +167,7 @@ intend to overhaul how tests against the database are performed.</p>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -181,7 +176,7 @@ intend to overhaul how tests against the database are performed.</p>
         <a href="prior-art.html" class="btn btn-neutral float-right" title="Prior Art" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="sqlr-gen.html" class="btn btn-neutral" title="Code Generation using sqlr-gen" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="dao.html" class="btn btn-neutral" title="The DAO Pattern" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -190,11 +185,11 @@ intend to overhaul how tests against the database are performed.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Jeffery.
+        &copy; Copyright 2017-2018, John Jeffery.
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -212,11 +207,12 @@ intend to overhaul how tests against the database are performed.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0',
+            VERSION:'0.6',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
@@ -225,19 +221,13 @@ intend to overhaul how tests against the database are performed.</p>
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

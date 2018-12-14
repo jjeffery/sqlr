@@ -41,41 +41,11 @@ specify the dialect directly from the ``*sql.DB`` handle::
         ForDB(db), // will choose the correct dialect for db
     )
 
-It not all that expensive to create a schema, but it is a good 
-idea to create a schema at program initialization and re-use it rather 
+It is recommended practice to create a schema at program initialization and 
+re-use it rather 
 than create one whenever necessary. The reason for this is that the 
 schema caches information about Go structures and SQL statements in order
 to improve performance.
-
-Using a Schema to perform Queries
----------------------------------
-
-The ``Schema`` type has the following methods to support performing queries:
-
-* ``Exec`` method; and
-* ``Select`` method.
-
-These methods are shorthand for preparing a statement (``Stmt``) and then
-performing the corresponding ``Exec`` or ``Select`` method on that statement.
-
-For example::
-
-    _, err := schema.Exec(db, row, "update table1")
-    if err != nil {
-        log.Fatal(err)
-    }
-
-Is the same as::
-
-    stmt, err := schema.Prepare(row, "update table1")
-    if err != nil {
-        log.Fatal(err)
-    }
-    _, err = stmt.Exec(db, row)
-    if err != nil {
-        log.Fatal(err)
-    }
-
 
 Mapping Individual Field/Column Names
 -------------------------------------
@@ -132,7 +102,7 @@ the schema::
     schema := NewSchema(
         WithDialect(sqlr.Postgres),
         WithNamingConvention(sqlr.SnakeCase),
-        WithTagKey("pg"),
+        WithKey("pg"),
     )
 
 Where does this come in useful? Perhaps it is best to describe the scenario
@@ -181,20 +151,20 @@ specify two different column names in the Go struct tag.
 
 While it is possible to get around this problem using the ``WithField`` schema
 option, there is some benefit visibility-wise if the two column names can
-appear in the Go struct field. This is where the ``WithTagKey`` schema option
+appear in the Go struct field. This is where the ``WithKey`` schema option
 becomes relevant. If the two schemas each specify a different struct tag key, then
 the ``sqlr`` package will look in the struct tag key for column names::
 
     mssqlSchema := sqlr.NewSchema(
         WithDialect(sqlr.MSSQL),
         WithNamingConvention(sqlr.SameCase),
-        WithTagKey("mssql"),
+        WithKey("mssql"),
     )
 
     pgSchema := sqlr.NewSchema(
         WithDialect(sqlr.Postgres),
         WithNamingConvention(sqlr.SnakeCase),
-        WithTagKey("pg"),
+        WithKey("pg"),
     )
 
 So now the column name exceptions can be included in the struct tag, and will only
@@ -250,53 +220,3 @@ identifers named ``widgets`` with ``Widgets``, and all identifiers named
 
 If you think this is untidy, you are probably correct. It is a seldom-used feature
 designed to help with an uncommon situation.
-
-Cloning a Schema
-----------------
-
-Once created, a schema is immutable. The reason for this is that schemas
-have an internal cache to help with performance, and changing the dialect,
-naming convention, or any other schema option would render this cache invalid.
-
-It is not anticipated that this is a common requirement, but in some cases
-it is useful to be able to clone a schema, which provides a deep copy of
-the configuration and allows for further configuration::
-
-    // ... schema has already been created elsewhere ...
-
-    schemaForContactDetails := schema.Clone(
-        WithField("Work.Facsimile", "work_fax"),
-        WithField("Home.Facsimile", "home_fax_number"),
-        WithTagKey("pg"),
-        WithIdentifer("Users", "users"),
-    )
-
-Still looking at unusual cases, it would be possible to keep separate schemas 
-for a database whose tables have evolved with different naming conventions::
-
-    var schema struct {
-        Base   *sqlr.Schema
-        Table1 *sqlr.Schema
-        Table2 *sqlr.Schema
-    }
-
-    func init() {
-        // The original database was created using `SameCase`, as many MS SQL DBs are.
-        schema.Base := NewSchema(
-            WithDialect(sqlr.MSSQL),
-            WithNamingConvention(sqlr.SameCase),
-        )
-
-        // Table1 got added later by someone who preferred `snake_case` and thought
-        // it would be better to use it than be consistent. (This can happen...)
-        schema.Table1 := schema.Base.Clone(
-            WithNamingConvention(sqlr.SnakeCase),
-        )
-
-        // Table2 was added, but there are some exceptions to the naming rules that
-        // are not universal across the database.
-        schema.Table2 := schema.Base.Clone(
-            WithField("Home.Locality", "HomeSuburb"),
-            WithField("ID", "table2_id"),
-        )
-    }

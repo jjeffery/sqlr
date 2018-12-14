@@ -100,27 +100,3 @@ Example of using aliases:
     from users u
     inner join user_search_terms t on t.user_id = u.id
     where t.search_term like ?
-
-Common abbreviations
---------------------
-
-The following abbreviations are used for commonly used queries:
-
-+-----------------------------+--------------------------------------------+
-| Abbreviation                | Expanded to                                |
-+=============================+============================================+
-| ``insert <tablename>`` |br| | ``insert into <tablename>({}) values({})`` |
-| ``insert into <tablename>`` |                                            |
-+-----------------------------+--------------------------------------------+
-| ``update <tablename>``      | ``update <tablename> set {} where {}``     |
-+-----------------------------+--------------------------------------------+
-
-So simple row inserts and row updates become as easy as::
-
-    // insert a row
-    rowsAffected, err := schema.Exec(db, row, "insert users")
-    
-    // ... and later ...
-
-    // update a row
-    rowsAffected, err := schema.Exec(db, row, "update users")

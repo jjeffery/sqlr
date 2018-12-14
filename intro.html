@@ -177,7 +177,7 @@ or make use of any other third party package that uses <cite>“database/sql”<
 <dl class="docutils">
 <dt>Prepare SQL from row structures</dt>
 <dd>It is error-prone and tedious to write SQL queries with long lists of column
-names and placeholder variables. Package sqlr provides a way to map column lists
+names and placeholder variables. Package <cite>sqlr</cite> provides a way to map column lists
 in the SQL with a Go language structure. The result is a way to write concise
 SQL queries for tables with large number of columns:</dd>
 </dl>
@@ -210,7 +210,7 @@ field in the row structure will be updated:</p>
 </div>
 </dd>
 <dt>Null columns</dt>
-<dd><p class="first">Package sqlr provides a convenient mechanism to map NULL values in the database to
+<dd><p class="first">Package <cite>sqlr</cite> provides a convenient mechanism to map NULL values in the database to
 the equivalent empty value in the Go struct field, for example mapping NULL to zero
 for integer values, or NULL to the empty string for string values. This is not always
 applicable as NULL and the empty string are not necessarily the same thing, but in many
@@ -248,8 +248,8 @@ accordingly:</p>
 </div>
 </dd>
 <dt>Generate query functions</dt>
-<dd>An sqlr session is able to create type-safe functions for a range of different queries,
-which reduces the amount of boiler-plate code.</dd>
+<dd>An <cite>sqlr</cite> <code class="docutils literal notranslate"><span class="pre">Session</span></code> object is able to create type-safe functions for a range of different
+queries, which reduces the amount of boiler-plate code.</dd>
 </dl>
 <div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="p">(</span>
     <span class="nx">getWidget</span> <span class="kd">func</span><span class="p">(</span><span class="nx">id</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Widget</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>

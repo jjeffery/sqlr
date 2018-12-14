@@ -24,24 +24,19 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-    <link rel="top" title="sqlr" href="index.html"/>
-        <link rel="next" title="SQL Dialects" href="dialects.html"/>
-        <link rel="prev" title="Column Mapping" href="column-mapping.html"/> 
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SQL Dialects" href="dialects.html" />
+    <link rel="prev" title="Column Mapping" href="column-mapping.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -63,7 +58,7 @@
             
             
               <div class="version">
-                1.0
+                0.6
               </div>
             
           
@@ -93,13 +88,13 @@
 <li class="toctree-l1"><a class="reference internal" href="column-mapping.html">Column Mapping</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Extended SQL Format</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#column-lists-in-each-sql-clause">Column lists in each SQL clause</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#common-abbreviations">Common abbreviations</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dialects.html">SQL Dialects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="naming-conventions.html">Column Naming Conventions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="schema.html">The Schema Type</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sqlr-gen.html">Code Generation using sqlr-gen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="session.html">Sessions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dao.html">The DAO Pattern</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests.html">Running the Tests</a></li>
 <li class="toctree-l1"><a class="reference internal" href="prior-art.html">Prior Art</a></li>
 </ul>
@@ -113,7 +108,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">sqlr</a>
@@ -121,9 +116,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -152,7 +148,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/sql-format.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/sql-format.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -169,20 +165,20 @@
 <span id="sql-format"></span><h1>Extended SQL Format<a class="headerlink" href="#extended-sql-format" title="Permalink to this headline">¶</a></h1>
 <p>The key goal of the <cite>sqlr</cite> package is to simplify some of the more tedious
 aspects of preparing SQL queries in Go code. One of the most tiresome chores
-(at least in the author&#8217;s opinion) is preparing SQL queries that have a
+(at least in the author’s opinion) is preparing SQL queries that have a
 large number of columns and placeholders, and matching them against fields
 in a Go language struct.</p>
 <p>One of the appealing aspects of an ORM is that it will map the inputs
 and outputs of an SQL query into the corresponding fields of a Go struct,
 but in doing so it creates the SQL as part of the process.</p>
 <p>Package <cite>sqlr</cite> takes a different approach. It assumes that the programmer
-knows the SQL that they want to execute, they just don&#8217;t want to mess
+knows the SQL that they want to execute, they just don’t want to mess
 around with the tedium of getting the column lists correct and in the
 correct order for the placeholders and struct fields.</p>
 <p>To this end, the <cite>sqlr</cite> package knows how to tokenize a string containing
-SQL, and it looks for curly braces <code class="docutils literal"><span class="pre">{}</span></code>. Anytime it finds them it knows
+SQL, and it looks for curly braces <code class="docutils literal notranslate"><span class="pre">{}</span></code>. Anytime it finds them it knows
 it has to substitute a list of columns.</p>
-<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="c1">-- Examples of &quot;extended&quot; SQL</span>
+<div class="highlight-postgres notranslate"><div class="highlight"><pre><span></span><span class="c1">-- Examples of &quot;extended&quot; SQL</span>
 
 <span class="k">select</span> <span class="p">{}</span> <span class="k">from</span> <span class="n">table_name</span> <span class="k">where</span> <span class="p">{}</span> <span class="k">order</span> <span class="k">by</span> <span class="p">{};</span>
 
@@ -209,37 +205,37 @@ it has to substitute a list of columns.</p>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">SELECT</span> <span class="pre">{}</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SELECT</span> <span class="pre">{}</span></code></td>
 <td>All columns</td>
-<td><code class="docutils literal"><span class="pre">col1,col2,...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1,col2,...</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">SELECT</span> <span class="pre">...</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">SELECT</span> <span class="pre">...</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
 <td>Primary key</td>
-<td><code class="docutils literal"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">SELECT</span> <span class="pre">...</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">...</span> <span class="pre">ORDER</span> <span class="pre">BY</span> <span class="pre">{}</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SELECT</span> <span class="pre">...</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">...</span> <span class="pre">ORDER</span> <span class="pre">BY</span> <span class="pre">{}</span></code></td>
 <td>Primary key</td>
-<td><code class="docutils literal"><span class="pre">col1,col2,...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1,col2,...</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">UPDATE</span> <span class="pre">...</span> <span class="pre">SET</span> <span class="pre">{}</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">UPDATE</span> <span class="pre">...</span> <span class="pre">SET</span> <span class="pre">{}</span></code></td>
 <td>Updateable</td>
-<td><code class="docutils literal"><span class="pre">col1=?,col2=?,...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1=?,col2=?,...</span></code></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">UPDATE</span> <span class="pre">...</span> <span class="pre">SET</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">UPDATE</span> <span class="pre">...</span> <span class="pre">SET</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
 <td>Primary key</td>
-<td><code class="docutils literal"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">INSERT</span> <span class="pre">INTO</span> <span class="pre">...({})</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">INSERT</span> <span class="pre">INTO</span> <span class="pre">...({})</span></code></td>
 <td>Insertable</td>
-<td><code class="docutils literal"><span class="pre">col1,col2,...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1,col2,...</span></code></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">INSERT</span> <span class="pre">INTO</span> <span class="pre">...</span> <span class="pre">VALUES</span> <span class="pre">({})</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">INSERT</span> <span class="pre">INTO</span> <span class="pre">...</span> <span class="pre">VALUES</span> <span class="pre">({})</span></code></td>
 <td>Insertable</td>
-<td><code class="docutils literal"><span class="pre">?,?,...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">?,?,...</span></code></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">DELETE</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">FROM</span> <span class="pre">...</span> <span class="pre">WHERE</span> <span class="pre">{}</span></code></td>
 <td>Primary key</td>
-<td><code class="docutils literal"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">col1=?</span> <span class="pre">and</span> <span class="pre">col2=?</span> <span class="pre">...</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -258,20 +254,20 @@ the Go struct field tags.</p>
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td>All columns</td>
-<td>Does not contain <code class="docutils literal"><span class="pre">-</span></code></td>
+<td>Does not contain <code class="docutils literal notranslate"><span class="pre">-</span></code></td>
 </tr>
 <tr class="row-odd"><td>Primary key</td>
-<td>Contains <code class="docutils literal"><span class="pre">primary</span> <span class="pre">key</span></code></td>
+<td>Contains <code class="docutils literal notranslate"><span class="pre">primary</span> <span class="pre">key</span></code></td>
 </tr>
 <tr class="row-even"><td>Updateable</td>
-<td>Contains neither <code class="docutils literal"><span class="pre">primary</span> <span class="pre">key</span></code> nor <code class="docutils literal"><span class="pre">autoincrement</span></code></td>
+<td>Contains neither <code class="docutils literal notranslate"><span class="pre">primary</span> <span class="pre">key</span></code> nor <code class="docutils literal notranslate"><span class="pre">autoincrement</span></code></td>
 </tr>
 <tr class="row-odd"><td>Insertable</td>
 <td>Does not contain <cite>autoincrement</cite></td>
 </tr>
 </tbody>
 </table>
-<p>The <code class="docutils literal"><span class="pre">{}</span></code> can be modified with a small set of simple modifiers</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">{}</span></code> can be modified with a small set of simple modifiers</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="22%" />
@@ -283,75 +279,39 @@ the Go struct field tags.</p>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">{}</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">{}</span></code></td>
 <td>Column list as per the SQL clause</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">{alias</span> <span class="pre">x}</span></code></td>
-<td><p class="first">Prefix the column list with <code class="docutils literal"><span class="pre">x</span></code>:</p>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">{alias</span> <span class="pre">x}</span></code></td>
+<td><p class="first">Prefix the column list with <code class="docutils literal notranslate"><span class="pre">x</span></code>:</p>
 <blockquote class="last">
-<div><p><code class="docutils literal"><span class="pre">x.col1,x.col2,...</span></code> or</p>
-<p><code class="docutils literal"><span class="pre">x.col1=?</span> <span class="pre">and</span> <span class="pre">x.col2=?</span> <span class="pre">...</span></code>, etc</p>
+<div><p><code class="docutils literal notranslate"><span class="pre">x.col1,x.col2,...</span></code> or</p>
+<p><code class="docutils literal notranslate"><span class="pre">x.col1=?</span> <span class="pre">and</span> <span class="pre">x.col2=?</span> <span class="pre">...</span></code>, etc</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">{pk}</span></code></td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">{pk}</span></code></td>
 <td>Override column list to contain only primary key
 columns</td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">{all}</span></code></td>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">{all}</span></code></td>
 <td>Override column list to contain all columns</td>
 </tr>
 </tbody>
 </table>
 <p>Example of using aliases:</p>
-<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="p">{</span><span class="n">alias</span> <span class="n">u</span><span class="p">}</span>
+<div class="highlight-postgres notranslate"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="p">{</span><span class="n">alias</span> <span class="n">u</span><span class="p">}</span>
 <span class="k">from</span> <span class="n">users</span> <span class="n">u</span>
 <span class="k">inner</span> <span class="k">join</span> <span class="n">user_search_terms</span> <span class="n">t</span> <span class="k">on</span> <span class="n">t</span><span class="mf">.</span><span class="n">user_id</span> <span class="o">=</span> <span class="n">u</span><span class="mf">.</span><span class="n">id</span>
 <span class="k">where</span> <span class="n">t</span><span class="mf">.</span><span class="n">search_term</span> <span class="k">like</span> <span class="o">?</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="common-abbreviations">
-<h2>Common abbreviations<a class="headerlink" href="#common-abbreviations" title="Permalink to this headline">¶</a></h2>
-<p>The following abbreviations are used for commonly used queries:</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="40%" />
-<col width="60%" />
-</colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Abbreviation</th>
-<th class="head">Expanded to</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal"><span class="pre">insert</span> <span class="pre">&lt;tablename&gt;</span></code> <br/>
-<code class="docutils literal"><span class="pre">insert</span> <span class="pre">into</span> <span class="pre">&lt;tablename&gt;</span></code></td>
-<td><code class="docutils literal"><span class="pre">insert</span> <span class="pre">into</span> <span class="pre">&lt;tablename&gt;({})</span> <span class="pre">values({})</span></code></td>
-</tr>
-<tr class="row-odd"><td><code class="docutils literal"><span class="pre">update</span> <span class="pre">&lt;tablename&gt;</span></code></td>
-<td><code class="docutils literal"><span class="pre">update</span> <span class="pre">&lt;tablename&gt;</span> <span class="pre">set</span> <span class="pre">{}</span> <span class="pre">where</span> <span class="pre">{}</span></code></td>
-</tr>
-</tbody>
-</table>
-<p>So simple row inserts and row updates become as easy as:</p>
-<div class="highlight-go"><div class="highlight"><pre><span></span><span class="c1">// insert a row</span>
-<span class="nx">rowsAffected</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;insert users&quot;</span><span class="p">)</span>
-
-<span class="c1">// ... and later ...</span>
-
-<span class="c1">// update a row</span>
-<span class="nx">rowsAffected</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schema</span><span class="p">.</span><span class="nx">Exec</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">row</span><span class="p">,</span> <span class="s">&quot;update users&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
 </div>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -369,11 +329,11 @@ columns</td>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, John Jeffery.
+        &copy; Copyright 2017-2018, John Jeffery.
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -391,11 +351,12 @@ columns</td>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0',
+            VERSION:'0.6',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: ''
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
@@ -404,19 +365,13 @@ columns</td>
 
   
 
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>
