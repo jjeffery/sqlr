@@ -110,7 +110,7 @@ func TestSelectStmt1Errors(t *testing.T) {
 		db := &FakeDB{}
 
 		if err == nil {
-			_, err = stmt.Select(ctx, db, tt.row)
+			_, err = stmt.selectRows(ctx, db, tt.row)
 			if err == nil || err.Error() != tt.errExec {
 				t.Errorf("test case %d:\nwant=%q\ngot=%q", i, tt.errExec, err)
 			}
@@ -201,7 +201,7 @@ func TestSelectStmt2Errors(t *testing.T) {
 
 		db := &FakeDB{queryErr: tt.queryErr}
 
-		_, err = stmt.Select(ctx, db, tt.dest, tt.args...)
+		_, err = stmt.selectRows(ctx, db, tt.dest, tt.args...)
 		if err == nil || err.Error() != tt.errText {
 			t.Errorf("%d: want=%q\ngot=%q", i, tt.errText, err)
 		}

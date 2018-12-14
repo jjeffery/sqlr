@@ -419,7 +419,7 @@ func (sess *Session) Select(rows interface{}, query string, args ...interface{})
 	if err != nil {
 		return 0, err
 	}
-	n, err := stmt.Select(sess.context, sess.querier, rows, args...)
+	n, err := stmt.selectRows(sess.context, sess.querier, rows, args...)
 	if err != nil {
 		return n, err
 	}

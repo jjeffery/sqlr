@@ -16,9 +16,6 @@ import (
 )
 
 // Stmt is a prepared statement. A Stmt is safe for concurrent use by multiple goroutines.
-//
-// Deprecated: Use equivalent methods on Session instead. This type will be removed from
-// the public API shortly.
 type Stmt struct {
 	schema    *Schema
 	tbl       *Table
@@ -105,15 +102,15 @@ func (stmt *Stmt) exec(ctx context.Context, db Querier, row interface{}, args ..
 	return result, nil
 }
 
-// Select executes the prepared query statement with the given arguments and
+// selectRows executes the prepared query statement with the given arguments and
 // returns the query results in rows. If rows is a pointer to a slice of structs
 // then one item is added to the slice for each row returned by the query. If row
 // is a pointer to a struct then that struct is filled with the result of the first
 // row returned by the query. In both cases Select returns the number of rows returned
 // by the query.
 //
-// Deprecated: Use Session.Select instead.
-func (stmt *Stmt) Select(ctx context.Context, db Querier, rows interface{}, args ...interface{}) (int, error) {
+// This used to be a public method, but has been deprecated in favour of Session.Select.
+func (stmt *Stmt) selectRows(ctx context.Context, db Querier, rows interface{}, args ...interface{}) (int, error) {
 	if rows == nil {
 		return 0, errors.New("nil pointer")
 	}
