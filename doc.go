@@ -1,9 +1,8 @@
 /*
-Package sqlr is designed to reduce the effort required to implement
-common operations performed with SQL databases. It is intended for programmers
-who are comfortable with writing SQL, but would like assistance with the
-sometimes tedious process of preparing SQL queries for tables that have a
-large number of columns, or have a variable number of input parameters.
+Package sqlr is designed to reduce the effort required to work with SQL databases.
+It is intended for programmers who are comfortable with writing SQL, but would
+like assistance with the sometimes tedious process of preparing SQL queries for
+tables that have a large number of columns, or have a variable number of input parameters.
 
 This GoDoc summary provides an overview of how to use this package. For
 more detailed documentation, see https://jjeffery.github.io/sqlr.
@@ -45,19 +44,19 @@ A session is created using a context, a database connection (eg *sql.DB, *sql.Tx
 schema. A session is inexpensive to create, and is intended to last no longer than a single request
 (which might be a HTTP request, in the case of a HTTP server). A session is bounded by the lifetime
 of its context.
- sess := NewSession(ctx, tx, schema)
+ session := NewSession(ctx, tx, schema)
 Once a session has been created, it is possible to create simple row insert/update statements with
 minimal effort.
  var row User
  // ... populate row with data here and then ...
 
  // generates the correct SQL to insert a row into the users table
- rowsAffected, err := sess.Exec(row, "insert into users({}) values({})")
+ result, err := session.Row(row).Exec("insert into users({}) values({})")
 
  // ... and then later on ...
 
  // generates the correct SQL to update a the matching row in the users table
- rowsAffected, err := sess.Exec(row, "update users set {} where {}")
+ result, err := session.Row(row).Exec("update users set {} where {}")
 The Exec method parses the SQL query and replaces occurrences of "{}" with the column names
 or placeholders that make sense for the SQL clause in which they occur. In the example above,
 the insert and update statements would look like:
@@ -78,21 +77,21 @@ For example if the Postgres dialect was used the insert and update queries would
  where "id"=$12
 Inserting and updating a single row are common enough operations that the session has methods
 that make it very simple:
- sess.InsertRow(row)
- sess.UpdateRow(row)
-Select queries are handled in a similar fashion:
+ session.InsertRow(row)
+ session.UpdateRow(row)
+Select queries can be performed using the session's Select method:
  var rows []*User
 
  // will populate rows slice with the results of the query
- rowCount, err := sess.Select(&rows, "select {} from users where postcode = ?", postcode)
+ rowCount, err := session.Select(&rows, "select {} from users where postcode = ?", postcode)
 
  var row User
 
  // will populate row with the first row returned by the query
- rowCount, err = sess.Select(&row, "select {} from users where {}", userID)
+ rowCount, err = session.Select(&row, "select {} from users where {}", userID)
 
  // more complex query involving joins and aliases
- rowCount, err = sess.Select(&rows, `
+ rowCount, err = session.Select(&rows, `
      select {alias u}
      from users u
      inner join user_search_terms ust on ust.user_id = u.id
@@ -128,7 +127,7 @@ structure will be updated.
  }
 
  row := &Row{Name: "some name"}
- _, err := sess.InsertRow(row)
+ _, err := session.InsertRow(row)
  if err != nil {
    log.Fatal(err)
  }
@@ -142,11 +141,11 @@ Null Columns
 
 Most SQL database tables have columns that are nullable, and it can be tiresome to always
 map to pointer types or special nullable types such as sql.NullString. In many cases it is
-acceptable to map a database NULL value to the empty value for the corresponding Go struct
-field.
+acceptable to map the zero value for the field a database NULL in the corresponding database
+column.
 
-Where it is acceptable to map a NULL value to an empty value and vice-versa, the Go struct
-field can be marked with the "null" keyword in the field's struct tag.
+Where it is acceptable to map a zero value to a NULL database column, the Go struct field can
+be marked with the "null" keyword in the field's struct tag.
  type Employee struct {
      ID        int     `sql:"primary key"`
      Name      string
@@ -154,11 +153,10 @@ field can be marked with the "null" keyword in the field's struct tag.
      Phone     string  `sql:"null"`
  }
 In the above example the `manager_id` column can be null, but if all valid IDs are non-zero,
-it is unambiguous to map a database NULL to the zero value. Similarly, if the `phone` column
-is null it will be mapped to an empty string. An empty string in the Go struct field will
-be mapped to NULL in the database.
+it is unambiguous to map the zero value to a database NULL. Similarly, if the `phone` column
+an empty string it will be stored as a NULL in the database.
 
-Care should be taken, because there are cases where an empty value and a database NULL do not
+Care should be taken, because there are cases where a zero value and a database NULL do not
 represent the same thing. There are many cases, however, where this feature can be applied,
 and the result is simpler code that is easier to read.
 
@@ -194,9 +192,9 @@ the number of placeholders in the query with args.
 This package simplifies queries with a variable number of arguments. When processing
 an SQL query, it detects if any of the arguments are slices:
  // GetWidgets returns all the widgets associated with the supplied IDs.
- func GetWidgets(sess *sqlr.Session, ids ...int) ([]*Widget, error) {
+ func GetWidgets(session *sqlr.Session, ids ...int) ([]*Widget, error) {
      var rows []*Widget
-     _, err := sess.Select(&rows, `select {} from widgets where id in (?)`, ids)
+     _, err := session.Select(&rows, `select {} from widgets where id in (?)`, ids)
      if err != nil {
        return nil, err
      }
@@ -210,18 +208,5 @@ Type-Safe Query Functions
 
 A session can create type-safe query functions. This is a very powerful feature and makes
 it very easy to create type-safe data access. See the Session.MakeQuery function for examples.
-
-Performance and Caching
-
-This package makes use of reflection in order to build the SQL that is sent
-to the database server, and this imposes a performance penalty. In order
-to reduce this overhead each schema instance caches queries generated.
-The goal is for queries generated by this package to have performance
-as close as possible to equivalent hand-constructed SQL queries that call
-package "database/sql" directly.
-
-Source Code
-
-The source code for this package is available at https://github.com/jjeffery/sqlr.
 */
 package sqlr
