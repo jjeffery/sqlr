@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/jjeffery/errors"
+	"github.com/jjeffery/kv"
 	"github.com/jjeffery/sqlr/dataloader"
 )
 
@@ -105,7 +105,7 @@ func makeSelectIntFunc(funcType reflect.Type) func(*Session) reflect.Value {
 			queryArgs := args[1].Interface().([]interface{})
 			rows, err := sess.Query(query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, "cannot query").With(
+				err = kv.Wrap(err, "cannot query").With(
 					"query", query,
 					"args", queryArgs,
 				)
@@ -149,7 +149,7 @@ func makeSelectRowsFunc(funcType reflect.Type, tbl *Table) func(*Session) reflec
 			queryArgs := args[1].Interface().([]interface{})
 			_, err := sess.Select(rowsPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, "cannot query rows").With(
+				err = kv.Wrap(err, "cannot query rows").With(
 					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
@@ -173,7 +173,7 @@ func makeSelectRowFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect
 			queryArgs := args[1].Interface().([]interface{})
 			n, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, "cannot query one row").With(
+				err = kv.Wrap(err, "cannot query one row").With(
 					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
@@ -240,7 +240,7 @@ func makeGetOneFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.Va
 			queryArgs := []interface{}{args[0].Interface()}
 			n, err := sess.Select(rowPtrValue.Interface(), query, queryArgs...)
 			if err != nil {
-				err = errors.Wrap(err, "cannot get one row").With(
+				err = kv.Wrap(err, "cannot get one row").With(
 					"rowType", tbl.RowType(),
 					"query", query,
 					"args", queryArgs,
@@ -309,7 +309,7 @@ func makeGetManyFunc(funcType reflect.Type, tbl *Table) func(*Session) reflect.V
 				ids := idsValue.Interface()
 				_, err = sess.Select(rowsPtrValue.Interface(), query, ids)
 				if err != nil {
-					err = errors.Wrap(err, "cannot get rows").With(
+					err = kv.Wrap(err, "cannot get rows").With(
 						"rowType", tbl.RowType(),
 						"query", query,
 						"args", ids,

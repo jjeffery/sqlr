@@ -2,11 +2,10 @@ package sqlr
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
-
-	"github.com/jjeffery/errors"
 )
 
 func TestNullScannerCell(t *testing.T) {

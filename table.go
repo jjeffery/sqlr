@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/jjeffery/errors"
+	"github.com/jjeffery/kv"
 	"github.com/jjeffery/sqlr/private/column"
 )
 
@@ -237,9 +237,9 @@ func (tbl *Table) getRowValue(row interface{}) (reflect.Value, error) {
 		rowValue = rowValue.Elem()
 	}
 	if rowValue.Type() != tbl.rowType {
-		return reflect.Value{}, errors.New("unexpected row type").With(
+		return reflect.Value{}, kv.NewError("unexpected row type").With(
 			"want", tbl.rowType,
-			"got", rowValue.Type(),
+			"have", rowValue.Type(),
 		)
 	}
 	return rowValue, nil
@@ -274,9 +274,9 @@ func (tbl *Table) keyvals(row interface{}) []interface{} {
 
 // wrapRowError wraps an error with a description and key/value pairs that identify the
 // row that was involved in the error condition.
-func (tbl *Table) wrapRowError(err error, row interface{}, msg string) errors.Error {
+func (tbl *Table) wrapRowError(err error, row interface{}, msg string) kv.Error {
 	keyvals := tbl.keyvals(row)
-	return errors.Wrap(err, msg).With(keyvals...)
+	return kv.Wrap(err, msg).With(keyvals...)
 }
 
 // Column contains meta-data about a column in a database table.
