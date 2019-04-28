@@ -18,6 +18,7 @@ type columnList struct {
 	filter     func(col *Column) bool
 	clause     sqlClause
 	alias      string
+	exclude    map[string]struct{}
 }
 
 func newColumns(allColumns []*Column) columnList {
@@ -40,25 +41,63 @@ func (cols columnList) Parse(clause sqlClause, text string) (columnList, error) 
 
 	// TODO: update filter based on text
 	scan := scanner.New(strings.NewReader(text))
-	scan.AddKeywords("alias", "all", "pk")
+	scan.AddKeywords("alias", "all", "pk", "exclude")
 	scan.IgnoreWhiteSpace = true
 
-	for scan.Scan() {
-		tok, lit := scan.Token(), scan.Text()
-
-		// TODO: dodgy job to get going quickly
-		if tok == scanner.KEYWORD {
-			switch strings.ToLower(lit) {
-			case "alias":
-				if scan.Scan() {
-					cols2.alias = scan.Text()
-				} else {
-					return columnList{}, fmt.Errorf("missing ident after 'alias'")
+	if scan.Scan() {
+		needScan := false
+		for {
+			if needScan {
+				needScan = false
+				if !scan.Scan() {
+					break
 				}
-			case "all":
-				cols2.filter = columnFilterAll
-			case "pk":
-				cols2.filter = columnFilterPK
+			}
+			tok, lit := scan.Token(), scan.Text()
+			if tok == scanner.EOF {
+				break
+			}
+
+			// TODO: dodgy job to get going quickly
+			if tok == scanner.KEYWORD {
+				switch strings.ToLower(lit) {
+				case "alias":
+					if scan.Scan() {
+						cols2.alias = scan.Text()
+						needScan = true
+					} else {
+						return columnList{}, fmt.Errorf("missing ident after 'alias'")
+					}
+				case "all":
+					cols2.filter = columnFilterAll
+					needScan = true
+				case "pk":
+					cols2.filter = columnFilterPK
+					needScan = true
+				case "exclude":
+					if scan.Scan() {
+						if cols2.exclude == nil {
+							cols2.exclude = make(map[string]struct{})
+						}
+						cols2.exclude[scan.Text()] = struct{}{}
+						for {
+							if !scan.Scan() {
+								break
+							}
+							if scan.Text() != "," {
+								break
+							}
+							if !scan.Scan() {
+								break
+							}
+							cols2.exclude[scan.Text()] = struct{}{}
+						}
+					} else {
+						return columnList{}, fmt.Errorf("missing column after 'exclude'")
+					}
+				}
+			} else {
+				needScan = true
 			}
 		}
 	}
@@ -122,6 +161,9 @@ func (cols columnList) filtered() []*Column {
 	v := make([]*Column, 0, len(cols.allColumns))
 	for _, col := range cols.allColumns {
 		if cols.filter == nil || cols.filter(col) {
+			if _, ok := cols.exclude[col.columnName]; ok {
+				continue
+			}
 			v = append(v, col)
 		}
 	}

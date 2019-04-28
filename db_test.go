@@ -1344,6 +1344,68 @@ func TestTableName(t *testing.T) {
 	}
 }
 
+func TestExcludeColumns(t *testing.T) {
+	db := postgresDB(t)
+	defer db.Close()
+
+	mustExec(t, db, `drop table if exists exclude_columns;`)
+	defer mustExec(t, db, `drop table if exists exclude_columns;`)
+	mustExec(t, db, `
+		create table exclude_columns(
+			id int primary key not null, 
+			n1 int not null,
+			n2 int not null,
+			n3 int not null
+		)`,
+	)
+
+	type Row struct {
+		ID int `sql:"primary key" table:"exclude_columns"`
+		N1 int
+		N2 int
+		N3 int
+	}
+
+	schema := NewSchema(WithDialect(Postgres))
+	sess := NewSession(context.Background(), db, schema)
+
+	err := sess.InsertRow(&Row{
+		ID: 1,
+		N1: 1,
+		N2: 2,
+		N3: 3,
+	})
+	wantNoError(t, err)
+
+	var selectRow func(query string, args ...interface{}) (*Row, error)
+	sess.MakeQuery(&selectRow)
+
+	check := func(got, want int) {
+		t.Helper()
+		if got != want {
+			t.Fatalf("got=%d want=%d", got, want)
+		}
+	}
+
+	row, err := selectRow("select {} from exclude_columns")
+	wantNoError(t, err)
+	check(row.N1, 1)
+	check(row.N2, 2)
+	check(row.N3, 3)
+
+	row, err = selectRow("select 0 as n1, {exclude n1} from exclude_columns")
+	wantNoError(t, err)
+	check(row.N1, 0)
+	check(row.N2, 2)
+	check(row.N3, 3)
+
+	row, err = selectRow("select 10 as n1, 20 as n2, {exclude n1, n2} from exclude_columns")
+	wantNoError(t, err)
+	check(row.N1, 10)
+	check(row.N2, 20)
+	check(row.N3, 3)
+}
+
 // mustExec performs an SQL command, which must succeed or the test stops
 func mustExec(t *testing.T, db *sql.DB, query string) {
 	t.Helper()
