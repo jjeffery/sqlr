@@ -28,6 +28,7 @@ Prepare SQL from row structures
         )
         session.Select(&rows, "select {} from widgets where rating > ?", rating)
 
+        var row *Widget
         session.Row(row).Exec("insert into widgets({}) values({})")
 
 Autoincrement column values

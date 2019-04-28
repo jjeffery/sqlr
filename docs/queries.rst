@@ -70,8 +70,9 @@ but for now we will move onto creating a session and performing queries.
 Create a Session
 ----------------
 
-Before performing any database queries, create a ``Session`` object. The session is created
-from a context_, a database connection (or a transaction), and a schema::
+Before performing any database queries, create a ``Session`` object. 
+The :ref:`session <session_type>` is created from a context_, a database
+connection (or a transaction), and a schema::
 
 	var (
 		ctx    context.Context
