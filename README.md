@@ -7,6 +7,8 @@
 [![Coverage Status](https://codecov.io/github/jjeffery/sqlr/badge.svg?branch=master)](https://codecov.io/github/jjeffery/sqlr?branch=master)
 [![GoReportCard](https://goreportcard.com/badge/github.com/jjeffery/sqlr)](https://goreportcard.com/report/github.com/jjeffery/sqlr)
 
+**This package is deprecated.** Use the excellent [sqlc](https://github.com/kyleconroy/sqlc) package instead.
+
 Package sqlr is designed to reduce the effort required to work with SQL databases.
 It is intended for programmers who are comfortable with writing SQL, but would like 
 assistance with the sometimes tedious process of preparing SQL queries for tables 
